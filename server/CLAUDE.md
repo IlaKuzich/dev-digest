@@ -1,7 +1,7 @@
 # CLAUDE.md — @devdigest/api (server)
 
 ## Before answering
-You MUST search this package's `docs/`, `specs/`, and `insights.md` for context relevant to the user's current prompt before responding. Pull in only what is relevant; if nothing applies, proceed without it. Treat `insights.md` as a curated learning log — read it every turn.
+You MUST search this package's `docs/`, `specs/`, and `INSIGHTS.md` for context relevant to the user's current prompt before responding. Pull in only what is relevant; if nothing applies, proceed without it. Treat `INSIGHTS.md` as a curated learning log — read it every turn.
 
 ## Stack
 - Fastify 5 · `fastify-type-provider-zod` · `fastify-sse-v2` · helmet · cors · rate-limit

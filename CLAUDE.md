@@ -3,7 +3,7 @@
 Local-first AI PR review tool. Multi-package, NOT a workspace.
 
 ## Before answering
-You MUST identify which package(s) the user's prompt touches and search those packages' `docs/`, `specs/`, and `insights.md` for context relevant to the prompt. Also check root `docs/` and `TESTING.md` if the prompt is project-wide. Pull in only what is relevant; if nothing applies, proceed without it. Treat each `insights.md` as a curated learning log — read it every turn you work in that package.
+You MUST identify which package(s) the user's prompt touches and search those packages' `docs/`, `specs/`, and `INSIGHTS.md` for context relevant to the prompt. Also check root `docs/`, `TESTING.md`, and the root `INSIGHTS.md` (cross-cutting findings) if the prompt is project-wide. Pull in only what is relevant; if nothing applies, proceed without it. Treat each `INSIGHTS.md` as a curated learning log — read it every turn you work in that package.
 
 ## Stack (project-wide)
 - Node ≥22 · pnpm ≥10 · Docker (Postgres only)
@@ -35,3 +35,4 @@ You MUST identify which package(s) the user's prompt touches and search those pa
 - Read [TESTING.md](./TESTING.md) **when** writing or running tests — owns the unit/integration split convention (`*.it.test.ts`).
 - Read [docs/agent-prompts/](./docs/agent-prompts/) **when** changing or authoring a reviewer system prompt.
 - Invoke a skill from `.claude/skills/` **when** working with Fastify, Drizzle, Next, React, Zod, etc. — don't re-derive framework patterns inline.
+- Invoke skill `engineering-insights` **when** wrapping up a session — capture any non-obvious lesson into the touched module's `INSIGHTS.md` (append-only).

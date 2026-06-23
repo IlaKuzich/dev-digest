@@ -1,16 +1,17 @@
-# Insights — client
+# INSIGHTS — client
 
-Curated learning log. Searched **before each answer** in this package (per CLAUDE.md). Only **relevant** entries belong here — prune obsolete ones; do not append blindly.
+Append-only engineering log for this package. Read before answering (per CLAUDE.md);
+appended via the `engineering-insights` skill. One finding per entry, actionable
+"cold" with `file:line` evidence. Append under the matching section — never reorder
+or overwrite existing entries (correct a stale one with a new dated note). Prune
+obsolete entries only during a deliberate review.
 
-Format per entry:
-```
-- YYYY-MM-DD — <one-line gotcha>
-  **Why:** <reason — what mistake this prevents>
-```
+## What Works
+## What Doesn't Work
+## Codebase Patterns
+## Tool & Library Notes
+## Recurring Errors & Fixes
+## Session Notes
+## Open Questions
 
-Discipline:
-- Add when you (or a future agent) make a non-obvious mistake the code/types can't catch
-- Remove when the rule no longer applies (refactor lands, convention changes, etc.)
-- Hard cap: 60 lines total. Over budget? Curate, don't grow.
-
-<!-- No insights yet — append below as patterns emerge. -->
+<!-- No insights yet — append under the matching section as patterns emerge. -->
