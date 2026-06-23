@@ -12,6 +12,7 @@ with a new dated note). Prune obsolete entries only during a deliberate review.
 ## What Doesn't Work
 ## Codebase Patterns
 ## Tool & Library Notes
+## Decisions
 ## Recurring Errors & Fixes
 ## Session Notes
 ## Open Questions
