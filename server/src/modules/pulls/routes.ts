@@ -129,6 +129,26 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
+    // Latest cost for each PR from the most recent completed run.
+    const latestCostByPr = new Map<string, number | null>();
+    if (prIds.length > 0) {
+      const costRows = await container.db
+        .select({ prId: t.agentRuns.prId, costUsd: t.agentRuns.costUsd })
+        .from(t.agentRuns)
+        .where(
+          and(
+            inArray(t.agentRuns.prId, prIds),
+            eq(t.agentRuns.status, 'done'),
+          ),
+        )
+        .orderBy(desc(t.agentRuns.ranAt));
+      for (const row of costRows) {
+        if (row.prId && !latestCostByPr.has(row.prId)) {
+          latestCostByPr.set(row.prId, row.costUsd ?? null);
+        }
+      }
+    }
+
     const now = Date.now();
     return rows.map((r) => {
       const review = latestReviewByPr.get(r.id);
@@ -153,6 +173,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         opened_at: r.openedAt?.toISOString() ?? null,
         updated_at: r.updatedAt?.toISOString() ?? null,
         score: review ? review.score : null,
+        latest_run_cost_usd: latestCostByPr.get(r.id) ?? null,
       };
     });
   });
