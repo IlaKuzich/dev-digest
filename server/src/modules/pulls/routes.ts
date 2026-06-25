@@ -144,7 +144,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         .orderBy(desc(t.agentRuns.ranAt));
       for (const row of costRows) {
         if (row.prId && !latestCostByPr.has(row.prId)) {
-          latestCostByPr.set(row.prId, row.costUsd ?? null);
+          latestCostByPr.set(row.prId, row.costUsd != null ? Number(row.costUsd) : null);
         }
       }
     }

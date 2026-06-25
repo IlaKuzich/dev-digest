@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, jsonb, timestamp, doublePrecision } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, jsonb, timestamp, numeric } from 'drizzle-orm/pg-core';
 import { workspaces } from './core';
 import { agents } from './agents';
 import { pullRequests } from './pulls';
@@ -29,7 +29,7 @@ export const agentRuns = pgTable('agent_runs', {
   /** Findings that tripped the agent's gate (severity ≥ ciFailOn). */
   blockers: integer('blockers'),
   /** Cost of the LLM call(s) in USD; null when unavailable (failed/cancelled). */
-  costUsd: doublePrecision('cost_usd'),
+  costUsd: numeric('cost_usd', { precision: 12, scale: 6 }),
 });
 
 /** Whole trace of one run as a SINGLE jsonb document. */
