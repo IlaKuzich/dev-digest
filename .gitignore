@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.claude/settings.local.json
 # agent-runner ships as a JS GitHub Action — its bundled dist/ MUST be committed
 # (GitHub runs action.yml `main: dist/index.js` as-is, with no build step).
 !agent-runner/dist/
