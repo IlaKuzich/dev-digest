@@ -24,6 +24,9 @@ function snippetOf(rationale: string): string {
   return rationale.slice(0, 120).replace(/\s\S+$/, '') + '…';
 }
 
+type SevKey = 'CRITICAL' | 'WARNING' | 'SUGGESTION';
+const SEV_ORDER: Record<SevKey, number> = { CRITICAL: 0, WARNING: 1, SUGGESTION: 2 };
+
 export default async function pullsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
@@ -156,8 +159,6 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
 
     // findings_by_severity + top_findings: all non-dismissed findings per PR.
     // Same IN-query + JS-grouping pattern as latestCostByPr.
-    type SevKey = 'CRITICAL' | 'WARNING' | 'SUGGESTION';
-    const SEV_ORDER: Record<SevKey, number> = { CRITICAL: 0, WARNING: 1, SUGGESTION: 2 };
     type TopFinding = {
       id: string; severity: string; category: string; title: string;
       file: string; start_line: number; end_line: number; confidence: number;
