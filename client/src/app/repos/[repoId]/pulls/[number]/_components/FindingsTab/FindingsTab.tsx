@@ -134,6 +134,7 @@ export function FindingsTab({
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
             onDelete={handleDelete}
+            reviews={runs}
           />
         </div>
       )}
