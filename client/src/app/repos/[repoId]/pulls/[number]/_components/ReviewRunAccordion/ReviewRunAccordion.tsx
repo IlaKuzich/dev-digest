@@ -11,6 +11,7 @@ import type { ReviewRecord, Verdict } from "@devdigest/shared";
 import { FindingsPanel } from "../FindingsPanel";
 import { VerdictBanner } from "../VerdictBanner";
 import { useDeleteReview } from "../../../../../../../lib/hooks/reviews";
+import { FindingsTooltip, toTopFinding } from "@/components/findings-severity-badges";
 
 const VERDICT_COLOR: Record<string, string> = {
   request_changes: "var(--crit)",
@@ -54,6 +55,12 @@ export function ReviewRunAccordion({
   const del = useDeleteReview(prId);
   const findings = review.findings;
   const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;
+  const bySeverity = {
+    CRITICAL:   findings.filter((f) => f.severity === "CRITICAL").length,
+    WARNING:    findings.filter((f) => f.severity === "WARNING").length,
+    SUGGESTION: findings.filter((f) => f.severity === "SUGGESTION").length,
+  };
+  const topFindings = findings.map(toTopFinding);
   const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
 
   return (
@@ -93,10 +100,19 @@ export function ReviewRunAccordion({
             {review.verdict.replace("_", " ")}
           </Badge>
         )}
-        <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
-          {findings.length} finding{findings.length === 1 ? "" : "s"}
-          {blockers > 0 ? ` · ${blockers} blocker${blockers === 1 ? "" : "s"}` : ""}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <FindingsTooltip
+            bySeverity={bySeverity}
+            findings={topFindings}
+            repoFullName={repoFullName}
+            headSha={headSha}
+          />
+          {blockers > 0 && (
+            <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+              · {blockers} blocker{blockers === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
         <span style={{ flex: 1 }} />
         {review.score != null && (
           <Badge mono color="var(--text-secondary)">
