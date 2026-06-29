@@ -56,11 +56,11 @@ export function ReviewRunAccordion({
   const findings = review.findings;
   const blockers = findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length;
   const bySeverity = {
-    CRITICAL:   findings.filter((f) => f.severity === "CRITICAL").length,
-    WARNING:    findings.filter((f) => f.severity === "WARNING").length,
-    SUGGESTION: findings.filter((f) => f.severity === "SUGGESTION").length,
+    CRITICAL:   findings.filter((f) => f.severity === "CRITICAL" && !f.dismissed_at).length,
+    WARNING:    findings.filter((f) => f.severity === "WARNING" && !f.dismissed_at).length,
+    SUGGESTION: findings.filter((f) => f.severity === "SUGGESTION" && !f.dismissed_at).length,
   };
-  const topFindings = findings.map(toTopFinding);
+  const topFindings = findings.filter((f) => !f.dismissed_at).map(toTopFinding);
   const verdictColor = review.verdict ? VERDICT_COLOR[review.verdict] ?? "var(--text-muted)" : "var(--text-muted)";
 
   return (
