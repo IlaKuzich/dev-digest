@@ -170,6 +170,23 @@ export const PrMeta = z.object({
   updated_at: z.string().nullish(),
   // Latest-review score (list endpoint only; null/absent until reviewed).
   score: z.number().int().nullish(),
+  latest_run_cost_usd: z.number().nullish(),
+  findings_by_severity: z.object({
+    CRITICAL:   z.number().int(),
+    WARNING:    z.number().int(),
+    SUGGESTION: z.number().int(),
+  }).nullable().optional(),
+  top_findings: z.array(z.object({
+    id:               z.string(),
+    severity:         z.string(),
+    category:         z.string(),
+    title:            z.string(),
+    file:             z.string(),
+    start_line:       z.number().int(),
+    end_line:         z.number().int(),
+    confidence:       z.number(),
+    rationale_snippet: z.string(),
+  })).nullable().optional(),
 });
 export type PrMeta = z.infer<typeof PrMeta>;
 

@@ -3,7 +3,9 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import type { RunSummary, PrCommit } from "@devdigest/shared";
+import type { RunSummary, PrCommit, ReviewRecord } from "@devdigest/shared";
+import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsTooltip, toTopFinding } from "@/components/findings-severity-badges";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -90,6 +92,9 @@ export function RunHistory({
   onOpenTrace,
   onGoToReview,
   onDelete,
+  reviews,
+  onFocusFinding,
+  onFocusDiffLine,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
@@ -98,6 +103,11 @@ export function RunHistory({
   /** Jump to this run's inline review accordion below (clicking the agent name). */
   onGoToReview?: (runId: string) => void;
   onDelete?: (runId: string) => void;
+  reviews?: ReviewRecord[];
+  /** Focus a finding (tooltip row) — opens its run accordion + scrolls to it. */
+  onFocusFinding?: (findingId: string) => void;
+  /** Focus a finding's file:line inside the Files-changed diff (internal). */
+  onFocusDiffLine?: (file: string, line: number) => void;
 }) {
   const t = useTranslations("prReview");
   if (runs.length === 0 && commits.length === 0) return null;
@@ -188,15 +198,46 @@ export function RunHistory({
                   {r.error}
                 </div>
               )}
-              {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
-                  {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
-                </div>
-              )}
+              {settled && (() => {
+                const matchingReview = reviews?.find((rv) => rv.run_id === r.run_id);
+                const runFindings = matchingReview?.findings ?? [];
+                const bySeverity = {
+                  CRITICAL:   runFindings.filter((f) => f.severity === "CRITICAL").length,
+                  WARNING:    runFindings.filter((f) => f.severity === "WARNING").length,
+                  SUGGESTION: runFindings.filter((f) => f.severity === "SUGGESTION").length,
+                };
+                const topFindings = runFindings.map(toTopFinding);
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <FindingsTooltip
+                      bySeverity={bySeverity}
+                      findings={topFindings}
+                      onFindingClick={onFocusFinding}
+                      onFileClick={onFocusDiffLine}
+                    />
+                    {(r.blockers ?? 0) > 0 && (
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        {t("runStatus.blockers", { count: r.blockers ?? 0 })}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
-              {r.ran_at && <span>{new Date(r.ran_at).toLocaleTimeString()}</span>}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+              {r.ran_at && (
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {new Date(r.ran_at).toLocaleTimeString()}
+                </span>
+              )}
+              {settled && (
+                <RunCostBadge
+                  variant="inline"
+                  costUsd={r.cost_usd}
+                  tokensIn={r.tokens_in}
+                  tokensOut={r.tokens_out}
+                />
+              )}
             </div>
             <button
               type="button"

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, Avatar, Badge, CircularScore } from "@devdigest/ui";
 import type { PrMeta } from "@/lib/types";
+import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsTooltip } from "@/components/findings-severity-badges";
 import { SIZE_COLOR, STATUS_META } from "../../constants";
 import { relativeTime, sizeOf } from "../../helpers";
 import { s } from "../../styles";
@@ -54,9 +56,26 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
         )}
       </div>
       <div>
+        <FindingsTooltip
+          bySeverity={pr.findings_by_severity}
+          findings={pr.top_findings ?? []}
+          onFindingClick={(id) =>
+            router.push(`/repos/${repoId}/pulls/${pr.number}?tab=findings&finding=${encodeURIComponent(id)}`)
+          }
+          onFileClick={(file, line) =>
+            router.push(
+              `/repos/${repoId}/pulls/${pr.number}?tab=diff&file=${encodeURIComponent(file)}&line=${line}`,
+            )
+          }
+        />
+      </div>
+      <div>
         <Badge dot color={st.c} bg="transparent">
           {t(`list.status.${st.labelKey}`)}
         </Badge>
+      </div>
+      <div>
+        <RunCostBadge costUsd={pr.latest_run_cost_usd} />
       </div>
       <div style={s.updatedCell}>{relativeTime(pr.updated_at)}</div>
     </div>

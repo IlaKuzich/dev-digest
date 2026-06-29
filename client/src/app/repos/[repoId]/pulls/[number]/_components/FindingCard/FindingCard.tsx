@@ -31,6 +31,8 @@ export function FindingCard({
   pending,
   repoFullName,
   headSha,
+  onFileClick,
+  expandSignal,
 }: {
   f: FindingRecord;
   focused?: boolean;
@@ -39,12 +41,22 @@ export function FindingCard({
   pending?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
+  /** Navigate to this finding's file:line inside the Files-changed diff (internal). */
+  onFileClick?: (file: string, line: number) => void;
+  /** Bumped when this card is the deep-link focus target — forces it expanded. */
+  expandSignal?: number;
 }) {
   const t = useTranslations("prReview");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
+  // Deep-link focus opens this card so its rationale is visible on arrival.
+  React.useEffect(() => {
+    if (expandSignal != null) setExpanded(true);
+  }, [expandSignal]);
   const sevColor = SEV_COLOR[f.severity] ?? SEV_COLOR_FALLBACK;
+  // Internal diff navigation takes precedence; fall back to a GitHub deep-link
+  // only when no in-app handler is wired.
   const fileHref =
-    repoFullName && headSha
+    !onFileClick && repoFullName && headSha
       ? githubBlobUrl(repoFullName, headSha, f.file, f.start_line, f.end_line)
       : undefined;
   const accepted = !!f.accepted_at;
@@ -52,7 +64,7 @@ export function FindingCard({
   const muted = accepted || dismissed;
 
   return (
-    <div data-finding-id={f.id} style={s.card(!!focused, sevColor, muted)}>
+    <div id={`finding-${f.id}`} data-finding-id={f.id} style={s.card(!!focused, sevColor, muted)}>
       <div onClick={() => setExpanded((e) => !e)} style={s.header}>
         <div style={s.badgeWrap}>
           <SeverityBadge severity={f.severity as Severity} compact />
@@ -64,8 +76,11 @@ export function FindingCard({
             {accepted && <span style={s.acceptedTag}>{t("finding.accepted")}</span>}
             {dismissed && <span style={s.dismissedTag}>{t("finding.dismissed")}</span>}
           </div>
-          <div style={s.metaRow}>
-            <MonoLink href={fileHref}>
+          <div style={s.metaRow} onClick={(e) => e.stopPropagation()}>
+            <MonoLink
+              href={fileHref}
+              onClick={onFileClick ? () => onFileClick(f.file, f.start_line) : undefined}
+            >
               {f.file}:{lineLabel(f)}
             </MonoLink>
             <ConfidenceNum value={f.confidence} />

@@ -21,6 +21,7 @@ import { usePrReviews, useCancelRun, usePrActiveRuns, usePrRuns, useDeleteRun } 
 import { useActiveRepo, useRepoNotFound } from "../../../../../lib/repo-context";
 import { ApiError } from "../../../../../lib/api";
 import { githubPrUrl } from "../../../../../lib/github-urls";
+import type { DiffFocus } from "@/components/diff-viewer";
 import type { FindingRecord } from "@devdigest/shared";
 
 export default function PRDetailPage() {
@@ -75,6 +76,71 @@ export default function PRDetailPage() {
   );
   const lethalTrifecta = allFindings.filter((f) => f.kind === "lethal_trifecta");
   const findingsCount = allFindings.length;
+
+  // ── Deep-link focus (clicking a finding in any FindingsTooltip) ──────────────
+  // Two intents share one nonce so the latest click always wins:
+  //   • focus a finding → open its run accordion + scroll/highlight the card
+  //   • focus a file:line → switch to Files-changed + scroll/highlight the diff line
+  // Cross-page arrivals (from the PR list) carry the intent in the URL and are
+  // replayed once reviews have loaded.
+  const focusNonce = React.useRef(0);
+  const [accordionTarget, setAccordionTarget] =
+    React.useState<{ runId: string | null; findingId: string | null; nonce: number } | null>(null);
+  const [diffFocus, setDiffFocus] = React.useState<DiffFocus | null>(null);
+
+  const runIdForFinding = React.useCallback(
+    (id: string) => runs.find((r) => r.findings.some((f) => f.id === id))?.run_id ?? null,
+    [runs],
+  );
+
+  const handleFocusFinding = React.useCallback(
+    (findingId: string) => {
+      focusNonce.current += 1;
+      setAccordionTarget({ runId: runIdForFinding(findingId), findingId, nonce: focusNonce.current });
+      setTab("findings");
+    },
+    // setTab is stable enough (recomputed each render but only reads router/search)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [runIdForFinding],
+  );
+
+  const handleGoToReview = React.useCallback(
+    (runId: string) => {
+      focusNonce.current += 1;
+      setAccordionTarget({ runId, findingId: null, nonce: focusNonce.current });
+      setTab("findings");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleFocusDiffLine = React.useCallback(
+    (file: string, line: number) => {
+      focusNonce.current += 1;
+      setDiffFocus({ file, line, nonce: focusNonce.current });
+      setTab("diff");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Replay a URL-carried intent once (after reviews load so the run resolves).
+  const findingParam = search.get("finding");
+  const fileParam = search.get("file");
+  const lineParam = search.get("line");
+  const deepLinkDone = React.useRef(false);
+  React.useEffect(() => {
+    if (deepLinkDone.current) return;
+    // A finding intent needs reviews loaded to resolve its run; a file intent
+    // only needs the diff (pr.files), already present by the time we render.
+    if (findingParam && reviews) {
+      deepLinkDone.current = true;
+      handleFocusFinding(findingParam);
+    } else if (fileParam && lineParam) {
+      deepLinkDone.current = true;
+      handleFocusDiffLine(fileParam, Number(lineParam));
+    }
+  }, [reviews, findingParam, fileParam, lineParam, handleFocusFinding, handleFocusDiffLine]);
 
   const repoName = activeRepo?.full_name ?? repoId;
   // The real "owner/repo" (null until the repo is loaded) — used to build
@@ -148,6 +214,10 @@ export default function PRDetailPage() {
             repoFullName={repoFullName}
             headSha={pr.head_sha}
             cancelMutation={cancel}
+            accordionTarget={accordionTarget}
+            onFocusFinding={handleFocusFinding}
+            onFocusDiffLine={handleFocusDiffLine}
+            onGoToReview={handleGoToReview}
             onOpenTrace={(id) => setParam("trace", id)}
             onDelete={(id) => {
               if (window.confirm("Delete this run from history? (its logs are removed too)"))
@@ -167,6 +237,7 @@ export default function PRDetailPage() {
             filesCount={pr.files_count}
             files={pr.files}
             canComment={pr.status === "open"}
+            focus={diffFocus}
           />
         )}
       </div>

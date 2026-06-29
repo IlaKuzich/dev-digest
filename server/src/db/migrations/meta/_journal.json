@@ -71,6 +71,20 @@
       "when": 1781464392464,
       "tag": "0009_complex_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782432000000,
+      "tag": "0010_add_cost_usd_agent_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782432010000,
+      "tag": "0011_change_cost_usd_to_numeric",
+      "breakpoints": true
     }
   ]
 }

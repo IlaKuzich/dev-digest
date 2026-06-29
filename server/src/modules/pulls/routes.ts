@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { PrMeta, PrDetail, GitHubClient, PrReviewComment } from '@devdigest/shared';
 import { PrCommentInput } from '@devdigest/shared';
 import * as t from '../../db/schema.js';
@@ -19,6 +19,14 @@ import { deriveReviewStatus } from './status.js';
  * Import is idempotent (unique repo_id+number). Review trigger is MANUAL
  * and owned by A2 — this module only imports/reads.
  */
+function snippetOf(rationale: string): string {
+  if (rationale.length <= 120) return rationale;
+  return rationale.slice(0, 120).replace(/\s\S+$/, '') + '…';
+}
+
+type SevKey = 'CRITICAL' | 'WARNING' | 'SUGGESTION';
+const SEV_ORDER: Record<SevKey, number> = { CRITICAL: 0, WARNING: 1, SUGGESTION: 2 };
+
 export default async function pullsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
@@ -111,10 +119,9 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
-    // Latest-review SCORE per PR for the list's score ring. Computed on read
-    // from reviews (no FK denorm); the list is small, so one IN-query + JS
-    // grouping is cheap. (The per-severity FINDINGS breakdown is intentionally
-    // not surfaced on the list — findings live on the PR detail page.)
+    // Latest-review SCORE and per-severity findings breakdown per PR. Computed
+    // on read from reviews (no FK denorm); the list is small, so one IN-query +
+    // JS grouping is cheap.
     const prIds = rows.map((r) => r.id);
     const latestReviewByPr = new Map<string, { score: number | null }>();
     if (prIds.length > 0) {
@@ -126,6 +133,96 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       // Rows are newest-first → first seen per PR is the latest review.
       for (const rv of reviewRows) {
         if (!latestReviewByPr.has(rv.prId)) latestReviewByPr.set(rv.prId, { score: rv.score });
+      }
+    }
+
+    // Latest cost for each PR from the most recent completed run.
+    const latestCostByPr = new Map<string, number | null>();
+    if (prIds.length > 0) {
+      const costRows = await container.db
+        .select({ prId: t.agentRuns.prId, costUsd: t.agentRuns.costUsd })
+        .from(t.agentRuns)
+        .where(
+          and(
+            inArray(t.agentRuns.prId, prIds),
+            eq(t.agentRuns.status, 'done'),
+          ),
+        )
+        .orderBy(desc(t.agentRuns.ranAt));
+      for (const row of costRows) {
+        if (row.prId && !latestCostByPr.has(row.prId)) {
+          latestCostByPr.set(row.prId, row.costUsd != null ? Number(row.costUsd) : null);
+        }
+      }
+    }
+
+    // findings_by_severity + top_findings: all non-dismissed findings per PR.
+    // Same IN-query + JS-grouping pattern as latestCostByPr.
+    type TopFinding = {
+      id: string; severity: string; category: string; title: string;
+      file: string; start_line: number; end_line: number; confidence: number;
+      rationale_snippet: string;
+    };
+    type FindingsBucket = {
+      bySeverity: { CRITICAL: number; WARNING: number; SUGGESTION: number };
+      top: TopFinding[];
+    };
+    const findingsByPr = new Map<string, FindingsBucket>();
+
+    if (prIds.length > 0) {
+      const fRows = await container.db
+        .select({
+          prId:       t.reviews.prId,
+          id:         t.findings.id,
+          severity:   t.findings.severity,
+          category:   t.findings.category,
+          title:      t.findings.title,
+          file:       t.findings.file,
+          startLine:  t.findings.startLine,
+          endLine:    t.findings.endLine,
+          confidence: t.findings.confidence,
+          rationale:  t.findings.rationale,
+        })
+        .from(t.findings)
+        .innerJoin(t.reviews, eq(t.findings.reviewId, t.reviews.id))
+        .where(and(
+          inArray(t.reviews.prId, prIds),
+          isNull(t.findings.dismissedAt),
+        ));
+
+      for (const row of fRows) {
+        if (!findingsByPr.has(row.prId)) {
+          findingsByPr.set(row.prId, {
+            bySeverity: { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 },
+            top: [],
+          });
+        }
+        const bucket = findingsByPr.get(row.prId)!;
+        const sev = row.severity as SevKey;
+        if (sev in bucket.bySeverity) bucket.bySeverity[sev]++;
+        bucket.top.push({
+          id:               row.id,
+          severity:         row.severity,
+          category:         row.category,
+          title:            row.title,
+          file:             row.file,
+          start_line:       row.startLine,
+          end_line:         row.endLine,
+          confidence:       row.confidence,
+          rationale_snippet: snippetOf(row.rationale),
+        });
+      }
+
+      // Sort each bucket: CRITICAL → WARNING → SUGGESTION, then confidence DESC.
+      // Trim to top 6 per PR.
+      for (const bucket of findingsByPr.values()) {
+        bucket.top.sort((a, b) => {
+          const sevDiff =
+            (SEV_ORDER[a.severity as SevKey] ?? 3) -
+            (SEV_ORDER[b.severity as SevKey] ?? 3);
+          return sevDiff !== 0 ? sevDiff : b.confidence - a.confidence;
+        });
+        bucket.top = bucket.top.slice(0, 6);
       }
     }
 
@@ -153,6 +250,9 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         opened_at: r.openedAt?.toISOString() ?? null,
         updated_at: r.updatedAt?.toISOString() ?? null,
         score: review ? review.score : null,
+        latest_run_cost_usd: latestCostByPr.get(r.id) ?? null,
+        findings_by_severity: findingsByPr.get(r.id)?.bySeverity ?? null,
+        top_findings:         findingsByPr.get(r.id)?.top ?? null,
       };
     });
   });
