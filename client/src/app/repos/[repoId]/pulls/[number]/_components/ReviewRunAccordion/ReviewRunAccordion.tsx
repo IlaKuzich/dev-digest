@@ -32,6 +32,9 @@ export function ReviewRunAccordion({
   headSha,
   targetRunId = null,
   targetNonce = 0,
+  targetFindingId = null,
+  onFocusFinding,
+  onFocusDiffLine,
 }: {
   review: ReviewRecord;
   prId: string;
@@ -42,13 +45,22 @@ export function ReviewRunAccordion({
    *  (driven from the Timeline: clicking an agent name navigates here). */
   targetRunId?: string | null;
   targetNonce?: number;
+  /** When set alongside a matching targetRunId, scroll to + highlight this finding. */
+  targetFindingId?: string | null;
+  /** Focus a finding (its tooltip row) — opens its run accordion + scrolls to it. */
+  onFocusFinding?: (findingId: string) => void;
+  /** Focus a finding's file:line inside the Files-changed diff (internal). */
+  onFocusDiffLine?: (file: string, line: number) => void;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const isTarget = !!review.run_id && review.run_id === targetRunId;
   React.useEffect(() => {
-    if (review.run_id && review.run_id === targetRunId) {
+    if (isTarget) {
       setOpen(true);
-      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // When focusing a specific finding, let FindingsPanel own the scroll (it
+      // centers the card); only scroll the accordion when just jumping to a run.
+      if (!targetFindingId) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetRunId, targetNonce, review.run_id]);
@@ -106,6 +118,8 @@ export function ReviewRunAccordion({
             findings={topFindings}
             repoFullName={repoFullName}
             headSha={headSha}
+            onFindingClick={onFocusFinding}
+            onFileClick={onFocusDiffLine}
           />
           {blockers > 0 && (
             <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
@@ -168,6 +182,9 @@ export function ReviewRunAccordion({
             prId={prId}
             repoFullName={repoFullName}
             headSha={headSha}
+            focusFindingId={isTarget ? targetFindingId : null}
+            focusNonce={isTarget ? targetNonce : 0}
+            onFileClick={onFocusDiffLine}
           />
         </div>
       )}

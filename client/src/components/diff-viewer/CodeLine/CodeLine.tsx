@@ -14,11 +14,14 @@ export function CodeLine({
   path,
   threads,
   commenting,
+  highlight,
 }: {
   ln: Line;
   path: string;
   threads: CommentThread[];
   commenting?: DiffCommentApi;
+  /** Set when this line is the deep-link focus target — flashes a highlight. */
+  highlight?: { line: number; side: "new" | "old" } | null;
 }) {
   const [hover, setHover] = React.useState(false);
   const [composing, setComposing] = React.useState(false);
@@ -34,14 +37,25 @@ export function CodeLine({
   const sign = ln.kind === "add" ? "+" : ln.kind === "del" ? "−" : "";
   const target = commenting?.canComment ? commentTargetFor(ln) : null;
   const showAdd = hover && !!target && !composing;
+  const highlighted =
+    !!highlight &&
+    (highlight.side === "new" ? ln.newNo === highlight.line : ln.oldNo === highlight.line);
 
   return (
     <div
       style={cs.rowWrap}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      data-ln-new={ln.newNo ?? undefined}
+      data-ln-old={ln.oldNo ?? undefined}
     >
-      <div style={lineRowFor(ln.kind)}>
+      <div
+        style={
+          highlighted
+            ? { ...lineRowFor(ln.kind), background: "var(--accent-bg)", boxShadow: "inset 2px 0 0 var(--accent)" }
+            : lineRowFor(ln.kind)
+        }
+      >
         <span className="mono tnum" style={{ ...s.lineNo, position: "relative" }}>
           {showAdd && target && (
             <button

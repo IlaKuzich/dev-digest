@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
 import { RunStatus } from "../RunStatus";
 import { RunHistory } from "../RunHistory/RunHistory";
@@ -21,6 +21,14 @@ interface FindingsTabProps {
   /** owner/repo + head sha — used to deep-link a finding's file:line to GitHub. */
   repoFullName?: string | null;
   headSha?: string | null;
+  /** Page-driven accordion target (finding focus or timeline "go to review"). */
+  accordionTarget?: { runId: string | null; findingId: string | null; nonce: number } | null;
+  /** Focus a finding (tooltip row) — opens its run accordion + scrolls to it. */
+  onFocusFinding?: (findingId: string) => void;
+  /** Focus a finding's file:line inside the Files-changed diff (internal). */
+  onFocusDiffLine?: (file: string, line: number) => void;
+  /** Jump to a run's accordion (clicking an agent name in the timeline). */
+  onGoToReview?: (runId: string) => void;
   onOpenTrace: (id: string) => void;
   onDelete: (id: string) => void;
   onRunDone: () => void;
@@ -37,6 +45,10 @@ export function FindingsTab({
   cancelMutation,
   repoFullName,
   headSha,
+  accordionTarget,
+  onFocusFinding,
+  onFocusDiffLine,
+  onGoToReview,
   onOpenTrace,
   onDelete,
   onRunDone,
@@ -62,14 +74,6 @@ export function FindingsTab({
     },
     [onDelete],
   );
-
-  // Timeline → Review-runs navigation: clicking an agent name in the timeline
-  // opens + scrolls to that run's accordion below. The nonce re-triggers the
-  // scroll even when the same run is clicked twice.
-  const [target, setTarget] = React.useState<{ runId: string; n: number } | null>(null);
-  const handleGoToReview = useCallback((runId: string) => {
-    setTarget((p) => ({ runId, n: (p?.n ?? 0) + 1 }));
-  }, []);
 
   return (
     <section>
@@ -132,9 +136,11 @@ export function FindingsTab({
             runs={prRuns ?? []}
             commits={prCommits}
             onOpenTrace={handleOpenTrace}
-            onGoToReview={handleGoToReview}
+            onGoToReview={onGoToReview}
             onDelete={handleDelete}
             reviews={runs}
+            onFocusFinding={onFocusFinding}
+            onFocusDiffLine={onFocusDiffLine}
           />
         </div>
       )}
@@ -163,8 +169,11 @@ export function FindingsTab({
             defaultOpen={i === 0}
             repoFullName={repoFullName}
             headSha={headSha}
-            targetRunId={target?.runId ?? null}
-            targetNonce={target?.n ?? 0}
+            targetRunId={accordionTarget?.runId ?? null}
+            targetNonce={accordionTarget?.nonce ?? 0}
+            targetFindingId={accordionTarget?.findingId ?? null}
+            onFocusFinding={onFocusFinding}
+            onFocusDiffLine={onFocusDiffLine}
           />
         ))
       )}

@@ -30,12 +30,51 @@ function threadsForLine(ln: Line, matched: Map<string, CommentThread[]>): Commen
   return out;
 }
 
-export function FileCard({ file, commenting }: { file: PrFile; commenting?: DiffCommentApi }) {
+/** Deep-link focus into a specific file/line of the diff (from a finding). */
+export type DiffFocus = { file: string; line: number; nonce: number };
+
+export function FileCard({
+  file,
+  commenting,
+  focus,
+}: {
+  file: PrFile;
+  commenting?: DiffCommentApi;
+  focus?: DiffFocus | null;
+}) {
   const t = useTranslations("shell");
   const [open, setOpen] = React.useState(
     (file.additions ?? 0) + (file.deletions ?? 0) <= AUTO_EXPAND_MAX_LINES
   );
   const lines = React.useMemo(() => parsePatch(file.patch), [file.patch]);
+
+  // Deep-link focus: open this file, scroll to the target line, flash it.
+  // Smart fallback — prefer the new-side line number, fall back to the old side;
+  // if neither is in the diff we just open the file (no scroll).
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  const [highlight, setHighlight] = React.useState<{ line: number; side: "new" | "old" } | null>(null);
+  const focused = !!focus && focus.file === file.path;
+  React.useEffect(() => {
+    if (!focused || !focus) return;
+    setOpen(true);
+    const side: "new" | "old" | null = lines.some((l) => l.newNo === focus.line)
+      ? "new"
+      : lines.some((l) => l.oldNo === focus.line)
+        ? "old"
+        : null;
+    if (!side) return;
+    const raf = requestAnimationFrame(() => {
+      const sel = side === "new" ? `[data-ln-new="${focus.line}"]` : `[data-ln-old="${focus.line}"]`;
+      bodyRef.current?.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlight({ line: focus.line, side });
+    });
+    const clear = setTimeout(() => setHighlight(null), 1800);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(clear);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused, focus?.nonce]);
 
   // Group this file's comments into threads, then split into ones we can anchor
   // to a rendered line vs. "outdated" (GitHub dropped the line / it's not here).
@@ -74,7 +113,7 @@ export function FileCard({ file, commenting }: { file: PrFile; commenting?: Diff
         )}
       </div>
       {open && (
-        <div style={s.fileBody}>
+        <div ref={bodyRef} style={s.fileBody}>
           {lines.length === 0 ? (
             <div style={s.noDiff}>{t("diffViewer.noDiffText")}</div>
           ) : (
@@ -85,6 +124,7 @@ export function FileCard({ file, commenting }: { file: PrFile; commenting?: Diff
                 path={file.path}
                 threads={threadsForLine(ln, matched)}
                 commenting={commenting}
+                highlight={highlight}
               />
             ))
           )}

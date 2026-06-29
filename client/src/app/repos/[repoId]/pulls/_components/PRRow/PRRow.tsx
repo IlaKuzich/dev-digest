@@ -59,6 +59,14 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
         <FindingsTooltip
           bySeverity={pr.findings_by_severity}
           findings={pr.top_findings ?? []}
+          onFindingClick={(id) =>
+            router.push(`/repos/${repoId}/pulls/${pr.number}?tab=findings&finding=${encodeURIComponent(id)}`)
+          }
+          onFileClick={(file, line) =>
+            router.push(
+              `/repos/${repoId}/pulls/${pr.number}?tab=diff&file=${encodeURIComponent(file)}&line=${line}`,
+            )
+          }
         />
       </div>
       <div>

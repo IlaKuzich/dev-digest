@@ -93,6 +93,8 @@ export function RunHistory({
   onGoToReview,
   onDelete,
   reviews,
+  onFocusFinding,
+  onFocusDiffLine,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
@@ -102,6 +104,10 @@ export function RunHistory({
   onGoToReview?: (runId: string) => void;
   onDelete?: (runId: string) => void;
   reviews?: ReviewRecord[];
+  /** Focus a finding (tooltip row) — opens its run accordion + scrolls to it. */
+  onFocusFinding?: (findingId: string) => void;
+  /** Focus a finding's file:line inside the Files-changed diff (internal). */
+  onFocusDiffLine?: (file: string, line: number) => void;
 }) {
   const t = useTranslations("prReview");
   if (runs.length === 0 && commits.length === 0) return null;
@@ -203,7 +209,12 @@ export function RunHistory({
                 const topFindings = runFindings.map(toTopFinding);
                 return (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <FindingsTooltip bySeverity={bySeverity} findings={topFindings} />
+                    <FindingsTooltip
+                      bySeverity={bySeverity}
+                      findings={topFindings}
+                      onFindingClick={onFocusFinding}
+                      onFileClick={onFocusDiffLine}
+                    />
                     {(r.blockers ?? 0) > 0 && (
                       <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
                         {t("runStatus.blockers", { count: r.blockers ?? 0 })}

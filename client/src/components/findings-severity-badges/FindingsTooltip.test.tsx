@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { FindingsTooltip, toTopFinding } from "./index";
 import type { TopFinding } from "./index";
@@ -73,28 +73,28 @@ describe("FindingsTooltip", () => {
     },
   ];
 
-  it("shows finding title in tooltip when hovered", () => {
+  it("shows finding title in tooltip when clicked", () => {
     const { container } = render(
       <FindingsTooltip
         bySeverity={{ CRITICAL: 1, WARNING: 0, SUGGESTION: 0 }}
         findings={findings}
       />
     );
-    fireEvent.mouseEnter(container.firstChild!);
+    fireEvent.click(container.firstChild!);
     expect(screen.getByText("SQL injection")).toBeInTheDocument();
     expect(screen.getByText("1 FINDINGS")).toBeInTheDocument();
   });
 
-  it("hides tooltip on mouse leave", () => {
+  it("hides tooltip on second click (toggle)", () => {
     const { container } = render(
       <FindingsTooltip
         bySeverity={{ CRITICAL: 1, WARNING: 0, SUGGESTION: 0 }}
         findings={findings}
       />
     );
-    fireEvent.mouseEnter(container.firstChild!);
+    fireEvent.click(container.firstChild!);
     expect(screen.getByText("SQL injection")).toBeInTheDocument();
-    fireEvent.mouseLeave(container.firstChild!);
+    fireEvent.click(container.firstChild!);
     expect(screen.queryByText("SQL injection")).not.toBeInTheDocument();
   });
 
@@ -102,7 +102,63 @@ describe("FindingsTooltip", () => {
     const { container } = render(
       <FindingsTooltip bySeverity={null} findings={[]} />
     );
-    fireEvent.mouseEnter(container.firstChild!);
+    fireEvent.click(container.firstChild!);
     expect(screen.queryByText(/FINDINGS/)).not.toBeInTheDocument();
+  });
+
+  it("calls onFindingClick with the finding id and closes the popup", () => {
+    const onFindingClick = vi.fn();
+    const { container } = render(
+      <FindingsTooltip
+        bySeverity={{ CRITICAL: 1, WARNING: 0, SUGGESTION: 0 }}
+        findings={findings}
+        onFindingClick={onFindingClick}
+      />
+    );
+    fireEvent.click(container.firstChild!);
+    fireEvent.click(screen.getByText("SQL injection"));
+    expect(onFindingClick).toHaveBeenCalledWith("f1");
+    expect(screen.queryByText("SQL injection")).not.toBeInTheDocument();
+  });
+
+  it("does not bubble a finding click to a parent onClick (portal event-bubbling guard)", () => {
+    // Reproduces the PRRow regression: the popup is portaled, but React events
+    // bubble through the React tree to the row's onClick — which would navigate
+    // to the PR Overview and clobber the finding deep-link.
+    const onFindingClick = vi.fn();
+    const parentClick = vi.fn();
+    const { container } = render(
+      <div onClick={parentClick}>
+        <FindingsTooltip
+          bySeverity={{ CRITICAL: 1, WARNING: 0, SUGGESTION: 0 }}
+          findings={findings}
+          onFindingClick={onFindingClick}
+        />
+      </div>
+    );
+    const anchor = (container.firstChild as HTMLElement).firstChild!; // tooltip anchor
+    fireEvent.click(anchor); // open the popup
+    fireEvent.click(screen.getByText("SQL injection"));
+    expect(onFindingClick).toHaveBeenCalledWith("f1");
+    expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it("calls onFileClick with file + start line (internal nav, no GitHub link)", () => {
+    const onFileClick = vi.fn();
+    const { container } = render(
+      <FindingsTooltip
+        bySeverity={{ CRITICAL: 1, WARNING: 0, SUGGESTION: 0 }}
+        findings={findings}
+        repoFullName="acme/widgets"
+        headSha="abc123"
+        onFileClick={onFileClick}
+      />
+    );
+    fireEvent.click(container.firstChild!);
+    const fileLink = screen.getByText("server.ts:10-12");
+    // With an internal handler we render a button, not an external anchor.
+    expect(fileLink.closest("a")).toBeNull();
+    fireEvent.click(fileLink);
+    expect(onFileClick).toHaveBeenCalledWith("server.ts", 10);
   });
 });
