@@ -1,19 +1,11 @@
 import { defineConfig } from 'vitest/config';
-import path from 'node:path';
 
+// Unit lane is hermetic (no Docker); integration tests use the *.it.test.ts
+// suffix and are excluded via the CLI (`--exclude '**/*.it.test.ts'`).
+// package.json is skip-worktree, so config lives here rather than in scripts.
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@devdigest/shared': path.resolve(__dirname, 'src/vendor/shared'),
-      '@devdigest/reviewer-core': path.resolve(__dirname, '../reviewer-core/src'),
-    },
-  },
   test: {
-    globals: true,
     environment: 'node',
-    include: ['test/**/*.test.ts', 'src/**/*.test.ts'],
-    // Testcontainers integration tests can be slow to spin up Postgres.
-    testTimeout: 120_000,
-    hookTimeout: 120_000,
+    include: ['src/**/*.test.ts'],
   },
 });
