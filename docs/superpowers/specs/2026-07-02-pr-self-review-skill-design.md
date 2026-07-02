@@ -18,15 +18,16 @@ through `react-best-practices`, a backend change may skip `onion-architecture`.
 A workflow skill that takes the current open changes, routes them to the
 **existing** domain skills (frontend, backend, full-stack) plus project-specific
 rules, and produces a structured self-review report with suggested fixes — run
-manually or reminded automatically before a GitHub push/PR.
+manually, and enforced as a blocking gate before a GitHub push/PR (any blocker
+finding, or a stale/missing review, denies the push).
 
 ## Non-Goals (YAGNI)
 
-- Does **not** block `git push` / `gh pr create` (hook only reminds).
 - Does **not** post to GitHub.
 - Does **not** run tests, linters, or type-checks.
 - Does **not** auto-apply fixes (offers; user decides).
 - Does **not** use subagents (parallel-per-area is a future enhancement).
+- Does **not** provide a bypass/escape hatch — the gate is unconditional.
 
 ## Chosen Approach
 
@@ -46,10 +47,27 @@ Rejected alternatives:
    `before git push`, `gh pr create`, `pr self-review`, `review my changes`,
    `open changes`. Lets the agent invoke it on intent, and enables manual/explicit
    invocation.
-2. **Hook** — a `PreToolUse` hook on `Bash` in `.claude/settings.json` that fires
-   when the command contains `git push` or `gh pr create`. It **only prints a
-   reminder** ("run pr-self-review on open changes before pushing"); it does not
-   block. The skill does the real work.
+2. **Blocking hook** — a `PreToolUse` hook on `Bash` in `.claude/settings.json`
+   that fires when the command contains `git push` or `gh pr create`. It reads the
+   review-state artifact (below) and **denies** the tool call (exit code 2 /
+   `permissionDecision: "deny"`) when either condition holds:
+   - no review was run for the **current** diff (stale or missing = block), or
+   - the last review for the current diff found **≥1 blocker**.
+   Otherwise it allows the push. The deny message tells the user to run
+   `pr-self-review` and clear blockers. There is no bypass.
+
+## Review-State Artifact
+
+The skill writes its verdict so the shell hook can gate without re-running the
+review:
+
+- Path: `.claude/.pr-self-review-state.json` (gitignored).
+- Contents: `diffHash` (hash of the branch-vs-main + working-tree diff at review
+  time), `verdict` (`pass` | `fail`), `blockerCount`, `timestamp`, `branch`.
+- **Freshness:** the hook recomputes the current `diffHash` the same way and
+  compares. A mismatch means the working tree changed since the review → treated
+  as "not reviewed" → block. This makes "fresh review + 0 blockers" the only way
+  through.
 
 ## Workflow (inside SKILL.md)
 
@@ -76,7 +94,10 @@ Rejected alternatives:
      cross-package `src` imports, vendored `shared` respected.
    - **INSIGHTS.md of each touched package** — reconcile the change against those
      recorded learnings.
-6. **Emit the report** and offer to apply fixes (no auto-apply, no block).
+6. **Emit the report**, then **write the review-state artifact** (`diffHash`,
+   `verdict` = `fail` if `blockerCount ≥ 1` else `pass`, counts, branch,
+   timestamp). Offer to apply fixes (no auto-apply). The verdict is what the
+   blocking hook later reads.
 
 ## Report Format
 
@@ -84,15 +105,23 @@ Markdown:
 - Header: scope line (branch, N files changed, which areas detected).
 - One section per area; each finding: `severity · file:line · skill · description ·
   suggested fix`.
-- Severity levels: `blocker`, `warning`, `nit`.
-- Footer: counts per severity, then the "apply fixes?" offer.
+- Severity levels: `blocker`, `warning`, `nit`. **`blocker` is the gating level**
+  — ≥1 blocker means the push hook will deny until it is resolved and the review
+  re-run.
+- Footer: counts per severity, the verdict (`pass`/`fail`), then the "apply
+  fixes?" offer.
 
 ## File Changes
 
 - **New:** `.claude/skills/pr-self-review/SKILL.md` — the orchestrator skill.
 - **New (optional):** `.claude/skills/pr-self-review/examples.md` — a sample report.
 - **Edit:** `.claude/skills/README.md` — add a catalog row (Scope: `Workflow`).
-- **Edit:** `.claude/settings.json` — add the `PreToolUse` reminder hook.
+- **New:** hook script (e.g. `.claude/hooks/pr-self-review-gate.sh`) that reads
+  the state artifact, recomputes `diffHash`, and denies the push on stale/missing
+  review or `blockerCount ≥ 1`.
+- **Edit:** `.claude/settings.json` — register the `PreToolUse` blocking hook on
+  `Bash` for `git push` / `gh pr create`.
+- **Edit:** `.gitignore` — ignore `.claude/.pr-self-review-state.json`.
 
 ## Success Criteria
 
@@ -101,6 +130,11 @@ Markdown:
   skills to `client/` files, plus full-stack skills to all code.
 - Adding a new skill row to `README.md` causes it to be considered without editing
   `SKILL.md`.
-- The hook prints a reminder before `git push` / `gh pr create` without blocking.
+- With ≥1 blocker (or no fresh review), `git push` / `gh pr create` is **denied**
+  by the hook with a message pointing to `pr-self-review`.
+- After the blocker is fixed and the review re-run (0 blockers, matching
+  `diffHash`), the same push is allowed.
+- Changing the working tree after a passing review invalidates the verdict
+  (stale `diffHash`) and blocks again until re-reviewed.
 - The report references concrete `file:line` locations and groups findings by
   skill/severity.
