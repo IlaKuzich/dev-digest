@@ -1,7 +1,8 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { RunSummary, RunTrace } from '@devdigest/shared';
+import type { RunCostRow } from '../../pulls/helpers.js';
 
 // ---- in-flight / history --------------------------------------------------
 
@@ -186,4 +187,21 @@ export async function saveRunTrace(db: Db, runId: string, trace: RunTrace): Prom
 export async function getRunTrace(db: Db, runId: string): Promise<RunTrace | undefined> {
   const [row] = await db.select().from(t.runTraces).where(eq(t.runTraces.runId, runId));
   return row ? (row.trace as RunTrace) : undefined;
+}
+
+/**
+ * Latest completed-run cost per PR, newest-first for dedup. `cost_usd` is
+ * NUMERIC → returned as a string by the driver, so cast with Number (INSIGHTS
+ * 2026-06-25).
+ */
+export async function doneRunCostsForPrs(db: Db, prIds: string[]): Promise<RunCostRow[]> {
+  if (prIds.length === 0) return [];
+  const rows = await db
+    .select({ prId: t.agentRuns.prId, costUsd: t.agentRuns.costUsd })
+    .from(t.agentRuns)
+    .where(and(inArray(t.agentRuns.prId, prIds), eq(t.agentRuns.status, 'done')))
+    .orderBy(desc(t.agentRuns.ranAt));
+  return rows.flatMap((r) =>
+    r.prId ? [{ prId: r.prId, costUsd: r.costUsd != null ? Number(r.costUsd) : null }] : [],
+  );
 }

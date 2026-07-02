@@ -1,8 +1,9 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { Finding } from '@devdigest/shared';
 import type { FindingRow, PullRow } from '../../../db/rows.js';
+import type { ReviewScoreRow, FindingRollupRow } from '../../pulls/helpers.js';
 
 export type ReviewRow = typeof t.reviews.$inferSelect;
 
@@ -140,4 +141,37 @@ export async function setFindingDismissed(
     .where(eq(t.findings.id, findingId))
     .returning();
   return row;
+}
+
+/** Latest-review scores for PRs (kind='review'), newest-first for dedup. */
+export async function reviewScoresForPrs(db: Db, prIds: string[]): Promise<ReviewScoreRow[]> {
+  if (prIds.length === 0) return [];
+  const rows = await db
+    .select({ prId: t.reviews.prId, score: t.reviews.score })
+    .from(t.reviews)
+    .where(and(inArray(t.reviews.prId, prIds), eq(t.reviews.kind, 'review')))
+    .orderBy(desc(t.reviews.createdAt));
+  return rows.map((r) => ({ prId: r.prId, score: r.score }));
+}
+
+/** Non-dismissed findings for PRs (joined via review → pr) for the list rollup. */
+export async function activeFindingsForPrs(db: Db, prIds: string[]): Promise<FindingRollupRow[]> {
+  if (prIds.length === 0) return [];
+  const rows = await db
+    .select({
+      prId: t.reviews.prId,
+      id: t.findings.id,
+      severity: t.findings.severity,
+      category: t.findings.category,
+      title: t.findings.title,
+      file: t.findings.file,
+      startLine: t.findings.startLine,
+      endLine: t.findings.endLine,
+      confidence: t.findings.confidence,
+      rationale: t.findings.rationale,
+    })
+    .from(t.findings)
+    .innerJoin(t.reviews, eq(t.findings.reviewId, t.reviews.id))
+    .where(and(inArray(t.reviews.prId, prIds), isNull(t.findings.dismissedAt)));
+  return rows;
 }
