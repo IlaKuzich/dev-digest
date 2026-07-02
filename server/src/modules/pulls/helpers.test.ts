@@ -85,7 +85,7 @@ describe('buildFindingsBuckets', () => {
     rows.push(mk({ id: 'crit', severity: 'CRITICAL', confidence: 0.01 }));
     const b = buildFindingsBuckets(rows).get('pr-1')!;
     expect(b.top).toHaveLength(TOP_FINDINGS_LIMIT);
-    expect(b.top[0].id).toBe('crit'); // CRITICAL wins regardless of confidence
+    expect(b.top[0]!.id).toBe('crit'); // CRITICAL wins regardless of confidence
     expect(SEV_ORDER.CRITICAL).toBeLessThan(SEV_ORDER.WARNING);
   });
 });
