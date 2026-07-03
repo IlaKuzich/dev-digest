@@ -25,11 +25,15 @@ function GroupSection({
   files,
   commenting,
   t,
+  targetFile,
+  targetLine,
 }: {
   group: SmartDiffGroup;
   files: PrFile[];
   commenting?: DiffCommentApi;
   t: ReturnType<typeof useTranslations<"prReview.smartDiff">>;
+  targetFile?: string;
+  targetLine?: number;
 }) {
   const dot = ROLE_DOT[group.role] ?? "#6b7280";
   const label = t(
@@ -66,7 +70,8 @@ function GroupSection({
             <FileCard
               file={prFile}
               commenting={commenting}
-              initialOpen={!isBoilerplate}
+              initialOpen={targetFile === prFile.path ? true : !isBoilerplate}
+              targetLine={targetFile === prFile.path ? targetLine : undefined}
               lineBadges={
                 smartFile.line_findings
                   ? new Map(
@@ -91,15 +96,26 @@ interface SmartDiffViewerProps {
   smartDiff: SmartDiff;
   files: PrFile[];
   commenting?: DiffCommentApi;
+  targetFile?: string;
+  targetLine?: number;
 }
 
 export function SmartDiffViewer({
   smartDiff,
   files,
   commenting,
+  targetFile,
+  targetLine,
 }: SmartDiffViewerProps) {
   const t = useTranslations("prReview.smartDiff");
   const { split_suggestion, review_tokens, groups } = smartDiff;
+
+  // Scroll to target file if coming from a file ref link
+  React.useEffect(() => {
+    if (!targetFile) return;
+    const el = document.getElementById(`diff-file-${targetFile}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [targetFile]);
 
   const totalFiles = files.length;
   const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0);
@@ -147,6 +163,8 @@ export function SmartDiffViewer({
           files={files}
           commenting={commenting}
           t={t}
+          targetFile={targetFile}
+          targetLine={targetLine}
         />
       ))}
     </div>

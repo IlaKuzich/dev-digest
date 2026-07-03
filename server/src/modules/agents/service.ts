@@ -48,6 +48,7 @@ export interface UpdateAgentInput {
   repo_intel?: boolean;
   enabled?: boolean;
   feature_model_id?: FeatureModelId | null;
+  context_doc_paths?: string[];
 }
 
 export class AgentsService {
@@ -132,6 +133,9 @@ export class AgentsService {
       ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
       ...(patch.feature_model_id !== undefined
         ? { featureModelId: patch.feature_model_id }
+        : {}),
+      ...(patch.context_doc_paths !== undefined
+        ? { contextDocPaths: patch.context_doc_paths }
         : {}),
     });
     return row ? toAgentDto(row) : undefined;

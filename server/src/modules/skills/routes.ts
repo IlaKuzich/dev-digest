@@ -47,6 +47,7 @@ const UpdateSkillBody = z.object({
   type: SkillType.optional(),
   body: z.string().optional(),
   enabled: z.boolean().optional(),
+  context_doc_paths: z.array(z.string()).optional(),
 });
 
 const RestoreBody = z.object({ version: z.number().int().min(1) });

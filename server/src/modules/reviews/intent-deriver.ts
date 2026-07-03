@@ -15,14 +15,9 @@ const MAX_BODY_CHARS = 2000;
 const INTENT_SYSTEM_PROMPT =
   "You are a PR intent classifier. Given a PR title, optional description, and a list " +
   "of changed files with their hunk positions (no code bodies), output the PR's intent " +
-  "summary, what changes are in scope, what is explicitly out of scope, and up to 4 risk areas. " +
+  "summary, what changes are in scope, and what is explicitly out of scope. " +
   "If there is no description, infer intent from the title and changed file paths — " +
   "this is expected and sufficient. Be concise and specific. " +
-  "For risk_areas: each item must have a title (≤6 words) and a kind from: " +
-  "'security', 'dependency', 'performance', 'data', 'api_change', 'other'. " +
-  'Examples: {"title":"Exposes unauthenticated endpoint","kind":"security"}, ' +
-  '{"title":"Adds heavy DB aggregation query","kind":"performance"}. ' +
-  "Omit risk_areas entirely if there are no meaningful risks. " +
   "Always respond in English regardless of the language of the PR title, body, or linked issue.";
 
 function formatIntent(data: Intent): string {
@@ -31,12 +26,6 @@ function formatIntent(data: Intent): string {
     `In scope: ${data.in_scope.join("; ")}`,
     `Out of scope: ${data.out_of_scope.join("; ")}`,
   ];
-  if (data.risk_areas && data.risk_areas.length > 0) {
-    const risks = data.risk_areas
-      .map((r) => `${r.title} [${r.kind}]`)
-      .join("; ");
-    parts.push(`Risk areas: ${risks}`);
-  }
   return parts.join("\n");
 }
 

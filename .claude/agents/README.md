@@ -63,14 +63,14 @@ planner  ──→  specs/PLAN-*.md  ──────────────�
 1. `STEP 0` — Interview Mode: оценивает запрос, задаёт ≤3 уточняющих вопроса если нужно
 2. `STEP 1` — Делегирует разведку `researcher` агенту (survey кода + извлечение релевантных инсайтов из INSIGHTS.md)
 3. `STEP 2` — Оценивает findings, при необходимости уточняет
-4. `STEP 3` — Пишет `specs/PLAN-<name>.md`
+4. `STEP 3` — Пишет `plans/PLAN-YYYY-MM-DD-<name>.md` (дата — как у spec-файлов)
 
 **Формат plan-файла:** Problem → Affected Modules → Tasks (TASK-001 + Owned Paths + Acceptance Criteria + Verification) → Phases (DB/Backend/Frontend/Tests) → Risks → Out of Scope
 
 **Ограничения:**
 - NEVER пишет код
 - NEVER изменяет существующие файлы (нет Edit в tools)
-- NEVER пишет вне `specs/`
+- NEVER пишет вне `plans/`
 - Owned paths между параллельными задачами НИКОГДА не пересекаются
 
 ---

@@ -92,8 +92,53 @@ export const api = {
 
 // ---- domain helpers -------------------------------------------------------
 
-import type { SmartDiff } from "@devdigest/shared";
+import type {
+  SmartDiff,
+  SpecFile,
+  ContextSummary,
+  Agent,
+  Skill,
+  Brief,
+} from "@devdigest/shared";
 
 export function fetchSmartDiff(prId: string): Promise<SmartDiff> {
   return api.get<SmartDiff>(`/pulls/${prId}/smart-diff`);
+}
+
+// ---- PR Why+Risk Brief -----------------------------------------------------
+
+export function postPrBrief(
+  prId: string,
+  opts?: { force?: boolean },
+): Promise<Brief> {
+  const url = opts?.force
+    ? `/pulls/${prId}/brief?force=true`
+    : `/pulls/${prId}/brief`;
+  return api.post<Brief>(url);
+}
+
+// ---- context / project docs -----------------------------------------------
+
+export function fetchContextFiles(repoId: string): Promise<SpecFile[]> {
+  return api.get<SpecFile[]>(`/repos/${repoId}/context`);
+}
+
+export function reindexContext(repoId: string): Promise<ContextSummary> {
+  return api.post<ContextSummary>(`/repos/${repoId}/context/reindex`);
+}
+
+// ---- agent / skill context doc paths ---------------------------------------
+
+export function updateAgentContextPaths(
+  id: string,
+  paths: string[],
+): Promise<Agent> {
+  return api.put<Agent>(`/agents/${id}`, { context_doc_paths: paths });
+}
+
+export function updateSkillContextPaths(
+  id: string,
+  paths: string[],
+): Promise<Skill> {
+  return api.put<Skill>(`/skills/${id}`, { context_doc_paths: paths });
 }

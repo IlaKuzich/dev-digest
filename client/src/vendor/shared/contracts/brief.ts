@@ -27,10 +27,6 @@ export const Intent = z.object({
   intent: z.string(),
   in_scope: z.array(z.string()),
   out_of_scope: z.array(z.string()),
-  risk_areas: z
-    .array(RiskArea)
-    .nullish()
-    .transform((v) => v ?? []),
 });
 export type Intent = z.infer<typeof Intent>;
 
@@ -69,7 +65,7 @@ export const RiskSeverity = z.enum(["high", "medium", "low"]);
 export type RiskSeverity = z.infer<typeof RiskSeverity>;
 
 export const Risk = z.object({
-  kind: z.string(),
+  kind: RiskAreaKind,
   title: z.string(),
   explanation: z.string(),
   severity: RiskSeverity,
@@ -210,11 +206,21 @@ export const BlastRadiusResult = z.object({
 });
 export type BlastRadiusResult = z.infer<typeof BlastRadiusResult>;
 
-// ---- Composed PR Brief (pr_brief.json) ----
-export const PrBrief = z.object({
-  intent: Intent,
-  blast: BlastRadius,
-  risks: Risks,
-  history: PrHistory,
+// ---- PR Why+Risk Brief (new, replaces dead PrBrief) ----
+export const RiskLevel = z.enum(["high", "medium", "low"]);
+export type RiskLevel = z.infer<typeof RiskLevel>;
+
+export const ReviewFocusItem = z.object({
+  label: z.string(),
+  file_refs: z.array(z.string()),
 });
-export type PrBrief = z.infer<typeof PrBrief>;
+export type ReviewFocusItem = z.infer<typeof ReviewFocusItem>;
+
+export const Brief = z.object({
+  what: z.string(),
+  why: z.string(),
+  risk_level: RiskLevel,
+  risks: z.array(Risk),
+  review_focus: z.array(ReviewFocusItem),
+});
+export type Brief = z.infer<typeof Brief>;

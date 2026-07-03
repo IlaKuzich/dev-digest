@@ -22,7 +22,7 @@ description: >
   user: "verify plan coverage for TASK-002"
   assistant: "I'll use the plan-viewer agent to check TASK-002 acceptance criteria."
   </example>
-model: opus
+model: sonnet
 color: orange
 tools:
   - Read

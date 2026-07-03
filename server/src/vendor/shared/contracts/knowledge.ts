@@ -146,6 +146,8 @@ export const Skill = z.object({
   version: z.number(),
   evidence_files: z.array(z.string()).nullable(),
   threat_level: SkillThreatLevel.optional(),
+  /** Ordered list of project-context doc paths attached to this skill. */
+  context_doc_paths: z.array(z.string()).default([]),
 });
 export type Skill = z.infer<typeof Skill>;
 
@@ -209,6 +211,8 @@ export const Agent = z.object({
   skill_count: z.number().int().optional(),
   // When set, provider+model come from Settings → Feature Models (single source of truth).
   feature_model_id: z.string().nullish(),
+  /** Ordered list of project-context doc paths attached to this agent. */
+  context_doc_paths: z.array(z.string()).default([]),
 });
 export type Agent = z.infer<typeof Agent>;
 

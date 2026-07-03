@@ -29,6 +29,8 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 2026-06-29 — Two parallel type hierarchies exist for blast radius data: `server/src/modules/repo-intel/types.ts` has internal types (`ChangedSymbol`, `BlastCaller`) used within repo-intel; `server/src/vendor/shared/contracts/brief.ts` has the HTTP contract types (`BlastChangedSymbol`, `BlastCallerRow`, `BlastRadiusResult`). These are structurally compatible but distinct — the prefix `Blast` was added to shared types to avoid name collision. Never merge them; the internal types can evolve independently of the HTTP contract. ref: server/src/vendor/shared/contracts/brief.ts:1
 
+2026-07-03 — `pr_brief` table (`{prId PK, json jsonb}`) has no `headSha` column, unlike `pr_intent` which reuses `pull.lastReviewedSha` for cache invalidation. Any feature that caches per-PR LLM output and needs to invalidate on new commits (e.g. the Why+Risk Brief feature, SPEC-2026-07-03-pr-why-risk-brief) must add a `headSha` column to the cache table first — copying the `pr_intent` invalidation pattern (`cachedHeadSha !== pull.headSha`) does not work out of the box against `pr_brief`'s current schema. ref: server/src/db/schema/reviews.ts:75
+
 2026-06-21 — Scan strategy differs by route: `PUT /skills/:id` runs regex + LLM scan **synchronously** so the response body contains the final `threat_level`. `POST /skills/import-url` runs regex synchronously (result goes into DB immediately) then fires LLM scan **in background** after `reply.status(201)` is sent — the background result upgrades the DB row asynchronously. ref: server/src/modules/skills/routes.ts:140
 
 2026-06-21 — Threat level is never downgraded from `"dangerous"`. LLM scan result is applied via a severity map `{ safe:0, unknown:1, suspicious:2, dangerous:3 }` — it replaces the current level only when its numeric rank is strictly higher. A `DANGEROUS` regex result cannot be softened by a `safe` LLM result. ref: server/src/modules/skills/routes.ts:272
@@ -42,6 +44,8 @@ See also: `insights/gotchas.md` for known quirks at project start.
 2026-06-20 — `src/platform/` is NOT an architectural layer — it is cross-cutting infrastructure (Container, RunBus, JobRunner, AppError, AppConfig) that any layer may import without violating the inward-only dependency rule. Treating it as a layer and avoiding imports from it is a mistake. ref: server/src/platform/container.ts:1
 
 2026-06-20 — Cross-module data access: a service must never import another module's `repository.ts` directly. Instead, shared repositories are pre-built as properties on `Container` (e.g. `container.agentsRepo`). To add cross-module data access, add a property to `Container` first, then use it via `this.container.X`. ref: server/src/platform/container.ts:1
+
+2026-07-02 — `reposRepo` lazy getter added to Container following the `agentsRepo`/`skillsRepo`/`reviewRepo` pattern (private `_reposRepo?`, `get reposRepo()` returning `new RepoRepository(this.db)`). Services needing cross-module repo access (`ContextService`) inject `Container` via constructor (type-only import to avoid circular dep), then call `this.container.reposRepo`. Route handlers stay thin — no infrastructure instantiation in `routes.ts`. ref: server/src/platform/container.ts:113
 
 2026-06-20 — `getContext(container, req)` is the mandatory first call in every Fastify route handler — it extracts `workspaceId` + `userId` from the auth context. Never read `workspaceId` from `req.headers` manually in a handler; always go through `getContext`. ref: server/src/modules/_shared/context.ts:1
 
@@ -61,7 +65,13 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 2026-06-18 — `POST /settings/test-connection` with provider `anthropic` calls `llm.listModels()` → `GET https://api.anthropic.com/v1/models`. If a student tests their key with `curl .../v1/messages` and it works, but test-connection returns "Invalid response body... Premature close", the issue is a network/VPN/ISP block on the `/v1/models` endpoint specifically — not an invalid key. Fix: reproduce with `curl https://api.anthropic.com/v1/models -H "x-api-key: KEY" -H "anthropic-version: 2023-06-01"` to confirm, then disable VPN or switch to mobile hotspot. ref: server/src/modules/settings/routes.ts:92
 
+## What Doesn't Work
+
+2026-07-02 — `new RepoRepository(container.db)` instantiated inside a route plugin (presentation layer) is a HIGH Onion Architecture violation on two counts: (1) presentation layer doing infrastructure instantiation, (2) cross-module import (`context/routes.ts` → `repos/repository.ts`). Architecture-reviewer flags both. The fix is adding `reposRepo` to Container and moving the lookup into a service method. ref: server/src/modules/context/routes.ts:19
+
 ## Session Notes
+
+2026-07-02 — Project Context spec: discovered that `PromptAssembly.specs`, `RunTrace.specs_read`, and `SpecFile` DTO were all pre-stubbed in prior lessons — the feature fills stubs without contract schema changes. Spec written to specs/SPEC-2026-07-02-project-context.md. Files: server/src/vendor/shared/contracts/trace.ts, server/src/vendor/shared/contracts/platform.ts, server/src/modules/reviews/run-executor.ts, server/src/platform/trace-builder.ts.
 
 2026-06-21 — Skills Lab (server): SkillsRepository (CRUD + versioning + `skill_versions` snapshots), SkillsService, 9 REST routes including `/skills/import-url` with SSRF protection. Skills injected into review pipeline in run-executor with untrusted-source wrapping. DB seeded with 6 skills + agent-skill links. Files: server/src/modules/skills/repository.ts, service.ts, routes.ts, scanner.ts, src/modules/reviews/run-executor.ts.
 
@@ -77,4 +87,20 @@ See also: `insights/gotchas.md` for known quirks at project start.
 
 2026-06-29 — Blast Radius server: BlastService, BlastRepository, GET /pulls/:id/blast. BlastRepository wraps all Drizzle queries (resolvePrAndRepo, getChangedFilePaths, findPriorPrsTouchingSameFiles). Architecture review caught BlastService doing direct db.select() — fix: extract to repository.ts. Files: server/src/modules/blast/service.ts, server/src/modules/blast/repository.ts, server/src/modules/blast/routes.ts, server/src/vendor/shared/contracts/brief.ts.
 
+2026-07-02 — Project Context implementation: `ContextService` is a pure filesystem service (no DB) that lives in `modules/context/`. DB-less services do NOT need a `repository.ts` — they own all FS access directly. The Onion Architecture rule "no DB in service" still holds since FS is not Drizzle. ref: server/src/modules/context/service.ts:12
+
+2026-07-02 — Project Context pre-stubs: `PromptAssembly.specs` (nullish, line 43) and `RunTrace.specs_read` (string[], line 88) were added in prior lessons and are always `null`/`[]` today. `run-executor.ts:444` hardcodes `specs_read: []` and `run-executor.ts:623` hardcodes `specs: null`. The Project Context feature only fills these stubs — no contract changes needed. ref: server/src/vendor/shared/contracts/trace.ts:43
+
+2026-07-02 — `SpecFile` DTO pre-exists in `platform.ts:259` for the Project Context Reader endpoint — path, content, size, updated_at are already defined; only `estimated_tokens` is new. Similarly `IndexStatus` (line 267) was pre-defined. ref: server/src/vendor/shared/contracts/platform.ts:259
+
+2026-07-02 — Skills untrusted-wrapping pattern in `run-executor.ts:326` is the exact template for spec doc injection: escape `</untrusted>` inside content (`.replaceAll("</untrusted>", "<\\/untrusted>")`), then wrap with source-tagged delimiter. Spec docs use a different format (comment-based, not XML) but the escaping step is identical. ref: server/src/modules/reviews/run-executor.ts:326
+
+2026-07-02 — For ordered lists of strings on an entity (like `context_doc_paths` on agents/skills), use a `text[]` column rather than a junction table. A junction table (like `agentSkills`) is only needed when the items are entity references with their own lifecycle. Paths are just strings — `text[]` preserves order via array position and avoids a migration + join. ref: server/src/db/schema/agents.ts:16
+
 ## Open Questions
+
+2026-07-02 — Project Context run-executor session: `RunLogger` class has no `warn()` method — only `info()`, `error()`, `result()`, and `step()`. Using `runLog.warn()` causes a TS2339 compile error. Use `runLog.info()` for all warning-level messages in run-executor. ref: server/src/platform/run-logger.ts:65
+
+## Codebase Patterns (continued)
+
+2026-07-02 — SUPERSEDED (see Codebase Patterns 2026-07-02 reposRepo entry): the previous approach of instantiating `new RepoRepository(container.db)` inside a route plugin was itself a HIGH violation (presentation layer doing infrastructure instantiation + cross-module import). ref: server/src/modules/context/routes.ts:19

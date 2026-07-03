@@ -67,7 +67,6 @@ export async function upsertIntent(
       intent: intent.intent,
       inScope: intent.in_scope,
       outOfScope: intent.out_of_scope,
-      riskAreas: intent.risk_areas,
     })
     .onConflictDoUpdate({
       target: t.prIntent.prId,
@@ -75,7 +74,6 @@ export async function upsertIntent(
         intent: intent.intent,
         inScope: intent.in_scope,
         outOfScope: intent.out_of_scope,
-        riskAreas: intent.risk_areas,
       },
     });
 }
@@ -93,6 +91,5 @@ export async function getIntent(
     intent: row.intent,
     in_scope: row.inScope,
     out_of_scope: row.outOfScope,
-    risk_areas: (row.riskAreas ?? []) as Intent["risk_areas"],
   };
 }

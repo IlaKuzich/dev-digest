@@ -333,6 +333,46 @@ export class ReviewRunExecutor {
         );
       }
 
+      // ---- Specs / Project context injection ---------------------------------
+      // Merge agent's own contextDocPaths with enabled linked skills' paths.
+      // Agent paths go first; insertion-order Set deduplicates.
+      const allContextPaths = [
+        ...(agent.contextDocPaths as string[] ?? []),
+        ...linkedSkills
+          .filter((s) => s.skill.enabled)
+          .flatMap((s) => (s.skill.contextDocPaths as string[]) ?? []),
+      ];
+      const dedupedPaths = [...new Set(allContextPaths)];
+
+      // Secondary path traversal guard (primary guard is in ContextService).
+      const validPaths = dedupedPaths.filter((p) => {
+        if (p.includes("..")) {
+          runLog.info(`Skipping context doc — invalid path: ${p}`);
+          return false;
+        }
+        return true;
+      });
+
+      const specDocs = validPaths.length > 0
+        ? await this.container.contextService.readDocsByPaths(
+            repo.clonePath ?? "",
+            validPaths,
+            (p) => runLog.info(`Context doc not found at ${p} — skipping`),
+          )
+        : [];
+
+      const specContents = specDocs.map(
+        (doc) =>
+          `<untrusted source="spec:${doc.path}">\n${doc.content.replaceAll("</untrusted>", "<\\/untrusted>")}\n</untrusted>`,
+      );
+      const specsRead = specDocs.map((doc) => doc.path);
+
+      if (specContents.length > 0) {
+        runLog.info(
+          `Specs: ${specContents.length} context doc(s) attached to prompt`,
+        );
+      }
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -348,6 +388,9 @@ export class ReviewRunExecutor {
         // Skills: resolved bodies (ordered). assemblePrompt renders them as
         // "## Skills / rules" section in the user message. Empty → section omitted.
         ...(skillBodies.length > 0 ? { skills: skillBodies } : {}),
+        // Specs: project context docs (untrusted-wrapped). assemblePrompt renders
+        // them as "## Project context" section. Empty → section omitted.
+        ...(specContents.length > 0 ? { specs: specContents } : {}),
         // T1.3 — pass the callers digest only when we built one. assemblePrompt
         // omits the section when this is empty/undefined.
         ...(callersDigest ? { callers: callersDigest } : {}),
@@ -440,7 +483,7 @@ export class ReviewRunExecutor {
         })),
         raw_output: outcome.raw,
         memory_pulled: [],
-        specs_read: [],
+        specs_read: specsRead,
         // Persisted log = the run's FULL event buffer (incl. shared pre-work:
         // diff load + intent), not just events recorded inside this method.
         log: runLog.logFor(runId),

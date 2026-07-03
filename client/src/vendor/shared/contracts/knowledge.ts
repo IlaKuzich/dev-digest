@@ -146,6 +146,8 @@ export const Skill = z.object({
   version: z.number().int(),
   evidence_files: z.array(z.string()).nullish(),
   threat_level: SkillThreatLevel.optional(),
+  /** Ordered list of project-context doc paths attached to this skill. */
+  context_doc_paths: z.array(z.string()).default([]),
 });
 export type Skill = z.infer<typeof Skill>;
 
@@ -202,6 +204,8 @@ export const Agent = z.object({
   repo_intel: z.boolean().default(true),
   skill_count: z.number().int().optional(),
   feature_model_id: z.string().nullish(),
+  /** Ordered list of project-context doc paths attached to this agent. */
+  context_doc_paths: z.array(z.string()).default([]),
 });
 export type Agent = z.infer<typeof Agent>;
 

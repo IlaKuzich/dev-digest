@@ -15,5 +15,22 @@
     "blame": "blame",
     "noHistory": "No history available for this line.",
     "noCommits": "No commits found for this line."
-  }
+  },
+  "riskLevel": {
+    "high": "High Risk",
+    "medium": "Medium Risk",
+    "low": "Low Risk"
+  },
+  "risks": {
+    "label": "RISKS"
+  },
+  "reviewFocus": {
+    "label": "REVIEW FOCUS — READ THESE FIRST"
+  },
+  "regenerate": "Regenerate Brief",
+  "generate": "Generate Brief",
+  "findingsTooltip": "Findings from the latest completed review run",
+  "noRunYet": "Review not run yet",
+  "error": "Failed to load Brief",
+  "loading": "Generating Brief…"
 }

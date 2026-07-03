@@ -38,6 +38,7 @@ export interface UpdateSkill {
   body?: string;
   enabled?: boolean;
   evidenceFiles?: string[] | null;
+  contextDocPaths?: string[];
 }
 
 export interface SkillWithStats {
@@ -184,6 +185,9 @@ export class SkillsRepository {
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
         ...(patch.evidenceFiles !== undefined
           ? { evidenceFiles: patch.evidenceFiles }
+          : {}),
+        ...(patch.contextDocPaths !== undefined
+          ? { contextDocPaths: patch.contextDocPaths }
           : {}),
         // Body change resets threat level — a re-scan will run asynchronously.
         ...(bodyChanged
