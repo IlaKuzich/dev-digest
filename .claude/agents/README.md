@@ -32,6 +32,12 @@ planner  ──→  specs/PLAN-*.md  ──────────────�
   doc-writer   ◄── (session end / документирование)             — on-demand
 ```
 
+> **Альтернативный быстрый путь**: для мелких, однозначных, одномодульных задач `quick-planner`
+> заменяет связку `spec-creator → implementation-planner` и сразу пишет
+> `plans/PLAN-YYYY-MM-DD-<name>.md` — без формальной спеки. Эскалирует обратно к
+> `spec-creator → implementation-planner`, если задача оказалась кросс-модульной или требует
+> настоящих acceptance criteria.
+
 ---
 
 ## Агенты
@@ -71,6 +77,36 @@ planner  ──→  specs/PLAN-*.md  ──────────────�
 - NEVER пишет код
 - NEVER изменяет существующие файлы (нет Edit в tools)
 - NEVER пишет вне `plans/`
+- Owned paths между параллельными задачами НИКОГДА не пересекаются
+
+---
+
+### `quick-planner.md`
+
+**Триггер:** мелкая, однозначная, одномодульная задача — план нужен, но полноценная спека избыточна.
+
+**Модель:** `opus` — то же обоснование, что и у `planner.md`/`implementation-planner.md`: анализ кодовой базы требует глубокого рассуждения независимо от размера задачи.
+
+**Tools:** `Read`, `Write`, `Agent`
+
+**Skills preloaded (startup):** тот же полный набор, что был у исходного `planner.md` до SDD-разделения — `onion-architecture`, `fastify-best-practices`, `drizzle-orm-patterns`, `postgresql-table-design`, `zod`, `frontend-architecture`, `next-best-practices`, `react-best-practices`, `typescript-expert`, `security`, `mermaid-diagram`.
+
+**Что делает:**
+1. `STEP 0` — Interview Mode: оценивает запрос, задаёт ≤3 уточняющих вопроса если нужно
+2. `STEP 0.5` — **Complexity Gate** (новое): если задача кросс-модульная или требует настоящих acceptance criteria — останавливается и рекомендует `spec-creator → implementation-planner` вместо написания плана
+3. `STEP 1` — Делегирует разведку `researcher` агенту (survey кода + извлечение релевантных инсайтов из INSIGHTS.md)
+4. `STEP 2` — Оценивает findings, при необходимости уточняет
+5. `STEP 3` — Пишет `plans/PLAN-YYYY-MM-DD-<name>.md` — тот же формат и та же директория, что у `implementation-planner.md`, поэтому `implementer`/`plan-viewer`/`/run-plan` потребляют результат одинаково независимо от того, какой из двух планировщиков его написал
+
+**Формат plan-файла:** Problem → Affected Modules → Tasks (TASK-001 + Owned Paths + Acceptance Criteria + Verification) → Phases (DB/Backend/Frontend/Tests) → Risks → Out of Scope → Architecture Notes
+
+**Отличие от `implementation-planner.md`:** не требует существующего `specs/SPEC-*.md` на входе — идёт прямо от текстового описания задачи к плану. Именно поэтому обязателен `STEP 0.5`: без него агент рисковал бы писать поверхностные планы для фич, которым на самом деле нужна спека.
+
+**Ограничения:**
+- NEVER пишет код
+- NEVER пишет спеки
+- NEVER пишет вне `plans/`
+- NEVER пропускает `STEP 0.5` — это единственное, что держит агента в рамках "простых задач"
 - Owned paths между параллельными задачами НИКОГДА не пересекаются
 
 ---

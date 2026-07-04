@@ -313,6 +313,14 @@ export function IntentCard({
         <div style={s.card}>
           <p style={s.emptyTitle}>{t("notRunTitle")}</p>
           <p style={s.emptyBody}>{t("notRunBody")}</p>
+          <button
+            type="button"
+            onClick={onRecalculate}
+            disabled={recalculating}
+            style={s.recalcBtn}
+          >
+            {recalculating ? "Running…" : "↻ Run Intent"}
+          </button>
         </div>
       </section>
     );

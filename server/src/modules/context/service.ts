@@ -51,7 +51,9 @@ export class ContextService {
 
     const files: SpecFile[] = [];
     try {
+      await this.collectRootMd(clonePath, files);
       await this.walkForContextDirs(clonePath, clonePath, files);
+      await this.collectModuleRootMd(clonePath, files);
     } catch {
       // clonePath does not exist or is not readable.
     }
@@ -117,8 +119,89 @@ export class ContextService {
 
   // ---- Private helpers -------------------------------------------------------
 
-  private static readonly CONTEXT_DIR_NAMES = new Set(["specs", "docs", "insights"]);
-  private static readonly SKIP_DIRS = new Set(["node_modules", ".git", ".next", "dist", "build"]);
+  private static readonly CONTEXT_DIR_NAMES = new Set([
+    "specs",
+    "docs",
+    "insights",
+  ]);
+  private static readonly SKIP_DIRS = new Set([
+    "node_modules",
+    ".git",
+    ".next",
+    "dist",
+    "build",
+  ]);
+
+  /** Returns true for directories that should never be entered by any scan. */
+  private shouldSkipDir(name: string): boolean {
+    return ContextService.SKIP_DIRS.has(name) || name.startsWith(".");
+  }
+
+  /** Collect .md files sitting directly at the clone root (depth 0). */
+  private async collectRootMd(
+    clonePath: string,
+    out: SpecFile[],
+  ): Promise<void> {
+    const entries = await readdir(clonePath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.endsWith(".md")) continue;
+      if (entry.name.toLowerCase() === "claude.md") continue;
+      const absPath = join(clonePath, entry.name);
+      try {
+        const fileStat = await stat(absPath);
+        const content = await readFile(absPath, "utf8");
+        out.push({
+          path: entry.name,
+          content,
+          size: fileStat.size,
+          updated_at: fileStat.mtime.toISOString(),
+          estimated_tokens: Math.ceil(content.length / 4),
+        });
+      } catch {
+        // File disappeared or is unreadable — skip.
+      }
+    }
+  }
+
+  /** Collect .md files sitting directly inside each top-level directory (depth 1, non-recursive). */
+  private async collectModuleRootMd(
+    clonePath: string,
+    out: SpecFile[],
+  ): Promise<void> {
+    const entries = await readdir(clonePath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (this.shouldSkipDir(entry.name)) continue;
+      if (ContextService.CONTEXT_DIR_NAMES.has(entry.name)) continue;
+      const modulePath = join(clonePath, entry.name);
+      let nestedEntries;
+      try {
+        nestedEntries = await readdir(modulePath, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const nested of nestedEntries) {
+        if (!nested.isFile()) continue;
+        if (!nested.name.endsWith(".md")) continue;
+        if (nested.name.toLowerCase() === "claude.md") continue;
+        const absPath = join(modulePath, nested.name);
+        try {
+          const fileStat = await stat(absPath);
+          const content = await readFile(absPath, "utf8");
+          out.push({
+            path: `${entry.name}/${nested.name}`,
+            content,
+            size: fileStat.size,
+            updated_at: fileStat.mtime.toISOString(),
+            estimated_tokens: Math.ceil(content.length / 4),
+          });
+        } catch {
+          // File disappeared or is unreadable — skip.
+        }
+      }
+    }
+  }
 
   /**
    * Walk the full clone tree. When a directory named specs/docs/insights is
@@ -134,7 +217,7 @@ export class ContextService {
 
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      if (ContextService.SKIP_DIRS.has(entry.name)) continue;
+      if (this.shouldSkipDir(entry.name)) continue;
 
       const absChild = join(absDir, entry.name);
 

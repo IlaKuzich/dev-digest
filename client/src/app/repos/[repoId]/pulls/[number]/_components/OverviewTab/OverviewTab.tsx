@@ -114,15 +114,7 @@ export function OverviewTab({ prBody, prId }: OverviewTabProps) {
         </section>
       </div>
 
-      {/* PR Description */}
-      {prBody && (
-        <section>
-          <SectionLabel icon="MessageSquare">Description</SectionLabel>
-          <div style={s.descriptionBox}>{prBody}</div>
-        </section>
-      )}
-
-      {/* Review Focus — full width, below description */}
+      {/* Review Focus — full width, first */}
       {brief?.review_focus && brief.review_focus.length > 0 && (
         <section>
           <ReviewFocusList
@@ -139,6 +131,14 @@ export function OverviewTab({ prBody, prId }: OverviewTabProps) {
               );
             }}
           />
+        </section>
+      )}
+
+      {/* PR Description — below Review Focus */}
+      {prBody && (
+        <section>
+          <SectionLabel icon="MessageSquare">Description</SectionLabel>
+          <div style={s.descriptionBox}>{prBody}</div>
         </section>
       )}
     </div>

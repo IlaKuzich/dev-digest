@@ -15,7 +15,10 @@ let service: ContextService;
 const stubContainer = {} as Container;
 
 beforeEach(async () => {
-  tempDir = join(tmpdir(), `ctx-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  tempDir = join(
+    tmpdir(),
+    `ctx-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
   service = new ContextService(stubContainer);
   await mkdir(tempDir, { recursive: true });
 });
@@ -50,7 +53,9 @@ describe("ContextService.listDocs()", () => {
     expect(files).toHaveLength(1);
     expect(files[0]!.path).toBe("specs/foo.md");
     expect(files[0]!.content).toBe("# Hello\ncontent here");
-    expect(files[0]!.estimated_tokens).toBe(Math.ceil("# Hello\ncontent here".length / 4));
+    expect(files[0]!.estimated_tokens).toBe(
+      Math.ceil("# Hello\ncontent here".length / 4),
+    );
   });
 
   it("finds .md files under docs/ and insights/", async () => {
@@ -163,5 +168,71 @@ describe("ContextService.readDocsByPaths()", () => {
     expect(results).toHaveLength(1);
     expect(results[0]!.path).toBe("specs/present.md");
     expect(missing).toEqual(["specs/absent.md"]);
+  });
+});
+
+// ---- root and module-root scan ----------------------------------------------
+
+describe("root and module-root scan", () => {
+  it("AC-001: picks up .md files at the clone root (depth 0)", async () => {
+    await writeFile(join(tempDir, "README.md"), "root readme");
+
+    const files = await service.listDocs(tempDir);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain("README.md");
+    expect(files.find((f) => f.path === "README.md")!.content).toBe(
+      "root readme",
+    );
+  });
+
+  it("AC-002: picks up .md files at depth 1 inside each top-level directory", async () => {
+    await mkdir(join(tempDir, "server"), { recursive: true });
+    await mkdir(join(tempDir, "client"), { recursive: true });
+    await writeFile(join(tempDir, "server", "README.md"), "server readme");
+    await writeFile(join(tempDir, "client", "README.md"), "client readme");
+
+    const files = await service.listDocs(tempDir);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain("server/README.md");
+    expect(paths).toContain("client/README.md");
+  });
+
+  it("AC-003: does NOT pick up .md files deeper than depth 1 in non-context dirs", async () => {
+    await mkdir(join(tempDir, "server", "sub"), { recursive: true });
+    await writeFile(join(tempDir, "server", "sub", "note.md"), "deep note");
+
+    const files = await service.listDocs(tempDir);
+    const paths = files.map((f) => f.path);
+    expect(paths).not.toContain("server/sub/note.md");
+  });
+
+  it("AC-004: excludes CLAUDE.md at root and case-insensitive claude.md in modules", async () => {
+    await mkdir(join(tempDir, "server"), { recursive: true });
+    await writeFile(join(tempDir, "CLAUDE.md"), "root claude");
+    await writeFile(join(tempDir, "server", "claude.md"), "module claude");
+
+    const files = await service.listDocs(tempDir);
+    const paths = files.map((f) => f.path);
+    expect(paths).not.toContain("CLAUDE.md");
+    expect(paths).not.toContain("server/claude.md");
+  });
+
+  it("AC-005: skips .claude/ directory entirely (never entered)", async () => {
+    await mkdir(join(tempDir, ".claude", "docs"), { recursive: true });
+    await writeFile(join(tempDir, ".claude", "docs", "notes.md"), "secret");
+
+    const files = await service.listDocs(tempDir);
+    const paths = files.map((f) => f.path);
+    expect(paths).not.toContain(".claude/docs/notes.md");
+    expect(paths.some((p) => p.startsWith(".claude"))).toBe(false);
+  });
+
+  it("AC-006: docs/ top-level appears exactly once (no duplication)", async () => {
+    await mkdir(join(tempDir, "docs"), { recursive: true });
+    await writeFile(join(tempDir, "docs", "README.md"), "docs readme");
+
+    const files = await service.listDocs(tempDir);
+    const paths = files.map((f) => f.path);
+    expect(paths.filter((p) => p === "docs/README.md")).toHaveLength(1);
   });
 });

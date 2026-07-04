@@ -134,11 +134,13 @@ export const s = {
   } satisfies CSSProperties,
 
   reviewFocus: {
-    borderTop: "1px solid var(--border)",
-    paddingTop: 10,
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    background: "var(--bg-elevated)",
+    padding: "12px 14px",
     display: "flex",
     flexDirection: "column",
-    gap: 6,
+    gap: 8,
   } satisfies CSSProperties,
   reviewFocusHeader: {
     display: "flex",
