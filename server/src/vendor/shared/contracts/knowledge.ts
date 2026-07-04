@@ -140,6 +140,23 @@ export const CommunitySkill = z.object({
 });
 export type CommunitySkill = z.infer<typeof CommunitySkill>;
 
+export const CreateSkillInput = z.object({
+  name: z.string().min(1),
+  description: z.string(),
+  type: SkillType,
+  body: z.string(),
+});
+export type CreateSkillInput = z.infer<typeof CreateSkillInput>;
+
+export const UpdateSkillInput = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  type: SkillType.optional(),
+  body: z.string().optional(),
+  enabled: z.boolean().optional(),
+});
+export type UpdateSkillInput = z.infer<typeof UpdateSkillInput>;
+
 // ---- Conventions ----
 export const ConventionCandidate = z.object({
   id: z.string(),
@@ -195,6 +212,7 @@ export const AgentSkillLink = z.object({
   agent_id: z.string(),
   skill_id: z.string(),
   order: z.number().int(),
+  enabled: z.boolean(),
 });
 export type AgentSkillLink = z.infer<typeof AgentSkillLink>;
 
