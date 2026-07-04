@@ -85,6 +85,13 @@
       "when": 1782432010000,
       "tag": "0011_change_cost_usd_to_numeric",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783142240582,
+      "tag": "0012_wandering_runaways",
+      "breakpoints": true
     }
   ]
 }
