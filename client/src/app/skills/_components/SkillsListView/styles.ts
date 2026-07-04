@@ -1,0 +1,60 @@
+import type { CSSProperties } from "react";
+import { CARD_GRID_COLS } from "./constants";
+
+/** Co-located styles for SkillsListView. */
+export const s = {
+  page: { display: "flex", minHeight: "calc(100vh - 52px)" } satisfies CSSProperties,
+  main: { flex: 1, padding: "24px 32px 44px", minWidth: 0 } satisfies CSSProperties,
+  header: { display: "flex", alignItems: "center", gap: 14, marginBottom: 20 } satisfies CSSProperties,
+  headerText: { flex: 1 } satisfies CSSProperties,
+  h1: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" } satisfies CSSProperties,
+  subtitle: { fontSize: 14, color: "var(--text-secondary)", marginTop: 4 } satisfies CSSProperties,
+  search: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "8px 12px",
+    borderRadius: 7,
+    border: "1px solid var(--border)",
+    background: "var(--bg-surface)",
+    width: 200,
+  } satisfies CSSProperties,
+  searchIcon: { color: "var(--text-muted)" } satisfies CSSProperties,
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    color: "var(--text-primary)",
+  } satisfies CSSProperties,
+  grid: { display: "grid", gridTemplateColumns: CARD_GRID_COLS, gap: 14 } satisfies CSSProperties,
+  panel: {
+    width: 380,
+    flexShrink: 0,
+    borderLeft: "1px solid var(--border)",
+    background: "var(--bg-surface)",
+    overflow: "auto",
+  } satisfies CSSProperties,
+  panelEmpty: {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 32,
+    textAlign: "center",
+  } satisfies CSSProperties,
+  panelEmptyTitle: { fontSize: 14, fontWeight: 600 } satisfies CSSProperties,
+  panelEmptyBody: { fontSize: 13, color: "var(--text-muted)" } satisfies CSSProperties,
+  panelBody: { padding: 20 } satisfies CSSProperties,
+  panelHeader: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 } satisfies CSSProperties,
+  panelTitle: { fontSize: 16, fontWeight: 700, flex: 1 } satisfies CSSProperties,
+  panelDescription: { fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 } satisfies CSSProperties,
+  panelMarkdown: {
+    fontSize: 13,
+    borderTop: "1px solid var(--border)",
+    paddingTop: 16,
+  } satisfies CSSProperties,
+} as const;
