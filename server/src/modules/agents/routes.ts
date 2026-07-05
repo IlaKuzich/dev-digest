@@ -46,6 +46,7 @@ const UpdateAgentBody = z.object({
   ci_fail_on: CiFailOn.optional(),
   repo_intel: z.boolean().optional(),
   enabled: z.boolean().optional(),
+  context_doc_paths: z.array(z.string()).optional(),
 });
 
 /** Either set the whole ordered set (`skill_ids`) or link one (`skill_id`). */

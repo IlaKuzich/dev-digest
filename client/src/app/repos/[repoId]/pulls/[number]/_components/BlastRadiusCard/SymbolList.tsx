@@ -23,19 +23,31 @@ export function SymbolList({ rows, repoId, prNumber }: SymbolListProps) {
     <div className="flex flex-col">
       {rows.map((sym) => {
         const isOpen = openSymbol === sym.name;
+        const rowKey = `${sym.file}:${sym.name}`;
         return (
-          <div
-            key={sym.name}
-            className="border-t border-[var(--border)] pt-2.5"
-          >
+          <div key={rowKey} className="border-t border-[var(--border)] pt-2.5">
             <button
               onClick={() => setOpenSymbol(isOpen ? null : sym.name)}
-              className="bg-transparent border-none cursor-pointer p-0 w-full flex items-center justify-between mb-1.5"
+              className="bg-transparent border-none cursor-pointer p-0 w-full flex items-center justify-between mb-1.5 gap-2"
             >
-              <span className="font-mono text-[13px] text-[var(--text-primary)] font-semibold">
-                ⟨⟩ {sym.name}
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span
+                  className="text-[var(--text-muted)] flex-shrink-0 transition-transform duration-150"
+                  style={{
+                    display: "inline-block",
+                    transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  }}
+                >
+                  ▸
+                </span>
+                <span className="text-[var(--accent-text,#60a5fa)] flex-shrink-0 text-[12px]">
+                  ⟨⟩
+                </span>
+                <span className="font-mono text-[13px] text-[var(--text-primary)] font-semibold truncate">
+                  {sym.name}
+                </span>
               </span>
-              <span className="text-[11px] text-[var(--text-muted)]">
+              <span className="text-[11px] text-[var(--text-muted)] flex-shrink-0">
                 {t("callersCount", { count: sym.callers.length })}
               </span>
             </button>
@@ -50,10 +62,11 @@ export function SymbolList({ rows, repoId, prNumber }: SymbolListProps) {
                         `/repos/${repoId}/pulls/${prNumber}?tab=diff&file=${encodeURIComponent(c.file)}&line=${c.line}`,
                       )
                     }
-                    className="text-xs text-[var(--text-muted)] pl-3 leading-7 cursor-pointer hover:text-[var(--text-primary)]"
+                    className="text-xs text-[var(--text-secondary)] pl-4 leading-7 cursor-pointer hover:text-[var(--text-primary)] flex items-center gap-1 min-w-0"
+                    title={`${c.file}:${c.line}`}
                   >
-                    ↳{" "}
-                    <span className="font-mono">
+                    <span className="flex-shrink-0">↳</span>
+                    <span className="font-mono truncate">
                       {c.file}:{c.line}
                     </span>
                   </div>

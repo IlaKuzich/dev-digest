@@ -7,14 +7,19 @@ import {
   jsonb,
   primaryKey,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { now } from "./_shared";
 import { workspaces } from "./core";
+import { repos } from "./repos";
 
 export const skills = pgTable("skills", {
   id: uuid("id").primaryKey().defaultRandom(),
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
+  repoId: uuid("repo_id")
+    .references(() => repos.id, { onDelete: "cascade" })
+    .notNull(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   type: text("type", {
@@ -32,6 +37,13 @@ export const skills = pgTable("skills", {
   })
     .notNull()
     .default("unknown"),
+  // Ordered list of project-context doc paths (relative to clone root) attached
+  // to this skill. When a skill is linked to an agent, these paths are merged
+  // into the agent's context doc list at run time (agent paths first).
+  contextDocPaths: text("context_doc_paths")
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
   createdAt: now(),
 });
 

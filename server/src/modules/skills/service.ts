@@ -37,6 +37,7 @@ export interface UpdateSkillInput {
   type?: SkillType;
   body?: string;
   enabled?: boolean;
+  context_doc_paths?: string[];
 }
 
 function toSkillDto(row: SkillRow): Skill {
@@ -51,6 +52,7 @@ function toSkillDto(row: SkillRow): Skill {
     version: row.version,
     evidence_files: (row.evidenceFiles as string[] | null) ?? null,
     threat_level: (row.threatLevel as ThreatLevel) ?? THREAT_LEVEL.UNKNOWN,
+    context_doc_paths: (row.contextDocPaths as string[]) ?? [],
   };
 }
 
@@ -114,6 +116,9 @@ export class SkillsService {
       ...(patch.type !== undefined ? { type: patch.type } : {}),
       ...(patch.body !== undefined ? { body: patch.body } : {}),
       ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+      ...(patch.context_doc_paths !== undefined
+        ? { contextDocPaths: patch.context_doc_paths }
+        : {}),
     });
     return row ? toSkillDto(row) : undefined;
   }

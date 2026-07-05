@@ -1,0 +1,2 @@
+ALTER TABLE "skills" ADD COLUMN "context_doc_paths" text[] DEFAULT ARRAY[]::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "agents" ADD COLUMN "context_doc_paths" text[] DEFAULT ARRAY[]::text[] NOT NULL;

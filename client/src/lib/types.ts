@@ -33,7 +33,7 @@ export type {
 } from "@devdigest/shared";
 
 export type { Review, Finding, Severity, Verdict } from "@devdigest/shared";
-export type { PrBrief, SmartDiff } from "@devdigest/shared";
+export type { Brief, SmartDiff } from "@devdigest/shared";
 
 /**
  * A single feature model entry as returned by GET /settings/feature-models.

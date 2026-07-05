@@ -63,12 +63,14 @@ export function CodeLine({
   threads,
   commenting,
   badge,
+  targetLine,
 }: {
   ln: Line;
   path: string;
   threads: CommentThread[];
   commenting?: DiffCommentApi;
   badge?: { severity: string; findingId: string };
+  targetLine?: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,11 +88,14 @@ export function CodeLine({
   const sign = ln.kind === "add" ? "+" : ln.kind === "del" ? "−" : "";
   const target = commenting?.canComment ? commentTargetFor(ln) : null;
   const showAdd = hover && !!target && !composing;
+  const lineNo = ln.newNo ?? ln.oldNo;
+  const isTarget = targetLine !== undefined && lineNo === targetLine;
 
   return (
     <div
+      id={isTarget ? `diff-line-${path}-${lineNo}` : undefined}
       style={cs.rowWrap}
-      data-line={ln.newNo ?? ln.oldNo}
+      data-line={lineNo}
       data-path={path}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -98,6 +103,12 @@ export function CodeLine({
       <div
         style={{
           ...lineRowFor(ln.kind),
+          ...(isTarget
+            ? {
+                background: "var(--accent-bg)",
+                outline: "1px solid var(--accent-text)",
+              }
+            : {}),
           ...(badge && BADGE_BORDER[badge.severity]
             ? {
                 borderLeft: `3px solid ${BADGE_BORDER[badge.severity]}`,

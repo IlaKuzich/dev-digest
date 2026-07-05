@@ -92,8 +92,71 @@ export const api = {
 
 // ---- domain helpers -------------------------------------------------------
 
-import type { SmartDiff } from "@devdigest/shared";
+import type {
+  SmartDiff,
+  SpecFile,
+  ContextSummary,
+  Agent,
+  Skill,
+  Brief,
+} from "@devdigest/shared";
 
 export function fetchSmartDiff(prId: string): Promise<SmartDiff> {
   return api.get<SmartDiff>(`/pulls/${prId}/smart-diff`);
+}
+
+// ---- PR Why+Risk Brief -----------------------------------------------------
+
+export function postPrBrief(
+  prId: string,
+  opts?: { force?: boolean },
+): Promise<Brief> {
+  const url = opts?.force
+    ? `/pulls/${prId}/brief?force=true`
+    : `/pulls/${prId}/brief`;
+  return api.post<Brief>(url);
+}
+
+// ---- context / project docs -----------------------------------------------
+
+export function fetchContextFiles(repoId: string): Promise<SpecFile[]> {
+  return api.get<SpecFile[]>(`/repos/${repoId}/context`);
+}
+
+export function reindexContext(repoId: string): Promise<ContextSummary> {
+  return api.post<ContextSummary>(`/repos/${repoId}/context/reindex`);
+}
+
+// ---- agent / skill context doc paths ---------------------------------------
+
+export function updateAgentContextPaths(
+  id: string,
+  paths: string[],
+): Promise<Agent> {
+  return api.put<Agent>(`/agents/${id}`, { context_doc_paths: paths });
+}
+
+export function updateSkillContextPaths(
+  id: string,
+  paths: string[],
+): Promise<Skill> {
+  return api.put<Skill>(`/skills/${id}`, { context_doc_paths: paths });
+}
+
+// ---- Onboarding Tour -------------------------------------------------------
+
+export function postOnboarding(
+  repoId: string,
+  opts?: { force?: boolean },
+): Promise<import('@devdigest/shared').Onboarding> {
+  const url = opts?.force
+    ? `/repos/${repoId}/onboarding?force=true`
+    : `/repos/${repoId}/onboarding`;
+  return api.post<import('@devdigest/shared').Onboarding>(url);
+}
+
+export function getOnboarding(
+  repoId: string,
+): Promise<import('@devdigest/shared').Onboarding> {
+  return api.get<import('@devdigest/shared').Onboarding>(`/repos/${repoId}/onboarding`);
 }

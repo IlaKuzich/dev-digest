@@ -164,6 +164,11 @@ export interface GitHubClient {
   getIssue(repo: RepoRef, n: number): Promise<IssueMeta>;
   /** GET /user — for "posting as @user". */
   currentLogin(): Promise<string>;
+  /**
+   * Returns commit count per path in the last `sinceDays` days.
+   * Degrades gracefully: the service layer catches errors and falls back to hotness=0.
+   */
+  getCommitActivity(repo: RepoRef, paths: string[], sinceDays: number): Promise<Record<string, number>>;
 }
 
 // ---------- Git (simple-git, heavy) ----------

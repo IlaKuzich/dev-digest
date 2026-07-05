@@ -28,6 +28,7 @@ export function toAgentDto(row: AgentRow): Agent {
     ci_fail_on: row.ciFailOn as CiFailOn,
     repo_intel: row.repoIntel,
     feature_model_id: row.featureModelId ?? null,
+    context_doc_paths: (row.contextDocPaths as string[]) ?? [],
   };
 }
 
@@ -42,6 +43,8 @@ export interface ConfigChangePatch {
   strategy?: ReviewStrategy;
   ciFailOn?: CiFailOn;
   repoIntel?: boolean;
+  /** Changing attached context doc paths changes agent behaviour → bumps version. */
+  contextDocPaths?: string[];
 }
 
 /**
@@ -59,6 +62,7 @@ export function isConfigChange(
     | "strategy"
     | "ciFailOn"
     | "repoIntel"
+    | "contextDocPaths"
   >,
   patch: ConfigChangePatch,
 ): boolean {
@@ -73,6 +77,9 @@ export function isConfigChange(
     (patch.strategy !== undefined && patch.strategy !== existing.strategy) ||
     (patch.ciFailOn !== undefined && patch.ciFailOn !== existing.ciFailOn) ||
     (patch.repoIntel !== undefined && patch.repoIntel !== existing.repoIntel) ||
-    patch.outputSchema !== undefined
+    patch.outputSchema !== undefined ||
+    (patch.contextDocPaths !== undefined &&
+      JSON.stringify(patch.contextDocPaths) !==
+        JSON.stringify(existing.contextDocPaths ?? []))
   );
 }

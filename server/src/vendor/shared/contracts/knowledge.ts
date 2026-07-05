@@ -30,23 +30,87 @@ export const Conformance = z.object({
 export type Conformance = z.infer<typeof Conformance>;
 
 // ---- Onboarding ----
-export const OnboardingLink = z.object({
+export const DiagramNode = z.object({
+  id: z.string(),
   label: z.string(),
-  path: z.string(),
+  kind: z.enum(["file", "package", "service"]),
+  isOverflow: z.boolean().optional(),
+  detail: z.string().optional(), // mermaid for drill-down
 });
-export type OnboardingLink = z.infer<typeof OnboardingLink>;
+export type DiagramNode = z.infer<typeof DiagramNode>;
 
-export const OnboardingSection = z.object({
-  kind: z.string(),
-  title: z.string(),
-  body: z.string(), // markdown
-  diagram: z.string().nullish(), // mermaid
-  links: z.array(OnboardingLink),
+export const DiagramEdge = z.object({
+  from: z.string(),
+  to: z.string(),
+  label: z.string().optional(),
 });
-export type OnboardingSection = z.infer<typeof OnboardingSection>;
+export type DiagramEdge = z.infer<typeof DiagramEdge>;
+
+export const ArchitectureSection = z.object({
+  overview: z.string(),
+  style: z.string(),
+  nodes: z.array(DiagramNode),
+  edges: z.array(DiagramEdge),
+});
+export type ArchitectureSection = z.infer<typeof ArchitectureSection>;
+
+export const CriticalPathItem = z.object({
+  file: z.string(),
+  whyItMatters: z.string(),
+  openUrl: z.string(),
+});
+export type CriticalPathItem = z.infer<typeof CriticalPathItem>;
+
+export const HowToRunSection = z.object({
+  packageManager: z.string(),
+  commands: z.array(z.string()),
+  envVars: z.array(z.string()),
+  entrypoint: z.string(),
+});
+export type HowToRunSection = z.infer<typeof HowToRunSection>;
+
+export const ReadingPathItem = z.object({
+  order: z.number(),
+  file: z.string(),
+  reason: z.string(),
+  openUrl: z.string(),
+});
+export type ReadingPathItem = z.infer<typeof ReadingPathItem>;
+
+export const GapType = z.enum(["missing-test", "missing-doc", "missing-pattern"]);
+export type GapType = z.infer<typeof GapType>;
+
+export const Complexity = z.enum(["Low", "Medium", "High"]);
+export type Complexity = z.infer<typeof Complexity>;
+
+export const FirstTask = z.object({
+  title: z.string(),
+  suggestedPath: z.string(),
+  gapType: GapType,
+  rationale: z.string(),
+  patternPointer: z.string(),
+  complexity: Complexity,
+  verificationHint: z.string(),
+  packageId: z.string().optional(),
+});
+export type FirstTask = z.infer<typeof FirstTask>;
+
+export const OnboardingSections = z.object({
+  architecture: ArchitectureSection,
+  criticalPaths: z.array(CriticalPathItem),
+  howToRun: HowToRunSection,
+  readingPath: z.array(ReadingPathItem),
+  firstTasks: z.array(FirstTask),
+});
+export type OnboardingSections = z.infer<typeof OnboardingSections>;
 
 export const Onboarding = z.object({
-  sections: z.array(OnboardingSection),
+  repoName: z.string(),
+  filesIndexed: z.number(),
+  generatedAt: z.string(), // ISO date string
+  headSha: z.string(),
+  narrativeUnavailable: z.boolean().optional(),
+  sections: OnboardingSections,
 });
 export type Onboarding = z.infer<typeof Onboarding>;
 
@@ -146,6 +210,8 @@ export const Skill = z.object({
   version: z.number(),
   evidence_files: z.array(z.string()).nullable(),
   threat_level: SkillThreatLevel.optional(),
+  /** Ordered list of project-context doc paths attached to this skill. */
+  context_doc_paths: z.array(z.string()).default([]),
 });
 export type Skill = z.infer<typeof Skill>;
 
@@ -209,6 +275,8 @@ export const Agent = z.object({
   skill_count: z.number().int().optional(),
   // When set, provider+model come from Settings → Feature Models (single source of truth).
   feature_model_id: z.string().nullish(),
+  /** Ordered list of project-context doc paths attached to this agent. */
+  context_doc_paths: z.array(z.string()).default([]),
 });
 export type Agent = z.infer<typeof Agent>;
 

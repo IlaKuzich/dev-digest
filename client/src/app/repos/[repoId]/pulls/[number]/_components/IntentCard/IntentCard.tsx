@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { SectionLabel, Icon } from "@devdigest/ui";
 import { useTranslations } from "next-intl";
-import type { Intent, RiskAreaKind } from "@devdigest/shared";
+import type { Intent, Risk, RiskAreaKind } from "@devdigest/shared";
 import type { CSSProperties } from "react";
 
 const RISK_ICONS: Record<
@@ -18,11 +19,146 @@ const RISK_ICONS: Record<
   other: { icon: "AlertTriangle", color: "#6b7280" },
 };
 
+/** Keep last 2 path segments, prefix with …/ when truncated. */
+function shortenRef(ref: string): string {
+  const path = ref.replace(/:\d+(-\d+)?$/, "");
+  const parts = path.split("/");
+  return parts.length <= 2 ? path : `…/${parts.slice(-2).join("/")}`;
+}
+
+function RiskItem({
+  risk,
+  repoId,
+  prNumber,
+}: {
+  risk: Risk;
+  repoId: string;
+  prNumber: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const meta = RISK_ICONS[risk.kind as RiskAreaKind] ?? RISK_ICONS.other;
+  const RiskIcon = Icon[meta.icon] as React.FC<{
+    size?: number;
+    style?: React.CSSProperties;
+  }>;
+
+  const navigateToRef = (ref: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // ref format: "path/to/file.ts:12-18" or "path/to/file.ts:12" or "path/to/file.ts"
+    const colonIdx = ref.lastIndexOf(":");
+    const hasLine = colonIdx > 0 && colonIdx > ref.lastIndexOf("/");
+    const filePath = hasLine ? ref.slice(0, colonIdx) : ref;
+    const lineStr = hasLine ? ref.slice(colonIdx + 1).split("-")[0] : undefined;
+    const url = `/repos/${repoId}/pulls/${prNumber}?tab=diff&file=${encodeURIComponent(filePath)}${lineStr ? `&line=${lineStr}` : ""}`;
+    router.push(url);
+  };
+
+  return (
+    <div style={{ borderBottom: "1px solid var(--border)" }}>
+      {/* ── Accordion header: icon + title + file refs ── */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+          width: "100%",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "6px 0",
+          textAlign: "left",
+        }}
+      >
+        <RiskIcon
+          size={11}
+          style={{ color: meta.color, flexShrink: 0, marginTop: 2 }}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span
+            style={{
+              fontSize: 12,
+              color: "var(--text-primary)",
+              display: "block",
+              fontWeight: 500,
+            }}
+          >
+            {risk.title}
+          </span>
+          {risk.file_refs.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 4,
+                marginTop: 3,
+              }}
+            >
+              {risk.file_refs.map((ref) => (
+                <span
+                  key={ref}
+                  onClick={(e) => navigateToRef(ref, e)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    navigateToRef(ref, e as unknown as React.MouseEvent)
+                  }
+                  title={ref}
+                  style={{
+                    fontSize: 10,
+                    color: "var(--accent-text, #60a5fa)",
+                    fontFamily: "monospace",
+                    cursor: "pointer",
+                    background: "rgba(96, 165, 250, 0.10)",
+                    borderRadius: 3,
+                    padding: "1px 5px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {shortenRef(ref)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <Icon.ChevronDown
+          size={11}
+          style={{
+            color: "var(--text-muted)",
+            transform: open ? "rotate(180deg)" : undefined,
+            transition: "transform 0.15s",
+            flexShrink: 0,
+            marginTop: 2,
+          }}
+        />
+      </button>
+
+      {/* ── Expanded: explanation only ── */}
+      {open && (
+        <p
+          style={{
+            margin: "0 0 6px 19px",
+            fontSize: 11,
+            color: "var(--text-secondary)",
+            lineHeight: 1.5,
+          }}
+        >
+          {risk.explanation}
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface IntentCardProps {
   intent: Intent | null | undefined;
   isLoading: boolean;
   onRecalculate: () => void;
   recalculating: boolean;
+  risks?: Risk[];
 }
 
 const s = {
@@ -34,8 +170,10 @@ const s = {
     display: "flex",
     flexDirection: "column",
     gap: 14,
-    height: "100%",
+    minHeight: 450,
     boxSizing: "border-box",
+    minWidth: 0,
+    overflow: "hidden",
   } satisfies CSSProperties,
 
   quote: {
@@ -152,25 +290,6 @@ const s = {
     color: "var(--text-muted)",
     marginBottom: 6,
   } satisfies CSSProperties,
-
-  riskChips: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 6,
-  } satisfies CSSProperties,
-
-  riskChip: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    fontSize: 11,
-    color: "var(--text-secondary)",
-    background: "var(--bg-surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 4,
-    padding: "2px 7px",
-    lineHeight: 1.6,
-  } satisfies CSSProperties,
 };
 
 export function IntentCard({
@@ -178,8 +297,10 @@ export function IntentCard({
   isLoading,
   onRecalculate,
   recalculating,
+  risks = [],
 }: IntentCardProps) {
   const t = useTranslations("prReview.intent");
+  const { repoId, number } = useParams<{ repoId: string; number: string }>();
 
   if (isLoading) return null;
 
@@ -192,6 +313,14 @@ export function IntentCard({
         <div style={s.card}>
           <p style={s.emptyTitle}>{t("notRunTitle")}</p>
           <p style={s.emptyBody}>{t("notRunBody")}</p>
+          <button
+            type="button"
+            onClick={onRecalculate}
+            disabled={recalculating}
+            style={s.recalcBtn}
+          >
+            {recalculating ? "Running…" : "↻ Run Intent"}
+          </button>
         </div>
       </section>
     );
@@ -245,26 +374,21 @@ export function IntentCard({
           </div>
         )}
 
-        {/* Risk Areas */}
-        {intent.risk_areas && intent.risk_areas.length > 0 && (
+        {/* Risk Areas from Brief */}
+        {risks.length > 0 && (
           <>
             <div style={s.divider} />
             <div>
               <div style={s.riskLabel}>⚠ Risk areas</div>
-              <div style={s.riskChips}>
-                {intent.risk_areas.map((risk) => {
-                  const meta = RISK_ICONS[risk.kind] ?? RISK_ICONS.other;
-                  const RiskIcon = Icon[meta.icon] as React.FC<{
-                    size?: number;
-                    style?: React.CSSProperties;
-                  }>;
-                  return (
-                    <span key={risk.title} style={s.riskChip}>
-                      <RiskIcon size={11} style={{ color: meta.color }} />
-                      {risk.title}
-                    </span>
-                  );
-                })}
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {risks.map((risk, i) => (
+                  <RiskItem
+                    key={`${risk.kind}-${i}`}
+                    risk={risk}
+                    repoId={repoId}
+                    prNumber={number}
+                  />
+                ))}
               </div>
             </div>
           </>

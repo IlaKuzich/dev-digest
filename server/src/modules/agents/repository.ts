@@ -40,6 +40,7 @@ export interface UpdateAgent {
   ciFailOn?: CiFailOn;
   repoIntel?: boolean;
   enabled?: boolean;
+  contextDocPaths?: string[];
 }
 
 /** A skill linked to an agent (with its order), joined from agent_skills. */
@@ -136,6 +137,9 @@ export class AgentsRepository {
         ...(patch.ciFailOn !== undefined ? { ciFailOn: patch.ciFailOn } : {}),
         ...(patch.repoIntel !== undefined ? { repoIntel: patch.repoIntel } : {}),
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+        ...(patch.contextDocPaths !== undefined
+          ? { contextDocPaths: patch.contextDocPaths }
+          : {}),
         ...(configChanged ? { version: nextVersion } : {}),
       })
       .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.id, id)))

@@ -2,9 +2,14 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, fetchSmartDiff } from "../api";
+import { api, fetchSmartDiff, postPrBrief } from "../api";
 import type { PrMeta, PrDetail } from "../types";
-import type { Intent, SmartDiff, BlastRadiusResult } from "@devdigest/shared";
+import type {
+  Intent,
+  SmartDiff,
+  BlastRadiusResult,
+  Brief,
+} from "@devdigest/shared";
 
 export function usePulls(repoId: string | null | undefined) {
   return useQuery({
@@ -62,5 +67,34 @@ export function useBlastRadius(prId: string | null | undefined) {
     staleTime: 5 * 60 * 1000,
     retry: (count, err: unknown) =>
       (err as { status?: number })?.status === 404 ? false : count < 2,
+  });
+}
+
+// ---- PR Why+Risk Brief -----------------------------------------------------
+
+/** Fetches (and, server-side, generates-or-caches) the PR Brief. A POST that
+   behaves like a query — the server owns cache invalidation by headSha, so a
+   plain (non-force) call is cheap once cached. Mirrors usePullIntent's
+   404-aware retry (no Brief yet is a valid, non-retryable state). */
+export function useBrief(prId: string | null | undefined) {
+  return useQuery<Brief>({
+    queryKey: ["brief", prId],
+    queryFn: () => postPrBrief(prId!),
+    enabled: prId != null,
+    staleTime: 5 * 60 * 1000,
+    retry: (count, err: unknown) =>
+      (err as { status?: number })?.status === 404 ? false : count < 2,
+  });
+}
+
+/** Force-regenerates the Brief regardless of cache state (Regenerate button). */
+export function useRegenerateBrief(prId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => postPrBrief(prId!, { force: true }),
+    onSuccess: (brief) => {
+      qc.setQueryData(["brief", prId], brief);
+      qc.invalidateQueries({ queryKey: ["brief", prId] });
+    },
   });
 }

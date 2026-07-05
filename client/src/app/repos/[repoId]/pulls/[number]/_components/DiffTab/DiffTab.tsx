@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SectionLabel, Button } from "@devdigest/ui";
 import { DiffViewer, type DiffCommentApi } from "@/components/diff-viewer";
@@ -29,6 +30,11 @@ export function DiffTab({
   onSmartOrderChange,
 }: DiffTabProps) {
   const t = useTranslations("prReview.smartDiff");
+  const searchParams = useSearchParams();
+  const targetFile = searchParams.get("file") ?? undefined;
+  const targetLine = searchParams.get("line")
+    ? Number(searchParams.get("line"))
+    : undefined;
   const { data: comments } = usePrComments(prId);
   const create = useCreatePrComment(prId);
   const smartDiff = useSmartDiff(prId);
@@ -104,9 +110,16 @@ export function DiffTab({
           smartDiff={smartDiff.data}
           files={files}
           commenting={commenting}
+          targetFile={targetFile}
+          targetLine={targetLine}
         />
       ) : (
-        <DiffViewer files={files} commenting={commenting} />
+        <DiffViewer
+          files={files}
+          commenting={commenting}
+          targetFile={targetFile}
+          targetLine={targetLine}
+        />
       )}
     </section>
   );

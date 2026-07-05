@@ -26,10 +26,13 @@ import { ConfigError } from './errors.js';
 import { AgentsRepository } from '../modules/agents/repository.js';
 import { SkillsRepository } from '../modules/skills/repository.js';
 import { ReviewRepository } from '../modules/reviews/repository.js';
+import { RepoRepository } from '../modules/repos/repository.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
+import { ContextService } from '../modules/context/service.js';
+import { OnboardingService } from '../modules/onboarding/service.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,
@@ -74,10 +77,13 @@ export class Container {
   private _agentsRepo?: AgentsRepository;
   private _skillsRepo?: SkillsRepository;
   private _reviewRepo?: ReviewRepository;
+  private _reposRepo?: RepoRepository;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
   private _priceBook?: PriceBook;
+  private _contextService?: ContextService;
+  private _onboarding?: OnboardingService;
 
   constructor(config: AppConfig, db: Db, private overrides: ContainerOverrides = {}) {
     this.config = config;
@@ -94,6 +100,14 @@ export class Container {
     return this._git;
   }
 
+  get contextService(): ContextService {
+    return (this._contextService ??= new ContextService(this));
+  }
+
+  get onboarding(): OnboardingService {
+    return (this._onboarding ??= new OnboardingService(this));
+  }
+
   get agentsRepo(): AgentsRepository {
     return (this._agentsRepo ??= new AgentsRepository(this.db));
   }
@@ -104,6 +118,10 @@ export class Container {
 
   get reviewRepo(): ReviewRepository {
     return (this._reviewRepo ??= new ReviewRepository(this.db));
+  }
+
+  get reposRepo(): RepoRepository {
+    return (this._reposRepo ??= new RepoRepository(this.db));
   }
 
   get codeIndex(): CodeIndex {

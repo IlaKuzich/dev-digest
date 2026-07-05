@@ -7,7 +7,7 @@ import { ConventionsRepository } from "./repository.js";
 import { extractConventions } from "./extractor.js";
 import { SkillsService } from "../skills/service.js";
 import type { ConventionRow } from "./repository.js";
-import { resolveFeatureModel } from "../settings/feature-models.js";
+import { resolveFeatureModelStrict } from "../settings/feature-models.js";
 
 function toDto(row: ConventionRow): ConventionCandidate {
   return {
@@ -55,7 +55,7 @@ export class ConventionsService {
       12,
     );
 
-    const { provider, model } = await resolveFeatureModel(
+    const { provider, model } = await resolveFeatureModelStrict(
       this.container,
       workspaceId,
       "conventions",

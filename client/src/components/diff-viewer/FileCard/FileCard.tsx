@@ -38,11 +38,13 @@ export function FileCard({
   commenting,
   initialOpen,
   lineBadges,
+  targetLine,
 }: {
   file: PrFile;
   commenting?: DiffCommentApi;
   initialOpen?: boolean;
   lineBadges?: Map<number, { severity: string; findingId: string }>;
+  targetLine?: number;
 }) {
   const t = useTranslations("shell");
   const [open, setOpen] = React.useState(
@@ -71,7 +73,7 @@ export function FileCard({
     : 0;
 
   return (
-    <div style={s.fileCard}>
+    <div id={`diff-file-${file.path}`} style={s.fileCard}>
       <div onClick={() => setOpen((o) => !o)} style={s.fileHeader}>
         <Icon.ChevronRight size={13} style={chevronFor(open)} />
         <Icon.FileText size={14} style={s.fileIcon} />
@@ -110,6 +112,7 @@ export function FileCard({
                 threads={threadsForLine(ln, matched)}
                 commenting={commenting}
                 badge={lineBadges?.get(ln.newNo ?? ln.oldNo ?? -1)}
+                targetLine={targetLine}
               />
             ))
           )}

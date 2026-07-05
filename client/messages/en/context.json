@@ -1,24 +1,69 @@
 {
   "title": "Project Context",
   "chunks": "{count} chunks",
-  "reindex": "Re-index",
-  "indexing": "Indexing…",
+  "reindex": "Reindex",
+  "reindexing": "Reindexing…",
   "resync": "Resync",
   "resyncing": "Resyncing…",
   "indexStatus": "Index status: {status}",
-  "loadError": "Couldn’t load specs",
+  "loadError": "Couldn't load specs",
   "kb": "{kb}kb",
   "empty": {
-    "title": "No spec files yet",
-    "body": "Drop your PRDs, tech specs, and acceptance criteria under .devdigest/specs/. Every agent and the PR brief read them as grounding context."
+    "title": "No documents found",
+    "body": "Drop your PRDs, tech specs, and acceptance criteria under specs/, docs/, or insights/ in the repository. Every agent and the PR brief read them as grounding context."
   },
   "mode": {
     "preview": "preview",
     "edit": "edit"
   },
   "editor": {
-    "loadError": "Couldn’t load spec",
+    "loadError": "Couldn't load spec",
     "save": "Save",
     "saving": "Saving…"
+  },
+  "page": {
+    "title": "Project Context",
+    "breadcrumb": "Project Context",
+    "reindex": "Reindex",
+    "reindexing": "Reindexing…",
+    "selectFile": "Select a file to preview",
+    "footer": {
+      "docs": "● {count} documents · {tokens} tokens total",
+      "refreshed": "· refreshed {minutes}m ago"
+    },
+    "toolbar": {
+      "reindex": "Reindex",
+      "download": "Download",
+      "add": "Add document",
+      "openFolder": "Open folder",
+      "comingSoon": "Coming soon"
+    },
+    "preview": {
+      "tabPreview": "Preview",
+      "tabEdit": "Edit",
+      "usedBy": "Used by {count} agents",
+      "coverage": "Coverage"
+    }
+  },
+  "attach": {
+    "title": "Project context",
+    "attachedCount": "{attached} of {total} attached",
+    "filterPlaceholder": "Filter documents…",
+    "hintPrefix": "Order matters — earlier docs appear earlier in the assembled",
+    "hintCode": "## Project context",
+    "hintSuffix": "block. Toggle to attach.",
+    "footerNotePrefix": "Injected as an untrusted block (",
+    "footerNoteSuffix": ") into every run.",
+    "preview": "Preview",
+    "footer": "≈ {tokens} tokens",
+    "tokenWarning": "Over 8 000 tokens — prompt may be long",
+    "noRepo": "No active repository selected",
+    "noRepoHint": "Open a repository to see available context documents.",
+    "empty": "No context documents found in this repository.",
+    "noResults": "No documents match your filter.",
+    "badgeSpec": "specs",
+    "badgeDoc": "docs",
+    "badgeInsight": "insights",
+    "badgeReadme": "readme"
   }
 }

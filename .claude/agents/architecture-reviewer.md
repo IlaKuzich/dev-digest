@@ -28,7 +28,7 @@ description: >
   user: "architecture audit before we merge this"
   assistant: "I'll use the architecture-reviewer agent to run a full onion compliance pass."
   </example>
-model: opus
+model: sonnet
 color: purple
 tools:
   - Read

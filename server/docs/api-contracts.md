@@ -57,6 +57,17 @@ Rate limit: `POST /pulls/:id/review` — 120/min globally.
 | `PUT` | `/settings` | Update settings |
 | `GET` | `/workspace` | Workspace status |
 
+### Onboarding
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/repos/:id/onboarding` | Generate (or serve cached) Onboarding Tour. `?force=true` regenerates even if `headSha` is unchanged |
+| `GET` | `/repos/:id/onboarding` | Get cached Onboarding Tour — `404` if none exists yet |
+
+Rate limit: `POST /repos/:id/onboarding` — `{max: 10, timeWindow: "1 minute"}` (same shape as `brief`).
+
+Cached per `(repoId, headSha)`, where `headSha` is the repo's last-indexed SHA (`repoIntel.getIndexState`). A `422` is returned when the workspace has no model configured for the `onboarding` feature in Settings → Feature Models.
+
 ## SSE Protocol — `GET /runs/:id/events`
 
 The client subscribes with `EventSource`. The server emits `RunEvent` objects as newline-delimited JSON in the `data` field of each SSE message.

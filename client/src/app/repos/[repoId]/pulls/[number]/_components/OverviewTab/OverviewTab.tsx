@@ -1,14 +1,21 @@
 "use client";
 
 import React from "react";
+import { useParams, useRouter } from "next/navigation";
 import { SectionLabel } from "@devdigest/ui";
 import { IntentCard } from "../IntentCard";
 import {
   usePullIntent,
   useRecalculateIntent,
   useBlastRadius,
+  useBrief,
+  useRegenerateBrief,
 } from "@/lib/hooks/pulls";
+import { usePrRuns, usePrReviews } from "@/lib/hooks/reviews";
+import type { RunSummary } from "@devdigest/shared";
 import { BlastRadiusCard } from "../BlastRadiusCard";
+import { BriefCard } from "../BriefCard";
+import { ReviewFocusList } from "../BriefCard/ReviewFocusList";
 import { ErrorBoundary } from "react-error-boundary";
 import { s } from "./styles";
 import type { CSSProperties } from "react";
@@ -18,141 +25,50 @@ interface OverviewTabProps {
   prId: string | null | undefined;
 }
 
-// ── Placeholder: PR Brief ─────────────────────────────────────────────────────
-function PrBriefPlaceholder() {
-  return (
-    <div
-      style={
-        {
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          background: "var(--bg-elevated)",
-          padding: "16px 18px",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 16,
-        } satisfies CSSProperties
-      }
-    >
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}
-      >
-        {/* verdict row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: "rgba(239,68,68,0.15)",
-              color: "#f87171",
-              borderRadius: 6,
-              padding: "3px 10px",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            🔴 Request changes
-          </span>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            6 findings · 2 blockers
-          </span>
-        </div>
-        {/* summary */}
-        <p
-          style={{
-            margin: 0,
-            fontSize: 13,
-            color: "var(--text-secondary)",
-            lineHeight: 1.5,
-          }}
-        >
-          Solid middleware approach, but a Stripe secret key is committed in
-          plaintext and the user-list endpoint introduces an N+1 query under the
-          new limiter. Two blockers before merge.
-        </p>
-        {/* cost row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 12,
-            color: "var(--text-muted)",
-          }}
-        >
-          <span>$ 0.014</span>
-          <span style={{ opacity: 0.5 }}>·</span>
-          <span>8.2K → 1.3K tokens</span>
-        </div>
-      </div>
-      {/* score badge */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 4,
-          flexShrink: 0,
-        }}
-      >
-        <svg width={56} height={56} viewBox="0 0 56 56">
-          <circle
-            cx={28}
-            cy={28}
-            r={24}
-            fill="none"
-            stroke="var(--border)"
-            strokeWidth={5}
-          />
-          <circle
-            cx={28}
-            cy={28}
-            r={24}
-            fill="none"
-            stroke="#f59e0b"
-            strokeWidth={5}
-            strokeDasharray={`${2 * Math.PI * 24 * 0.61} ${2 * Math.PI * 24}`}
-            strokeLinecap="round"
-            transform="rotate(-90 28 28)"
-          />
-          <text
-            x={28}
-            y={33}
-            textAnchor="middle"
-            fontSize={14}
-            fontWeight={700}
-            fill="var(--text-primary)"
-          >
-            61
-          </text>
-        </svg>
-        <span
-          style={{
-            fontSize: 10,
-            color: "var(--text-muted)",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
-        >
-          PR Score
-        </span>
-      </div>
-    </div>
-  );
-}
 export function OverviewTab({ prBody, prId }: OverviewTabProps) {
+  const { repoId, number } = useParams<{ repoId: string; number: string }>();
+  const router = useRouter();
   const { data: intent, isLoading } = usePullIntent(prId);
   const recalc = useRecalculateIntent(prId);
   const { data: blastRadius, isLoading: blastLoading } = useBlastRadius(prId);
+
+  const {
+    data: brief,
+    isLoading: briefLoading,
+    isError: briefError,
+  } = useBrief(prId);
+  const regenerateBrief = useRegenerateBrief(prId);
+  const { data: runs } = usePrRuns(prId);
+  const latestDoneRun =
+    runs?.find((r: RunSummary) => r.status === "done") ?? null;
+  const { data: reviews } = usePrReviews(prId);
+  const latestReview = reviews?.[0] ?? null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* PR Brief — full width */}
       <section>
         <SectionLabel icon="FileText">PR Brief</SectionLabel>
-        <PrBriefPlaceholder />
+        <ErrorBoundary
+          fallback={
+            <div style={{ fontSize: 13, color: "var(--crit)", padding: 12 }}>
+              Failed to load PR Brief
+            </div>
+          }
+        >
+          <BriefCard
+            brief={brief}
+            isLoading={briefLoading}
+            isError={briefError}
+            latestRun={latestDoneRun}
+            latestReview={latestReview}
+            prId={prId ?? ""}
+            repoId={repoId}
+            prNumber={number}
+            onRegenerate={() => regenerateBrief.mutate()}
+            regenerating={regenerateBrief.isPending}
+          />
+        </ErrorBoundary>
       </section>
 
       {/* 2-column: Intent + Blast Radius */}
@@ -162,7 +78,7 @@ export function OverviewTab({ prBody, prId }: OverviewTabProps) {
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: 16,
-            alignItems: "stretch",
+            alignItems: "start",
           } satisfies CSSProperties
         }
       >
@@ -171,9 +87,15 @@ export function OverviewTab({ prBody, prId }: OverviewTabProps) {
           isLoading={isLoading}
           onRecalculate={() => recalc.mutate()}
           recalculating={recalc.isPending}
+          risks={brief?.risks}
         />
         <section
-          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: 700,
+            minWidth: 0,
+          }}
         >
           <SectionLabel icon="GitPullRequest">Blast Radius</SectionLabel>
           <ErrorBoundary
@@ -186,12 +108,33 @@ export function OverviewTab({ prBody, prId }: OverviewTabProps) {
             <BlastRadiusCard
               blastRadius={blastRadius}
               isLoading={blastLoading}
+              className="flex-1 overflow-y-auto"
             />
           </ErrorBoundary>
         </section>
       </div>
 
-      {/* PR Description */}
+      {/* Review Focus — full width, first */}
+      {brief?.review_focus && brief.review_focus.length > 0 && (
+        <section>
+          <ReviewFocusList
+            items={brief.review_focus}
+            onNavigate={(ref) => {
+              const colonIdx = ref.lastIndexOf(":");
+              const hasLine = colonIdx > 0 && colonIdx > ref.lastIndexOf("/");
+              const filePath = hasLine ? ref.slice(0, colonIdx) : ref;
+              const lineStr = hasLine
+                ? ref.slice(colonIdx + 1).split("-")[0]
+                : undefined;
+              router.push(
+                `/repos/${repoId}/pulls/${number}?tab=diff&file=${encodeURIComponent(filePath)}${lineStr ? `&line=${lineStr}` : ""}`,
+              );
+            }}
+          />
+        </section>
+      )}
+
+      {/* PR Description — below Review Focus */}
       {prBody && (
         <section>
           <SectionLabel icon="MessageSquare">Description</SectionLabel>

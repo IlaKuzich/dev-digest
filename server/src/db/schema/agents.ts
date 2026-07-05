@@ -7,8 +7,10 @@ import {
   jsonb,
   primaryKey,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { now } from "./_shared";
 import { workspaces, users } from "./core";
+import { repos } from "./repos";
 import { skills } from "./skills";
 
 // ============================================================ Agents & skills
@@ -18,6 +20,9 @@ export const agents = pgTable("agents", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
+  repoId: uuid("repo_id")
+    .references(() => repos.id, { onDelete: "cascade" })
+    .notNull(),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
   provider: text("provider", {
@@ -47,6 +52,12 @@ export const agents = pgTable("agents", {
   // (Settings → Feature Models) rather than the stored provider/model fields.
   // The stored provider/model act as display defaults in the agent editor only.
   featureModelId: text("feature_model_id"),
+  // Ordered list of project-context doc paths (relative to clone root) attached
+  // to this agent. Injected into the review prompt as spec blocks at run time.
+  contextDocPaths: text("context_doc_paths")
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
   createdBy: uuid("created_by").references(() => users.id),
   createdAt: now(),
 });

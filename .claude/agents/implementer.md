@@ -31,22 +31,10 @@ tools:
   - Glob
 permissionMode: acceptEdits
 skills:
-  # Cross-cutting — both scopes
+  # Cross-cutting — always needed regardless of scope
   - typescript-expert
   - security
-  # Backend — all preloaded at startup
-  - onion-architecture
-  - fastify-best-practices
-  - drizzle-orm-patterns
-  - postgresql-table-design
-  - zod
-  # Frontend — all preloaded at startup
-  - frontend-architecture
-  - next-best-practices
-  - react-best-practices
-  - react-testing-library
-  # Session end — insights recording
-  - engineering-insights
+  - engineering-insights      # session end — loaded on-demand at STEP FINAL
 ---
 
 # Implementer Agent
@@ -81,17 +69,33 @@ Determine your scope from the task description or plan:
 
 One implementer instance = one scope. If asked to do both, spawn two instances.
 
+⚠️ **CHECKPOINT — Immediately after determining scope, load scope skills:**
+
+**Backend scope:**
+```
+Skill("onion-architecture") → Skill("drizzle-orm-patterns") → Skill("zod") →
+Skill("fastify-best-practices") → Skill("postgresql-table-design")
+```
+
+**UI scope:**
+```
+Skill("frontend-architecture") → Skill("next-best-practices") →
+Skill("react-best-practices") → Skill("react-testing-library") → Skill("zod")
+```
+
+Do NOT write any code until scope skills are loaded.
+
 ---
 
 ## Skills Reference
 
-All skills are preloaded at startup. Apply them as follows:
+Scope-specific skills are loaded on-demand at Task Detection (below). Cross-cutting skills (`typescript-expert`, `security`) are preloaded.
 
-**Backend scope** (`server/`): `onion-architecture` enforces layer placement → `drizzle-orm-patterns` for repository queries → `zod` for route schemas and contracts → `fastify-best-practices` for plugins/hooks/SSE → `postgresql-table-design` for schema design → `engineering-insights` at session end.
+**Backend scope** — load these via `Skill` tool at task start:
+`onion-architecture` → `drizzle-orm-patterns` → `zod` → `fastify-best-practices` → `postgresql-table-design`
 
-**UI scope** (`client/`): `frontend-architecture` enforces file placement → `next-best-practices` for App Router/RSC → `react-best-practices` for components/hooks → `react-testing-library` in Phase 4 → `zod` for `@devdigest/shared` contracts → `engineering-insights` at session end.
-
-**Both scopes always:** `typescript-expert` for type patterns, `security` for input/auth handling.
+**UI scope** — load these via `Skill` tool at task start:
+`frontend-architecture` → `next-best-practices` → `react-best-practices` → `react-testing-library` → `zod`
 
 ---
 
@@ -109,7 +113,7 @@ All skills are preloaded at startup. Apply them as follows:
 
 ## Self-Verification
 
-Run after every implemented phase. Do NOT proceed until clean.
+### After every phase (fast check):
 
 **Backend:**
 ```bash
@@ -123,7 +127,14 @@ cd client && pnpm typecheck
 cd client && pnpm test
 ```
 
-If typecheck or tests fail — fix immediately before moving to the next phase.
+### After every TASK (integration — backend only):
+```bash
+cd server && pnpm exec vitest run .it.test
+```
+
+Integration tests (testcontainers) are expensive — run them once per TASK, not per phase.
+
+If typecheck or unit tests fail after a phase — fix immediately before moving to the next phase.
 
 ---
 
@@ -201,6 +212,25 @@ git diff $START_SHA...HEAD
 Pass this diff to pr-self-review. It reviews **only your changes** — not the full branch history.
 
 If pr-self-review returns CRITICAL findings → fix them before declaring done.
+
+---
+
+## Recommended next steps after declaring done
+
+Run `/run-plan plans/PLAN-<feature>.md` in a new chat — it orchestrates everything automatically.
+
+Or manually, in this order:
+
+1. **architecture-reviewer** — check layering and SOLID violations
+   → if CRITICAL/HIGH found → fix them → re-run architecture-reviewer
+   → repeat until no CRITICAL/HIGH (max 3 iterations)
+
+2. **plan-viewer** — final coverage check (reports only, does not block)
+   → outputs IMPLEMENTED / PARTIAL / MISSING per AC
+   → user decides next steps
+
+3. **test-writer** — manual, when ready
+   → run after arch is clean and plan-viewer reports acceptable coverage
 
 ---
 

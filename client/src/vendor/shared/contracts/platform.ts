@@ -261,8 +261,17 @@ export const SpecFile = z.object({
   content: z.string().nullish(),
   size: z.number().int().nullish(),
   updated_at: z.string().nullish(),
+  /** Rough token estimate: Math.ceil(content.length / 4). Server-computed only. */
+  estimated_tokens: z.number().int().nonnegative().nullish(),
 });
 export type SpecFile = z.infer<typeof SpecFile>;
+
+export const ContextSummary = z.object({
+  files_count: z.number().int(),
+  tokens_total: z.number().int(),
+  refreshed_at: z.string(),
+});
+export type ContextSummary = z.infer<typeof ContextSummary>;
 
 export const IndexStatus = z.object({
   status: z.enum(["idle", "cloning", "parsing", "embedding", "done", "error"]),

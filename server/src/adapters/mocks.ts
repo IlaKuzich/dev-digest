@@ -125,6 +125,8 @@ export interface MockGitHubOptions {
   login?: string;
   /** Existing inline review comments returned by listReviewComments. */
   comments?: PrReviewComment[];
+  /** Stub for getCommitActivity — path → commit count. Defaults to empty (zero activity). */
+  commitActivity?: Record<string, number>;
 }
 
 export class MockGitHubClient implements GitHubClient {
@@ -236,6 +238,11 @@ export class MockGitHubClient implements GitHubClient {
 
   async currentLogin(): Promise<string> {
     return this.opts.login ?? 'mock-user';
+  }
+
+  async getCommitActivity(_repo: RepoRef, paths: string[], _sinceDays: number): Promise<Record<string, number>> {
+    const activity = this.opts.commitActivity ?? {};
+    return Object.fromEntries(paths.map((p) => [p, activity[p] ?? 0]));
   }
 }
 

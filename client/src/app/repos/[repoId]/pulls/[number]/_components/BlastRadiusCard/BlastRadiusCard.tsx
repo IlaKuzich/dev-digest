@@ -13,11 +13,13 @@ import { buildCronSet, buildSymbolRows } from "./helpers";
 interface BlastRadiusCardProps {
   blastRadius: BlastRadiusResult | undefined;
   isLoading: boolean;
+  className?: string;
 }
 
 export function BlastRadiusCard({
   blastRadius,
   isLoading,
+  className = "",
 }: BlastRadiusCardProps) {
   const t = useTranslations("prReview.blastRadius");
   const params = useParams<{ repoId: string; number: string }>();
@@ -25,7 +27,9 @@ export function BlastRadiusCard({
 
   if (isLoading) {
     return (
-      <div className="border border-[var(--border)] rounded-lg bg-[var(--bg-elevated)] p-4 flex items-center justify-center h-80">
+      <div
+        className={`border border-[var(--border)] rounded-lg bg-[var(--bg-elevated)] p-4 flex items-center justify-center min-h-[280px] h-full ${className}`}
+      >
         <span className="text-xs text-[var(--text-muted)]">
           {t("loadingTitle")}
         </span>
@@ -35,7 +39,9 @@ export function BlastRadiusCard({
 
   if (!blastRadius) {
     return (
-      <div className="border border-[var(--border)] rounded-lg bg-[var(--bg-elevated)] p-4 flex flex-col items-center justify-center h-80 gap-2">
+      <div
+        className={`border border-[var(--border)] rounded-lg bg-[var(--bg-elevated)] p-4 flex flex-col items-center justify-center min-h-[280px] h-full gap-2 ${className}`}
+      >
         <span className="text-2xl">📡</span>
         <span className="text-sm text-[var(--text-muted)] text-center">
           {t("emptyTitle")}
@@ -51,7 +57,9 @@ export function BlastRadiusCard({
   const symbolRows = buildSymbolRows(blastRadius);
 
   return (
-    <div className="border border-[var(--border)] rounded-lg bg-[var(--bg-elevated)] p-4 flex flex-col gap-3 h-80 box-border overflow-hidden">
+    <div
+      className={`border border-[var(--border)] rounded-lg bg-[var(--bg-elevated)] p-4 flex flex-col gap-3 min-h-[280px] h-full box-border ${className}`}
+    >
       <SummaryBar
         symbolCount={blastRadius.changedSymbols.length}
         callerCount={blastRadius.callers.length}

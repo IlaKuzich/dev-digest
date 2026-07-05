@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createDb, type Db } from "./client.js";
 import * as t from "./schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 /**
  * Seed the starter's demo data. Idempotent: re-running upserts the default
@@ -191,6 +191,7 @@ export async function seed(
   const seedAgents: Array<typeof t.agents.$inferInsert> = [
     {
       workspaceId,
+      repoId,
       name: "General Reviewer",
       description: "Reviews a PR diff for bugs, correctness, and clarity.",
       provider: "openai",
@@ -203,6 +204,7 @@ export async function seed(
     },
     {
       workspaceId,
+      repoId,
       name: "Security Reviewer",
       description:
         "Flags secrets, injection, and untrusted-input sinks before merge.",
@@ -216,6 +218,7 @@ export async function seed(
     },
     {
       workspaceId,
+      repoId,
       name: "Test Quality Reviewer",
       description:
         "Checks test coverage, corner cases, excessive mocking, and flaky patterns.",
@@ -237,6 +240,11 @@ export async function seed(
       );
     if (!existing) await db.insert(t.agents).values(a);
   }
+  // backfill repo_id for any agent rows inserted before this migration
+  await db
+    .update(t.agents)
+    .set({ repoId })
+    .where(and(eq(t.agents.workspaceId, workspaceId), isNull(t.agents.repoId)));
 
   // ---- skills (6 reusable instruction blocks) ----
   const seedSkills: Array<{
@@ -247,6 +255,7 @@ export async function seed(
       slug: "pr-quality-rubric",
       values: {
         workspaceId,
+        repoId,
         name: "PR Quality Rubric",
         description:
           "General PR quality rubric covering clarity, correctness, and edge cases.",
@@ -271,6 +280,7 @@ Flag any dimension that scores below 3/5.`,
       slug: "no-then-chains",
       values: {
         workspaceId,
+        repoId,
         name: "No .then() Chains",
         description: "Forbid .then() chaining — require async/await instead.",
         type: "convention",
@@ -302,6 +312,7 @@ fetchUser(id).then(result => { ... });
       slug: "secret-leakage-gate",
       values: {
         workspaceId,
+        repoId,
         name: "Secret Leakage Gate",
         description:
           "Detect hardcoded secrets, API keys, and credentials in the diff.",
@@ -327,6 +338,7 @@ Flag as CRITICAL if the diff contains:
       slug: "lethal-trifecta",
       values: {
         workspaceId,
+        repoId,
         name: "Lethal Trifecta",
         description:
           "Detect private data + untrusted input + exfiltration path in same change.",
@@ -353,6 +365,7 @@ The "lethal trifecta" is when a single change touches all three of:
       slug: "phantom-api-gate",
       values: {
         workspaceId,
+        repoId,
         name: "Phantom API Gate",
         description:
           "Detect undocumented or phantom API calls introduced in the diff.",
@@ -377,6 +390,7 @@ Flag as WARNING or CRITICAL if the diff:
       slug: "test-coverage-nudge",
       values: {
         workspaceId,
+        repoId,
         name: "Test Coverage Nudge",
         description:
           "Flag missing test coverage for changed branches and new functions.",
@@ -425,6 +439,11 @@ Suggest adding a test case with the specific scenario that would exercise the un
     }
     skillIdBySlug.set(slug, existing!.id);
   }
+  // backfill repo_id for any skill rows inserted before this migration
+  await db
+    .update(t.skills)
+    .set({ repoId })
+    .where(and(eq(t.skills.workspaceId, workspaceId), isNull(t.skills.repoId)));
 
   // ---- agent–skill links ----
   // Security Reviewer: pr-quality-rubric, secret-leakage-gate, lethal-trifecta
@@ -581,6 +600,7 @@ app.get('/v1/users', deprecationMiddleware('/v2/users'), handler);
         .insert(t.skills)
         .values({
           workspaceId,
+          repoId,
           name: s.name,
           description: s.description,
           type: s.type,
@@ -614,6 +634,7 @@ app.get('/v1/users', deprecationMiddleware('/v2/users'), handler);
       .insert(t.agents)
       .values({
         workspaceId,
+        repoId,
         name: "API Contract Reviewer",
         description:
           "Detects breaking API changes, schema violations, and versioning issues before merge.",

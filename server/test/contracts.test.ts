@@ -128,7 +128,30 @@ describe('AI contracts parse fixtures', () => {
     ).not.toThrow();
     expect(() =>
       Onboarding.parse({
-        sections: [{ kind: 'architecture', title: 'T', body: 'b', links: [] }],
+        repoName: 'owner/repo',
+        filesIndexed: 50,
+        generatedAt: new Date().toISOString(),
+        headSha: 'abc123',
+        sections: {
+          architecture: {
+            overview: 'A monorepo.',
+            style: 'monorepo',
+            nodes: [{ id: 'client', label: 'client', kind: 'package' }],
+            edges: [],
+          },
+          criticalPaths: [{ file: 'src/app.ts', whyItMatters: 'Entry', openUrl: 'https://github.com/x' }],
+          howToRun: { packageManager: 'pnpm', commands: ['pnpm dev'], envVars: [], entrypoint: 'pnpm dev' },
+          readingPath: [{ order: 1, file: 'src/app.ts', reason: 'Start here', openUrl: 'https://github.com/x' }],
+          firstTasks: [{
+            title: 'Add tests',
+            suggestedPath: 'src/app.test.ts',
+            gapType: 'missing-test',
+            rationale: 'No tests',
+            patternPointer: 'src/app.ts',
+            complexity: 'Medium',
+            verificationHint: 'Run vitest',
+          }],
+        },
       }),
     ).not.toThrow();
     expect(() =>

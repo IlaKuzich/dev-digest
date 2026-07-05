@@ -2,7 +2,7 @@ import type { Container } from "../../platform/container.js";
 import type { BlastRadiusResult, Provider } from "@devdigest/shared";
 import { NotFoundError } from "../../platform/errors.js";
 import { BlastRepository } from "./repository.js";
-import { resolveFeatureModel } from "../settings/feature-models.js";
+import { resolveFeatureModelStrict } from "../settings/feature-models.js";
 
 export class BlastService {
   private readonly repo: BlastRepository;
@@ -60,7 +60,7 @@ export class BlastService {
 
     let summary: string | undefined;
     try {
-      const { provider, model } = await resolveFeatureModel(
+      const { provider, model } = await resolveFeatureModelStrict(
         this.container,
         workspaceId,
         "review_intent",

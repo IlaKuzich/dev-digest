@@ -369,4 +369,37 @@ export class OctokitGitHubClient implements GitHubClient {
     );
     return res.data.login;
   }
+
+  async getCommitActivity(
+    repo: RepoRef,
+    paths: string[],
+    sinceDays: number,
+  ): Promise<Record<string, number>> {
+    const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
+    const result: Record<string, number> = {};
+
+    await Promise.all(
+      paths.map(async (path) => {
+        try {
+          const res = await withRetry(() =>
+            withTimeout(
+              this.octokit.rest.repos.listCommits({
+                owner: repo.owner,
+                repo: repo.name,
+                path,
+                since,
+                per_page: 100,
+              }),
+              TIMEOUT,
+            ),
+          );
+          result[path] = res.data.length;
+        } catch {
+          result[path] = 0;
+        }
+      }),
+    );
+
+    return result;
+  }
 }
