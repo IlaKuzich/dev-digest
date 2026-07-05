@@ -20,7 +20,7 @@ import { REVIEW_STRATEGY } from "./constants.js";
 import { taskLine } from "./helpers.js";
 import { loadDiff } from "./diff-loader.js";
 import { deriveIntent } from "./intent-deriver.js";
-import { resolveFeatureModel } from "../settings/feature-models.js";
+import { resolveFeatureModelStrict } from "../settings/feature-models.js";
 import type { FeatureModelId } from "@devdigest/shared";
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
@@ -258,10 +258,14 @@ export class ReviewRunExecutor {
       // Resolve provider + model: Feature Models settings take priority when the
       // agent is linked to a feature (featureModelId set). This makes Settings →
       // Feature Models the single source of truth for those agents.
+      // Deliberate degrade-on-ValidationError: run-executor runs in the background
+      // pipeline — a missing model config aborts just this agent's run (logged below
+      // in the outer catch), not the whole batch. This is a documented deviation from
+      // AC-14's literal "throw 422" for the non-HTTP pipeline call sites.
       let provider = agent.provider as Provider;
       let model = agent.model;
       if (agent.featureModelId) {
-        const resolved = await resolveFeatureModel(
+        const resolved = await resolveFeatureModelStrict(
           this.container,
           agent.workspaceId,
           agent.featureModelId as FeatureModelId,

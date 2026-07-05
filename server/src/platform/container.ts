@@ -32,6 +32,7 @@ import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
 import { type Tokenizer, TiktokenTokenizer } from '../adapters/tokenizer/index.js';
 import { ContextService } from '../modules/context/service.js';
+import { OnboardingService } from '../modules/onboarding/service.js';
 
 /**
  * DI container. One per app instance. Holds config, db, the JobRunner,
@@ -82,6 +83,7 @@ export class Container {
   private _tokenizer?: Tokenizer;
   private _priceBook?: PriceBook;
   private _contextService?: ContextService;
+  private _onboarding?: OnboardingService;
 
   constructor(config: AppConfig, db: Db, private overrides: ContainerOverrides = {}) {
     this.config = config;
@@ -100,6 +102,10 @@ export class Container {
 
   get contextService(): ContextService {
     return (this._contextService ??= new ContextService(this));
+  }
+
+  get onboarding(): OnboardingService {
+    return (this._onboarding ??= new OnboardingService(this));
   }
 
   get agentsRepo(): AgentsRepository {

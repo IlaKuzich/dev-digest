@@ -102,5 +102,6 @@ Vague language ("should work", "handle errors") is not allowed in ACs.
 | SPEC-2026-07-02-project-context | [Project Context](SPEC-2026-07-02-project-context.md) | server, client | draft |
 | SPEC-2026-07-03-pr-why-risk-brief | [PR Why+Risk Brief](SPEC-2026-07-03-pr-why-risk-brief.md) | server, client | draft |
 | SPEC-2026-07-04-context-root-scan | [Context Root Scan](SPEC-2026-07-04-context-root-scan.md) | server, client | draft |
+| SPEC-2026-07-04-onboarding-generator | [Onboarding Generator (Onboarding Tour)](SPEC-2026-07-04-onboarding-generator.md) | server, client | draft |
 
 _This table is updated by `spec-creator` each time a cross-module spec is added._

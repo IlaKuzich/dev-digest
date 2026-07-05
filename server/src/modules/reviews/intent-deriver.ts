@@ -7,7 +7,8 @@ import type {
   Provider,
 } from "@devdigest/shared";
 import { Intent as IntentSchema } from "@devdigest/shared";
-import { resolveFeatureModel } from "../settings/feature-models.js";
+import { resolveFeatureModelStrict } from "../settings/feature-models.js";
+import { ValidationError } from "../../platform/errors.js";
 import type { RunLogger } from "../../platform/run-logger.js";
 
 const MAX_BODY_CHARS = 2000;
@@ -48,11 +49,23 @@ export async function deriveIntent(
     }
 
     // Step 1 — resolve cheap model
-    const { provider, model } = await resolveFeatureModel(
-      container,
-      workspaceId,
-      "review_intent",
-    );
+    // Deliberate degrade-on-ValidationError: intent-deriver runs inside the
+    // background review pipeline (not a direct HTTP handler). A missing model
+    // config should skip intent derivation, not crash the whole review run.
+    let resolvedModel: { provider: string; model: string };
+    try {
+      resolvedModel = await resolveFeatureModelStrict(
+        container,
+        workspaceId,
+        "review_intent",
+      );
+    } catch (err) {
+      runLog.info(
+        `Intent: no model configured — skipping (${(err as Error).message})`,
+      );
+      return undefined;
+    }
+    const { provider, model } = resolvedModel;
 
     // Step 2 — get LLM provider (may throw if key not configured)
     let llm;

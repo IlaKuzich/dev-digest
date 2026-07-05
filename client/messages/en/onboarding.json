@@ -1,10 +1,68 @@
 {
-  "title": "Onboarding Tour",
-  "sections": "Sections",
-  "sectionCount": "{count} sections",
-  "regenerate": "Regenerate",
-  "regenerating": "Regenerating…",
-  "unknownError": "Unknown error",
+  "page": {
+    "title": "Onboarding for <repo>{repoName}</repo>",
+    "subheader": "Generated from index of {filesIndexed} files · last refreshed {ago}",
+    "breadcrumb": "Onboarding Tour"
+  },
+  "header": {
+    "regenerate": "Regenerate",
+    "regenerating": "Regenerating…",
+    "shareLink": "Share link",
+    "linkCopied": "Link copied!"
+  },
+  "nav": {
+    "onThisPage": "On this page"
+  },
+  "sections": {
+    "architecture": "Architecture",
+    "criticalPaths": "Critical Paths",
+    "howToRun": "How to Run Locally",
+    "readingPath": "Guided Reading Path",
+    "firstTasks": "First Tasks"
+  },
+  "architecture": {
+    "overviewLabel": "Overview",
+    "diagramLabel": "Diagram",
+    "noDetail": "No further detail available for this node.",
+    "noRelationships": "No relationships detected between these components.",
+    "overflowItemDetail": "{label} was grouped into this overflow node — no further detail available."
+  },
+  "criticalPaths": {
+    "openFile": "Open"
+  },
+  "howToRun": {
+    "packageManagerLabel": "Package manager:",
+    "copyCommand": "Copy",
+    "copied": "Copied!",
+    "envVarsLabel": "Required env vars",
+    "entrypointLabel": "Entrypoint",
+    "noEnvVars": "No env vars required"
+  },
+  "readingPath": {
+    "openFile": "Open"
+  },
+  "firstTasks": {
+    "complexityLabel": "Complexity",
+    "gapTypeLabel": "Gap",
+    "gapType": {
+      "missing-test": "Missing test",
+      "missing-doc": "Missing doc",
+      "missing-pattern": "Missing pattern"
+    },
+    "patternPointerLabel": "Reference file",
+    "verificationHintLabel": "How to verify",
+    "suggestedPathLabel": "Suggested path"
+  },
+  "empty": {
+    "title": "Generate Onboarding Tour",
+    "body": "DevDigest indexes the repo and writes a 5-section guided tour: architecture, critical paths, how to run, reading path, and first tasks.",
+    "cta": "Generate"
+  },
+  "error": {
+    "title": "Couldn't load the onboarding tour",
+    "retry": "Try again"
+  },
+  "narrativeUnavailable": "LLM call failed — showing mechanical skeleton. Click Regenerate to retry.",
   "generate": {
     "title": "Generate onboarding tour",
     "body": "DevDigest indexes the repo and specs, then writes a 5-section guided tour: overview, architecture, key modules, getting started, and conventions & gotchas.",
@@ -12,6 +70,6 @@
     "generating": "Generating…"
   },
   "loadError": {
-    "title": "Couldn’t load the onboarding tour"
+    "title": "Couldn't load the onboarding tour"
   }
 }

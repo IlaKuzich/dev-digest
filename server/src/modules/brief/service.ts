@@ -1,7 +1,7 @@
 import type { Container } from "../../platform/container.js";
 import type { Brief, IssueMeta, Provider, SmartDiff } from "@devdigest/shared";
 import { Brief as BriefSchema } from "@devdigest/shared";
-import { resolveFeatureModel } from "../settings/feature-models.js";
+import { resolveFeatureModelStrict } from "../settings/feature-models.js";
 import { BlastService } from "../blast/service.js";
 import { PullsService } from "../pulls/service.js";
 import { NotFoundError } from "../../platform/errors.js";
@@ -59,7 +59,7 @@ export class BriefService {
       }
 
       // 3. Resolve LLM
-      const { provider, model } = await resolveFeatureModel(
+      const { provider, model } = await resolveFeatureModelStrict(
         this.container,
         workspaceId,
         "risk_brief",

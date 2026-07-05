@@ -9,7 +9,7 @@ let seq = 0;
 const MERMAID_RE =
   /^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(-v2)?|erDiagram|journey|gantt|pie|mindmap|timeline|gitGraph|quadrantChart|requirementDiagram|C4Context)\b/;
 
-function looksLikeMermaid(src: string): boolean {
+export function looksLikeMermaid(src: string): boolean {
   return MERMAID_RE.test(src.trim());
 }
 

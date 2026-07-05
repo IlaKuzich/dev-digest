@@ -5,7 +5,7 @@ import { getContext } from "../_shared/context.js";
 import { IdParams } from "../_shared/schemas.js";
 import { BriefService } from "./service.js";
 import { getCachedBrief } from "./repository.js";
-import { NotFoundError } from "../../platform/errors.js";
+import { NotFoundError, ValidationError } from "../../platform/errors.js";
 
 /**
  * Brief module.
@@ -39,6 +39,9 @@ export default async function briefRoutes(appBase: FastifyInstance) {
         );
         return brief;
       } catch (err) {
+        if (err instanceof ValidationError) {
+          return reply.status(422).send({ error: (err as Error).message });
+        }
         if (err instanceof NotFoundError) {
           return reply.status(404).send({ error: (err as Error).message });
         }

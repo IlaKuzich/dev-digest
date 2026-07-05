@@ -142,3 +142,21 @@ export function updateSkillContextPaths(
 ): Promise<Skill> {
   return api.put<Skill>(`/skills/${id}`, { context_doc_paths: paths });
 }
+
+// ---- Onboarding Tour -------------------------------------------------------
+
+export function postOnboarding(
+  repoId: string,
+  opts?: { force?: boolean },
+): Promise<import('@devdigest/shared').Onboarding> {
+  const url = opts?.force
+    ? `/repos/${repoId}/onboarding?force=true`
+    : `/repos/${repoId}/onboarding`;
+  return api.post<import('@devdigest/shared').Onboarding>(url);
+}
+
+export function getOnboarding(
+  repoId: string,
+): Promise<import('@devdigest/shared').Onboarding> {
+  return api.get<import('@devdigest/shared').Onboarding>(`/repos/${repoId}/onboarding`);
+}

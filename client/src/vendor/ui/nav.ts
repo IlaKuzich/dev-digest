@@ -36,6 +36,13 @@ export const NAV: NavGroup[] = [
         href: "/repos/:repoId/project-context",
         gKey: "c",
       },
+      {
+        key: "onboarding-tour",
+        label: "Onboarding Tour",
+        icon: "Layers",
+        href: "/repos/:repoId/onboarding",
+        gKey: "o",
+      },
     ],
   },
   {
