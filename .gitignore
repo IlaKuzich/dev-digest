@@ -24,6 +24,6 @@ test-results/
 # emdash worktree config (local)
 .emdash.json
 
-TODO-context-root-scan.md
+TODO-*.md
 
 # plans/ and specs/ are tracked (SDD deliverables — spec.md/plan.md must be in git log)
