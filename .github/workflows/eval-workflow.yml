@@ -1,0 +1,85 @@
+# eval-workflow — systemic tier (@devdigest/evals, workflow/**).
+# Asserts the REAL on-disk harness (CLAUDE.md routing, subagent dispatch, skill activation)
+# behaves as documented. Triggers on exactly the same conditions evals/scripts/ci-detect.mjs uses
+# to decide "run_workflow": CLAUDE.md, any agent definition, the workflow cases themselves, or the
+# eval engine (evals/src/**) changing — any of these can change what the harness actually does.
+#
+# Needs the LiteLLM proxy (the Agent SDK speaks the Anthropic wire protocol only). NON-BLOCKING for
+# two documented reasons (evals/README.md): openai/gpt-4o-mini is unverified for subagent dispatch,
+# and `activation` cases are inherently indicative (not blocking) on non-Anthropic models — a
+# capable model may perform the underlying action directly instead of invoking the Skill tool.
+#
+# Model: OpenRouter, default openai/gpt-4o-mini — override via workflow_dispatch inputs
+# (Actions tab → Run workflow), no code change needed.
+name: eval-workflow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CLAUDE.md'
+      - '.claude/CLAUDE.md'
+      - '.claude/agents/**'
+      - 'evals/workflow/**'
+      - 'evals/src/**'
+      - '.github/workflows/eval-workflow.yml'
+  pull_request:
+    paths:
+      - 'CLAUDE.md'
+      - '.claude/CLAUDE.md'
+      - '.claude/agents/**'
+      - 'evals/workflow/**'
+      - 'evals/src/**'
+      - '.github/workflows/eval-workflow.yml'
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'EVAL_MODEL override (OpenRouter slug, e.g. google/gemini-2.5-flash)'
+        required: false
+        type: string
+      judge_model:
+        description: 'EVAL_JUDGE_MODEL override (OpenRouter slug)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval-workflow-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EVAL_BACKEND: openrouter
+  EVAL_MODEL: ${{ inputs.model || 'openai/gpt-4o-mini' }}
+  EVAL_JUDGE_MODEL: ${{ inputs.judge_model || 'openai/gpt-4o-mini' }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  OPENROUTER_BASE_URL: http://localhost:4000
+
+jobs:
+  # No separate "changes" job here — unlike skills/agents (which run a per-name matrix), the
+  # workflow tier is a single suite (pnpm eval:workflow), and the path filter above already IS
+  # the run_workflow condition from ci-detect.mjs, so there's nothing further to compute.
+  workflow-tier:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: evals
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: evals/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: docker compose -f proxy/docker-compose.yml up -d
+      - run: pnpm proxy:wait
+      - run: pnpm eval:workflow
+      - if: failure()
+        run: docker compose -f proxy/docker-compose.yml logs --tail 100
+      - if: always()
+        run: docker compose -f proxy/docker-compose.yml down
