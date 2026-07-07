@@ -183,7 +183,11 @@ export function SkillEditor({
         {activeTab === "versions" && <VersionsTab skill={skill} />}
         {activeTab === "context" && <SkillContextTab skill={skill} />}
         {activeTab === "evals" && (
-          <EvalsTab ownerKind="skill" ownerId={skill.id} />
+          <EvalsTab
+            ownerKind="skill"
+            ownerId={skill.id}
+            skillType={skill.type}
+          />
         )}
       </div>
     </div>

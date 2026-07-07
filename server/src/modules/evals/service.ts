@@ -9,7 +9,9 @@ import type {
   EvalDashboard,
   EvalDashboardOverview,
   EvalOwnerKind,
+  ExpectedFinding,
   Provider,
+  SkillType,
 } from '@devdigest/shared';
 import { reviewPullRequest } from '@devdigest/reviewer-core';
 import { parseUnifiedDiff } from '../../adapters/git/diff-parser.js';
@@ -25,9 +27,11 @@ import {
   macroAverage,
   buildDashboard,
   buildRecentBatchSummaries,
+  taskLine,
+  prDescription,
 } from './helpers.js';
-import { scoreCase, caseTypeOf, computePass, computeSkillPass, computeCitationAccuracy } from './scoring.js';
-import { REFERENCE_PROMPT } from './reference-prompt.js';
+import { scoreCase, caseTypeOf, computePass, computeCitationAccuracy } from './scoring.js';
+import { SKILL_EVAL_STRATEGIES } from './skill-eval-strategies.js';
 import { RECENT_RUNS_LIMIT } from './constants.js';
 import type { AgentRow } from '../agents/repository.js';
 import type { SkillRow } from '../skills/repository.js';
@@ -220,16 +224,6 @@ export class EvalsService {
 
   // ---- per-case run helpers ---------------------------------------------------
 
-  private taskLine(evalCase: EvalCaseRow): string {
-    const meta = evalCase.inputMeta as { pr_title?: string } | null;
-    return `Review: ${meta?.pr_title ?? evalCase.name}`;
-  }
-
-  private prDescription(evalCase: EvalCaseRow): string | undefined {
-    const meta = evalCase.inputMeta as { pr_body?: string } | null;
-    return meta?.pr_body;
-  }
-
   /** One agent-owned case: exactly 1 `reviewPullRequest` call (AC-5). */
   private async runOneAgentCase(
     agent: AgentRow,
@@ -237,10 +231,10 @@ export class EvalsService {
     batchId: string,
     ranAt: Date,
   ): Promise<{ runRow: EvalRunRow; result: EvalRun }> {
-    const expected = parseExpectedOutput(evalCase.expectedOutput);
+    const expected = parseExpectedOutput(evalCase.expectedOutput) as ExpectedFinding[];
     const diff = parseUnifiedDiff(evalCase.inputDiff ?? '');
     const llm = await this.container.llm(agent.provider as Provider);
-    const prDescription = this.prDescription(evalCase);
+    const prDesc = prDescription(evalCase);
 
     const start = Date.now();
     const outcome = await reviewPullRequest({
@@ -248,8 +242,8 @@ export class EvalsService {
       model: agent.model,
       diff,
       llm,
-      ...(prDescription ? { prDescription } : {}),
-      task: this.taskLine(evalCase),
+      ...(prDesc ? { prDescription: prDesc } : {}),
+      task: taskLine(evalCase),
     });
     const durationMs = Date.now() - start;
 
@@ -304,8 +298,17 @@ export class EvalsService {
     return `<untrusted source="skill:${skill.source}">\n${skill.body.replaceAll('</untrusted>', '<\\/untrusted>')}\n</untrusted>`;
   }
 
-  /** One skill-owned case: exactly 2 `reviewPullRequest` calls — with/without
-   *  the skill body appended to the fixed reference prompt (AC-24/AC-27/Q6). */
+  /**
+   * One skill-owned case: dispatches to the registered `SkillEvalStrategy`
+   * for the skill's `type` (`SKILL_EVAL_STRATEGIES`) — `convention`/
+   * `security`/`custom` run the finding-grounded with/without comparison
+   * (exactly 2 `reviewPullRequest` calls, AC-24/AC-27/Q6); `rubric` runs a
+   * single direct `completeStructured` call (AC-11). The untrusted-source
+   * wrapping guard (`wrapSkillBodyIfUntrusted`) is computed ONCE here and
+   * passed into the strategy as `wrappedBody` — every strategy receives an
+   * already-safe body, never the raw skill body, so this refactor cannot
+   * accidentally drop the security wrapping for either path.
+   */
   private async runOneSkillCase(
     provider: Provider,
     model: string,
@@ -314,96 +317,47 @@ export class EvalsService {
     batchId: string,
     ranAt: Date,
   ): Promise<{ runRow: EvalRunRow; result: EvalRun }> {
-    const expected = parseExpectedOutput(evalCase.expectedOutput);
-    const diff = parseUnifiedDiff(evalCase.inputDiff ?? '');
-    const llm = await this.container.llm(provider);
-    const prDescription = this.prDescription(evalCase);
-    const task = this.taskLine(evalCase);
-    const skillBody = this.wrapSkillBodyIfUntrusted(skill);
-
-    const withStart = Date.now();
-    const withOutcome = await reviewPullRequest({
-      systemPrompt: `${REFERENCE_PROMPT}\n\n${skillBody}`,
+    const wrappedBody = this.wrapSkillBodyIfUntrusted(skill);
+    const strategy = SKILL_EVAL_STRATEGIES[skill.type as SkillType];
+    const outcome = await strategy.execute({
+      container: this.container,
+      provider,
       model,
-      diff,
-      llm,
-      ...(prDescription ? { prDescription } : {}),
-      task,
+      skill,
+      evalCase,
+      wrappedBody,
     });
-    const withDurationMs = Date.now() - withStart;
-
-    const withoutStart = Date.now();
-    const withoutOutcome = await reviewPullRequest({
-      systemPrompt: REFERENCE_PROMPT,
-      model,
-      diff,
-      llm,
-      ...(prDescription ? { prDescription } : {}),
-      task,
-    });
-    const withoutDurationMs = Date.now() - withoutStart;
-
-    const withScore = scoreCase(expected, withOutcome.review.findings);
-    const withoutScore = scoreCase(expected, withoutOutcome.review.findings);
-    const caseType = caseTypeOf(expected);
-    const pass = computeSkillPass(caseType, withScore, withoutScore);
-
-    const withCitation = computeCitationAccuracy(
-      withOutcome.review.findings.length,
-      withOutcome.dropped.length,
-    );
-    const withoutCitation = computeCitationAccuracy(
-      withoutOutcome.review.findings.length,
-      withoutOutcome.dropped.length,
-    );
-
-    const durationMs = withDurationMs + withoutDurationMs;
-    const costUsd =
-      withOutcome.costUsd == null && withoutOutcome.costUsd == null
-        ? null
-        : (withOutcome.costUsd ?? 0) + (withoutOutcome.costUsd ?? 0);
-
-    // Q6: top-level recall/precision/citation_accuracy mirror the WITH-skill
-    // result (the headline number); the full with/without pair lives in
-    // actual_output (jsonb — unstructured by design for exactly this).
-    const actualOutput = {
-      with: {
-        findings: withOutcome.review.findings,
-        recall: withScore.recall,
-        precision: withScore.precision,
-        citation_accuracy: withCitation,
-      },
-      without: {
-        findings: withoutOutcome.review.findings,
-        recall: withoutScore.recall,
-        precision: withoutScore.precision,
-        citation_accuracy: withoutCitation,
-      },
-    };
 
     const runRow = await this.repo.insertRun({
       caseId: evalCase.id,
       ranAt,
-      actualOutput,
-      pass,
-      recall: withScore.recall,
-      precision: withScore.precision,
-      citationAccuracy: withCitation,
-      durationMs,
-      costUsd,
+      actualOutput: outcome.actualOutput,
+      pass: outcome.pass,
+      recall: outcome.recall,
+      precision: outcome.precision,
+      citationAccuracy: outcome.citationAccuracy,
+      durationMs: outcome.durationMs,
+      costUsd: outcome.costUsd,
       batchId,
       agentVersion: null,
     });
 
+    const expected = parseExpectedOutput(evalCase.expectedOutput, skill.type as SkillType);
     const result: EvalRun = {
-      recall: withScore.recall,
-      precision: withScore.precision,
-      citation_accuracy: withCitation,
-      traces_passed: pass ? 1 : 0,
+      recall: outcome.recall,
+      precision: outcome.precision,
+      // `EvalRun.citation_accuracy` (the immediate per-run result contract) is
+      // non-nullable — unlike the persisted `EvalRunRecord.citation_accuracy`.
+      // Rubric cases have no citation-accuracy concept at all (no grounding
+      // pass); the client omits the Citation Accuracy tile entirely for
+      // rubric skills (never renders this value), so `0` here is an inert
+      // placeholder — the true `null` is what gets persisted to `eval_runs`.
+      citation_accuracy: outcome.citationAccuracy ?? 0,
+      traces_passed: outcome.pass ? 1 : 0,
       traces_total: 1,
-      duration_ms: durationMs,
-      cost_usd: costUsd,
-      per_trace: [{ name: evalCase.name, pass, expected, actual: actualOutput }],
+      duration_ms: outcome.durationMs,
+      cost_usd: outcome.costUsd,
+      per_trace: [{ name: evalCase.name, pass: outcome.pass, expected, actual: outcome.actualOutput }],
     };
     return { runRow, result };
   }
@@ -416,12 +370,14 @@ export class EvalsService {
     ownerKind: EvalOwnerKind,
     ownerId: string,
   ): Promise<EvalDashboard> {
+    let skillType: SkillType | undefined;
     if (ownerKind === 'agent') {
       const agent = await this.container.agentsRepo.getById(workspaceId, ownerId);
       if (!agent) throw new NotFoundError('Agent not found');
     } else {
       const skill = await this.container.skillsRepo.getById(workspaceId, ownerId);
       if (!skill) throw new NotFoundError('Skill not found');
+      skillType = skill.type as SkillType;
     }
 
     const cases = await this.repo.listCases(workspaceId, ownerKind, ownerId);
@@ -430,7 +386,7 @@ export class EvalsService {
       .slice(0, RECENT_RUNS_LIMIT)
       .map((r) => toEvalRunRecordDto(r.run, r.caseName));
 
-    return buildDashboard(ownerKind, ownerId, cases.length, runs, recentRuns);
+    return buildDashboard(ownerKind, ownerId, cases.length, runs, recentRuns, skillType);
   }
 
   /** `GET /eval-dashboard` — workspace landing overview (AC-13/14/15). */

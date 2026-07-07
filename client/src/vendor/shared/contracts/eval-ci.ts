@@ -44,6 +44,21 @@ export const ExpectedFinding = z.object({
 });
 export type ExpectedFinding = z.infer<typeof ExpectedFinding>;
 
+/**
+ * The holistic-assessment shape used by `rubric`-type skill eval cases (e.g.
+ * `pr-quality-rubric`) — scored by dimension-name match, not file/line
+ * overlap like `ExpectedFinding`. Mirrors
+ * `server/src/vendor/shared/contracts/eval-ci.ts` `RubricAssessment` — kept
+ * in sync manually (client vendor copy, same discipline as the rest of this
+ * file).
+ */
+export const RubricAssessment = z.object({
+  dimension: z.string(),
+  score: z.number(),
+  reason: z.string(),
+});
+export type RubricAssessment = z.infer<typeof RubricAssessment>;
+
 /** A persisted eval run row (one execution of a case), returned by the API. */
 export const EvalRunRecord = z.object({
   id: z.string(),

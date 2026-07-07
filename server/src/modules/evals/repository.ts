@@ -42,7 +42,12 @@ export interface InsertEvalRun {
   pass: boolean;
   recall: number;
   precision: number;
-  citationAccuracy: number;
+  /** Null for rubric-type skill cases — citation accuracy is specific to the
+   *  `groundFindings` pass (kept/dropped around a diff), which the rubric
+   *  strategy never runs (no diff to ground). The `citation_accuracy` DB
+   *  column is already nullable (`doublePrecision('citation_accuracy')`,
+   *  no `.notNull()`). */
+  citationAccuracy: number | null;
   durationMs: number;
   costUsd: number | null;
   batchId: string;

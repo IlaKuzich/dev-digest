@@ -44,6 +44,20 @@ export const ExpectedFinding = z.object({
 });
 export type ExpectedFinding = z.infer<typeof ExpectedFinding>;
 
+/**
+ * The expected/actual shape for `rubric`-type skill eval cases — a rubric
+ * skill scores a PR holistically (title+body, no diff) across independent
+ * dimensions, structurally distinct from `ExpectedFinding` (which requires a
+ * file + line range). `score`/`reason` are diagnostic only — matching for
+ * scoring purposes is by `dimension` name alone (`scoreRubricCase`).
+ */
+export const RubricAssessment = z.object({
+  dimension: z.string(),
+  score: z.number(),
+  reason: z.string(),
+});
+export type RubricAssessment = z.infer<typeof RubricAssessment>;
+
 /** A persisted eval run row (one execution of a case), returned by the API. */
 export const EvalRunRecord = z.object({
   id: z.string(),

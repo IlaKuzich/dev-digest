@@ -53,6 +53,9 @@ export async function resolveFeatureModelStrict(
   const override = await getFeatureModelOverride(container, workspaceId, id);
   if (override) return override;
   const def = FEATURE_MODELS.find((f) => f.id === id);
+  if (def?.defaultProvider && def?.defaultModel) {
+    return { provider: def.defaultProvider, model: def.defaultModel };
+  }
   const label = def?.label ?? id;
   throw new ValidationError(
     `No model selected for ${label} — choose one in Settings → Feature Models`,

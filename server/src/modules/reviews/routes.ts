@@ -159,8 +159,8 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     return { ok: true };
   });
 
-  // ---- Finding actions (accept / dismiss) ---------------------------------
-  for (const action of FINDING_ACTIONS) {
+  // ---- Finding actions (accept / dismiss / undo) -------------------------
+  for (const action of [...FINDING_ACTIONS, "undo"] as const) {
     app.post(
       `/findings/:id/${action}`,
       { schema: { params: IdParams } },

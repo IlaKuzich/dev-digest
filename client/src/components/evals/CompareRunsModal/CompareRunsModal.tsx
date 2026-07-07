@@ -7,7 +7,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Modal, Button, Icon } from "@devdigest/ui";
+import { Modal, Button, Icon, Badge } from "@devdigest/ui";
 import type { Agent } from "@devdigest/shared";
 import { useAgentVersions, usePromoteAgentPrompt } from "@/lib/hooks/evals";
 import { parsePatch } from "@/components/diff-viewer/helpers";
@@ -16,7 +16,7 @@ import { buildPromptDiffPatch } from "@/lib/diff/lcs-diff";
 import type { EvalBatchRow } from "../RunsTable/helpers";
 import { orderByRanAt, computeDeltas, type MetricDelta } from "./helpers";
 
-function DeltaRow({ delta, label }: { delta: MetricDelta; label: string }) {
+function DeltaCard({ delta, label }: { delta: MetricDelta; label: string }) {
   const isCost = delta.key === "cost_usd";
   const d = delta.delta;
   const flat = d == null || d === 0;
@@ -27,26 +27,58 @@ function DeltaRow({ delta, label }: { delta: MetricDelta; label: string }) {
   const ArrowIcon = flat ? Icon.Slash : d! > 0 ? Icon.ArrowUp : Icon.ArrowDown;
 
   const fmt = (v: number | null) =>
-    v == null ? "–" : isCost ? `$${v.toFixed(3)}` : `${Math.round(v * 100)}%`;
+    v == null ? "–" : isCost ? `$${v.toFixed(2)}` : `${Math.round(v * 100)}%`;
+
+  const fmtDelta = () => {
+    if (d == null) return null;
+    return isCost ? `$${Math.abs(d).toFixed(2)}` : `${Math.abs(Math.round(d * 100))}pt`;
+  };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-      <span style={{ color: "var(--text-muted)", width: 90 }}>{label}</span>
-      <span className="tnum">{fmt(delta.older)}</span>
-      <Icon.ArrowRight size={12} style={{ color: "var(--text-muted)" }} />
-      <span className="tnum">{fmt(delta.newer)}</span>
-      <span
+    <div
+      style={{
+        flex: 1,
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border)",
+        borderRadius: 8,
+        padding: "14px 16px",
+      }}
+    >
+      <div
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 2,
-          color,
+          fontSize: 11,
           fontWeight: 600,
+          color: "var(--text-muted)",
+          letterSpacing: "0.05em",
+          marginBottom: 8,
         }}
       >
-        <ArrowIcon size={12} />
-        {d != null && (isCost ? `$${Math.abs(d).toFixed(3)}` : `${Math.abs(Math.round(d * 100))}%`)}
-      </span>
+        {label.toUpperCase()}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span className="tnum" style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+          {fmt(delta.older)}
+        </span>
+        <Icon.ArrowRight size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+        <span className="tnum" style={{ fontSize: 14, fontWeight: 700 }}>
+          {fmt(delta.newer)}
+        </span>
+        {fmtDelta() != null && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 2,
+              color,
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            <ArrowIcon size={12} />
+            {fmtDelta()}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -84,14 +116,18 @@ export function CompareRunsModal({
   return (
     <Modal
       width={860}
-      title={t("title")}
-      subtitle={t("subtitle", { older: older.agent_version ?? "?", newer: newer.agent_version ?? "?" })}
+      title={`${t("title")} · v${older.agent_version ?? "?"} → v${newer.agent_version ?? "?"}`}
+      subtitle={t("subtitle")}
       onClose={onClose}
       footer={
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+          <Button kind="secondary" size="sm" onClick={onClose}>
+            {t("close")}
+          </Button>
           <Button
             kind="primary"
             size="sm"
+            icon="GitMerge"
             disabled={promoteDisabled || !newerPrompt}
             loading={promote.isPending}
             title={promoteDisabled ? t("alreadyCurrent") : undefined}
@@ -105,18 +141,41 @@ export function CompareRunsModal({
       }
     >
       <div style={{ padding: 24 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
           {deltas.map((d) => (
-            <DeltaRow key={d.key} delta={d} label={t(`deltas.${d.key}`)} />
+            <DeltaCard key={d.key} delta={d} label={t(`deltas.${d.key}`)} />
           ))}
         </div>
 
         {patch ? (
-          <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-            {lines.map((ln, i) => (
-              <CodeLine key={i} ln={ln} path="system_prompt" threads={[]} />
-            ))}
-          </div>
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <Icon.FileText size={13} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "var(--text-muted)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                {t("diffHeader")}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
+                <Badge mono color="var(--crit)" bg="transparent">
+                  ● v{older.agent_version} (old)
+                </Badge>
+                <Badge mono color="var(--ok)" bg="transparent">
+                  ● v{newer.agent_version} (new)
+                </Badge>
+              </div>
+            </div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+              {lines.map((ln, i) => (
+                <CodeLine key={i} ln={ln} path="system_prompt" threads={[]} />
+              ))}
+            </div>
+          </>
         ) : (
           <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
             {t("noVersionData")}
@@ -126,3 +185,4 @@ export function CompareRunsModal({
     </Modal>
   );
 }
+

@@ -4,11 +4,11 @@
 "use client";
 
 import React from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AppShell } from "@/components/app-shell";
-import { Button, ErrorState, Skeleton, MetricCard, LineChart } from "@devdigest/ui";
-import { useAgent } from "@/lib/hooks/agents";
+import { Button, ErrorState, Skeleton, MetricCard, LineChart, Badge, Dropdown } from "@devdigest/ui";
+import { useAgent, useAgents } from "@/lib/hooks/agents";
 import { useEvalDashboard, useRunAgentEvals } from "@/lib/hooks/evals";
 import { RunsTable, groupRunsByBatch } from "@/components/evals/RunsTable";
 import { CompareRunsModal } from "@/components/evals/CompareRunsModal";
@@ -29,6 +29,8 @@ export default function EvalAgentDetailPage() {
     agentId,
   );
   const runEvals = useRunAgentEvals(agentId);
+  const { data: agents } = useAgents();
+  const router = useRouter();
 
   const [selected, setSelected] = React.useState<string[]>([]);
   const [compareOpen, setCompareOpen] = React.useState(false);
@@ -62,21 +64,57 @@ export default function EvalAgentDetailPage() {
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "space-between",
+            gap: 16,
           }}
         >
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>
-            {agentLoading ? <Skeleton width={200} height={24} /> : agent?.name}
-          </h1>
-          <Button
-            kind="primary"
-            icon="Play"
-            loading={runEvals.isPending}
-            onClick={() => runEvals.mutate()}
-          >
-            {runEvals.isPending ? t("detail.running") : t("detail.runAllEvals")}
-          </Button>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {agentLoading ? (
+                <Skeleton width={200} height={24} />
+              ) : (
+                <>
+                  <h1 style={{ fontSize: 20, fontWeight: 700 }}>{agent?.name}</h1>
+                  {agent?.model && (
+                    <Badge mono color="var(--text-muted)" bg="var(--bg-hover)">
+                      {agent.model}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
+            {agent?.description && (
+              <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+                {agent.description}
+              </p>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <Dropdown
+              align="right"
+              trigger={
+                <Button kind="secondary" size="sm" iconRight="ChevronDown">
+                  {agent?.name ?? "Agent"}
+                </Button>
+              }
+              items={(agents ?? []).map((a) => ({
+                label: a.name,
+                onClick: () => router.push(`/eval/${a.id}`),
+              }))}
+            />
+            <Button kind="secondary" size="sm" icon="Calendar">
+              30 days
+            </Button>
+            <Button
+              kind="primary"
+              icon="Play"
+              loading={runEvals.isPending}
+              onClick={() => runEvals.mutate()}
+            >
+              {runEvals.isPending ? t("detail.running") : t("detail.runAllEvals")}
+            </Button>
+          </div>
         </div>
 
         {dashboardLoading || !dashboard ? (
@@ -89,18 +127,24 @@ export default function EvalAgentDetailPage() {
                 value={`${Math.round(dashboard.current.recall * 100)}`}
                 suffix="%"
                 delta={showDeltas ? dashboard.delta.recall : undefined}
+                trend={trend.map((p) => p.recall)}
+                color="var(--accent)"
               />
               <MetricCard
                 label={t("dashboard.metrics.precision")}
                 value={`${Math.round(dashboard.current.precision * 100)}`}
                 suffix="%"
                 delta={showDeltas ? dashboard.delta.precision : undefined}
+                trend={trend.map((p) => p.precision)}
+                color="var(--ok)"
               />
               <MetricCard
                 label={t("dashboard.metrics.citationAccuracy")}
                 value={`${Math.round(dashboard.current.citation_accuracy * 100)}`}
                 suffix="%"
                 delta={showDeltas ? dashboard.delta.citation_accuracy : undefined}
+                trend={trend.map((p) => p.citation_accuracy)}
+                color="var(--warn)"
               />
             </div>
 

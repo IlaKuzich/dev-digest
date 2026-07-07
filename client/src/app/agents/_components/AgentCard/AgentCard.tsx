@@ -88,8 +88,20 @@ export function AgentCard({
           {ag.runs_count} {t("card.runs")}
           {ag.accept_rate_pct != null && (
             <>
-              {" "}
-              · {ag.accept_rate_pct.toFixed(0)}% {t("card.accept")}
+              {" · "}
+              <span
+                style={{
+                  color:
+                    ag.accept_rate_pct >= 80
+                      ? "var(--ok)"
+                      : ag.accept_rate_pct >= 40
+                        ? "var(--warn)"
+                        : "var(--crit)",
+                  fontWeight: 600,
+                }}
+              >
+                {ag.accept_rate_pct.toFixed(0)}% {t("card.accept")}
+              </span>
             </>
           )}
           {ag.avg_cost_usd != null && (

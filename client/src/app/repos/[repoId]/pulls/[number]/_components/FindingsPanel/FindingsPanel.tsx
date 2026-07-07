@@ -123,7 +123,7 @@ export function FindingsPanel({
               focused={i === focusIdx}
               targeted={f.id === targetFindingId}
               defaultExpanded={i === 0}
-              pending={action.isPending}
+              pending={action.isPending && action.variables?.findingId === f.id}
               repoFullName={repoFullName}
               headSha={headSha}
               onAction={(act) =>

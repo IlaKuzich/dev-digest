@@ -4,7 +4,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Checkbox } from "@devdigest/ui";
+import { Checkbox, Badge, ProgressBar } from "@devdigest/ui";
 import type { EvalRunRecord } from "@devdigest/shared";
 import { groupRunsByBatch } from "./helpers";
 
@@ -38,6 +38,9 @@ export function RunsTable({
           <th style={{ textAlign: "left", padding: "8px 6px", color: "var(--text-muted)" }}>
             {t("ranAt")}
           </th>
+          <th style={{ textAlign: "left", padding: "8px 6px", color: "var(--text-muted)" }}>
+            {t("version")}
+          </th>
           <th style={{ textAlign: "right", padding: "8px 6px", color: "var(--text-muted)" }}>
             {t("recall")}
           </th>
@@ -66,23 +69,39 @@ export function RunsTable({
             </td>
             <td style={{ padding: "8px 6px" }}>
               {new Date(b.ran_at).toLocaleString()}
-              {b.agent_version != null && (
-                <span
-                  className="mono"
-                  style={{ marginLeft: 6, fontSize: 11, color: "var(--text-muted)" }}
-                >
+            </td>
+            <td style={{ padding: "8px 6px" }}>
+              {b.agent_version != null ? (
+                <Badge mono color="var(--accent)" bg="transparent" style={{ padding: "1px 0" }}>
                   v{b.agent_version}
-                </span>
+                </Badge>
+              ) : (
+                <span style={{ color: "var(--text-muted)" }}>—</span>
               )}
             </td>
-            <td className="tnum" style={{ textAlign: "right", padding: "8px 6px" }}>
-              {Math.round(b.recall * 100)}%
+            <td style={{ padding: "8px 6px", minWidth: 100 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <ProgressBar value={Math.round(b.recall * 100)} color="var(--accent)" height={4} />
+                <span className="tnum" style={{ fontSize: 12, minWidth: 32 }}>
+                  {Math.round(b.recall * 100)}%
+                </span>
+              </div>
             </td>
-            <td className="tnum" style={{ textAlign: "right", padding: "8px 6px" }}>
-              {Math.round(b.precision * 100)}%
+            <td style={{ padding: "8px 6px", minWidth: 100 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <ProgressBar value={Math.round(b.precision * 100)} color="var(--ok)" height={4} />
+                <span className="tnum" style={{ fontSize: 12, minWidth: 32 }}>
+                  {Math.round(b.precision * 100)}%
+                </span>
+              </div>
             </td>
-            <td className="tnum" style={{ textAlign: "right", padding: "8px 6px" }}>
-              {Math.round(b.citation_accuracy * 100)}%
+            <td style={{ padding: "8px 6px", minWidth: 100 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <ProgressBar value={Math.round(b.citation_accuracy * 100)} color="var(--warn)" height={4} />
+                <span className="tnum" style={{ fontSize: 12, minWidth: 32 }}>
+                  {Math.round(b.citation_accuracy * 100)}%
+                </span>
+              </div>
             </td>
             <td className="tnum" style={{ textAlign: "right", padding: "8px 6px" }}>
               {b.traces_passed}/{b.cases_total}

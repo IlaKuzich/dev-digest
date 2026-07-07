@@ -1,16 +1,18 @@
 import { z } from 'zod';
 import {
   ExpectedFinding,
+  RubricAssessment,
   type EvalCase,
   type EvalRunRecord,
   type EvalDashboard,
   type EvalTrendPoint,
   type EvalBatchSummary,
   type EvalOwnerKind,
+  type SkillType,
 } from '@devdigest/shared';
 import type { EvalCaseRow, EvalRunRow, EvalRunJoinedRow } from './repository.js';
 import { caseTypeOf } from './scoring.js';
-import { RECENT_RUNS_LIMIT } from './constants.js';
+import { RECENT_RUNS_LIMIT, MANUAL_SKILL_CASE_FILE_PATH } from './constants.js';
 
 /**
  * Pure application-layer helpers for the evals module: DB row ⇄ DTO mapping
@@ -20,12 +22,65 @@ import { RECENT_RUNS_LIMIT } from './constants.js';
 
 // ---- expected_output parsing ------------------------------------------------
 
-/** Safely parse `eval_cases.expected_output` (stored as untyped jsonb) into
- *  `ExpectedFinding[]`. Malformed/missing data degrades to `[]` (treated as a
- *  must_not_flag case) rather than throwing. */
-export function parseExpectedOutput(raw: unknown): ExpectedFinding[] {
-  const parsed = z.array(ExpectedFinding).safeParse(raw);
+const MANUAL_SKILL_TYPES = new Set<SkillType>(['convention', 'security', 'custom']);
+
+/**
+ * For manually-written finding-grounded skill cases (Code-tab skeletons omit
+ * `file` by design — see `MANUAL_SKILL_CASE_FILE_PATH`), inject the hidden
+ * file-path constant onto any raw item lacking a `file` key BEFORE validating
+ * against `ExpectedFinding` — so a human never has to type (or mistype) a
+ * fake file path that must otherwise match `actual.file` verbatim.
+ */
+function injectManualSkillCaseFile(raw: unknown): unknown {
+  if (!Array.isArray(raw)) return raw;
+  return raw.map((item) =>
+    item !== null && typeof item === 'object' && !('file' in item)
+      ? { ...item, file: MANUAL_SKILL_CASE_FILE_PATH }
+      : item,
+  );
+}
+
+/**
+ * Safely parse `eval_cases.expected_output` (stored as untyped jsonb) into its
+ * typed shape. The shape depends on the OWNING skill's `type`:
+ *  - `skillType === 'rubric'`             → `RubricAssessment[]`.
+ *  - `skillType` in convention/security/custom → `ExpectedFinding[]`, with the
+ *    hidden manual-case file path injected for skeletons that omit `file`.
+ *  - `skillType === undefined` (agent-owned case) → `ExpectedFinding[]`, the
+ *    real `file` is preserved as-is, no injection.
+ * Malformed/missing data degrades to `[]` (treated as a must_not_flag case)
+ * rather than throwing — this is now only a last-resort fallback; the primary
+ * defence against malformed input is client-side live validation against the
+ * correct schema before save.
+ */
+export function parseExpectedOutput(
+  raw: unknown,
+  skillType?: SkillType,
+): ExpectedFinding[] | RubricAssessment[] {
+  if (skillType === 'rubric') {
+    const parsed = z.array(RubricAssessment).safeParse(raw);
+    return parsed.success ? parsed.data : [];
+  }
+
+  const withInjectedFile = MANUAL_SKILL_TYPES.has(skillType as SkillType)
+    ? injectManualSkillCaseFile(raw)
+    : raw;
+  const parsed = z.array(ExpectedFinding).safeParse(withInjectedFile);
   return parsed.success ? parsed.data : [];
+}
+
+/** Server-side task line for a skill/agent-owned eval case — derived from the
+ *  case's `input_meta.pr_title`, falling back to the case name. Shared by both
+ *  `runOneAgentCase` (service.ts) and the skill-eval strategies. */
+export function taskLine(evalCase: EvalCaseRow): string {
+  const meta = evalCase.inputMeta as { pr_title?: string } | null;
+  return `Review: ${meta?.pr_title ?? evalCase.name}`;
+}
+
+/** The case's `input_meta.pr_body`, if present. */
+export function prDescription(evalCase: EvalCaseRow): string | undefined {
+  const meta = evalCase.inputMeta as { pr_body?: string } | null;
+  return meta?.pr_body;
 }
 
 // ---- DTO mappers ------------------------------------------------------------
@@ -132,7 +187,7 @@ export function macroAverage(runs: EvalRunRow[]): MacroAverage {
  * produces an alert message (the reverse is an improvement — silent, even if
  * a later-sorted case regressed). Fewer than 2 batches → null.
  */
-export function computeAlert(batches: BatchGroup[]): string | null {
+export function computeAlert(batches: BatchGroup[], skillType?: SkillType): string | null {
   const [latest, prev] = batches;
   if (!latest || !prev) return null;
 
@@ -149,7 +204,7 @@ export function computeAlert(batches: BatchGroup[]): string | null {
   const wentTrueToFalse = prevEntry.run.pass === true && first.run.pass === false;
   if (!wentTrueToFalse) return null; // false→true is an improvement — no alert
 
-  const caseType = caseTypeOf(parseExpectedOutput(first.caseExpectedOutput));
+  const caseType = caseTypeOf(parseExpectedOutput(first.caseExpectedOutput, skillType));
   return caseType === 'must_not_flag'
     ? `New false positive: case '${first.caseName}' now flags a finding it previously didn't.`
     : `Regression: case '${first.caseName}' no longer finds the expected issue.`;
@@ -163,6 +218,7 @@ export function buildDashboard(
   casesTotal: number,
   allRuns: EvalRunJoinedRow[],
   recentRuns: EvalRunRecord[],
+  skillType?: SkillType,
 ): EvalDashboard {
   const batches = groupByBatch(allRuns);
   const [latest, prev] = batches;
@@ -197,7 +253,7 @@ export function buildDashboard(
     delta,
     trend,
     recent_runs: recentRuns.slice(0, RECENT_RUNS_LIMIT),
-    alert: computeAlert(batches),
+    alert: computeAlert(batches, skillType),
   };
 }
 

@@ -52,7 +52,14 @@ export default function EvalDashboardPage() {
 
   return (
     <AppShell crumb={crumb}>
-      <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div
+        style={{
+          padding: 28,
+          display: "flex",
+          flexDirection: "column",
+          gap: 24,
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -60,10 +67,17 @@ export default function EvalDashboardPage() {
             justifyContent: "space-between",
           }}
         >
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>{t("landing.title")}</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700 }}>
+            {t("landing.title")}
+          </h1>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {runAll.isSuccess && (
-              <span style={{ fontSize: 12, color: runAll.data.length === 0 ? "var(--warn)" : "var(--ok)" }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: runAll.data.length === 0 ? "var(--warn)" : "var(--ok)",
+                }}
+              >
                 {runAll.data.length === 0
                   ? t("landing.runAllEmpty")
                   : t("landing.runAllDone", { count: runAll.data.length })}
@@ -80,7 +94,9 @@ export default function EvalDashboardPage() {
               loading={runAll.isPending}
               onClick={() => runAll.mutate()}
             >
-              {runAll.isPending ? t("landing.running") : t("landing.runAllAgents")}
+              {runAll.isPending
+                ? t("landing.running")
+                : t("landing.runAllAgents")}
             </Button>
           </div>
         </div>
@@ -106,15 +122,17 @@ export default function EvalDashboardPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {/* Header row */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 140px 48px 1fr 1fr 1fr 56px",
-                gap: 12,
-                padding: "4px 12px",
-                fontSize: 10,
-                color: "var(--text-muted)",
-                letterSpacing: "0.05em",
-              }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 140px 48px 1fr 1fr 1fr 56px",
+                  gap: 12,
+                  padding: "4px 12px",
+                  fontSize: 10,
+                  color: "var(--text-muted)",
+                  letterSpacing: "0.05em",
+                }}
+              >
                 <span>AGENT</span>
                 <span>DATE</span>
                 <span>VER</span>
@@ -124,7 +142,8 @@ export default function EvalDashboardPage() {
                 <span style={{ textAlign: "right" }}>PASS</span>
               </div>
               {overview.recent_runs.map((r) => {
-                const agentName = agents?.find((a) => a.id === r.agent_id)?.name ?? r.agent_id;
+                const agentName =
+                  agents?.find((a) => a.id === r.agent_id)?.name ?? r.agent_id;
                 const recall = Math.round(r.recall * 100);
                 const prec = Math.round(r.precision * 100);
                 const cite = Math.round(r.citation_accuracy * 100);
@@ -142,33 +161,84 @@ export default function EvalDashboardPage() {
                       background: "var(--bg-elevated)",
                     }}
                   >
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{agentName}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>
+                      {agentName}
+                    </span>
                     <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
                       {new Date(r.ran_at).toLocaleString()}
                     </span>
                     {r.agent_version != null ? (
-                      <span style={{
-                        fontSize: 11, fontWeight: 700,
-                        color: "var(--ok)", background: "color-mix(in srgb, var(--ok) 12%, transparent)",
-                        padding: "2px 6px", borderRadius: 4, textAlign: "center",
-                      }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--ok)",
+                          background:
+                            "color-mix(in srgb, var(--ok) 12%, transparent)",
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          textAlign: "center",
+                        }}
+                      >
                         v{r.agent_version}
                       </span>
-                    ) : <span />}
+                    ) : (
+                      <span />
+                    )}
                     {/* Progress bars */}
-                    {([
-                      { val: recall, color: "var(--ok)" },
-                      { val: prec, color: "var(--warn)" },
-                      { val: cite, color: "#f97316" },
-                    ] as { val: number; color: string }[]).map(({ val, color }, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ flex: 1, height: 5, background: "var(--bg-hover)", borderRadius: 3 }}>
-                          <div style={{ width: `${val}%`, height: "100%", background: color, borderRadius: 3 }} />
+                    {(
+                      [
+                        { val: recall, color: "var(--ok)" },
+                        { val: prec, color: "var(--warn)" },
+                        { val: cite, color: "#f97316" },
+                      ] as { val: number; color: string }[]
+                    ).map(({ val, color }, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            height: 5,
+                            background: "var(--bg-hover)",
+                            borderRadius: 3,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${val}%`,
+                              height: "100%",
+                              background: color,
+                              borderRadius: 3,
+                            }}
+                          />
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color, minWidth: 30, textAlign: "right" }}>{val}%</span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color,
+                            minWidth: 30,
+                            textAlign: "right",
+                          }}
+                        >
+                          {val}%
+                        </span>
                       </div>
                     ))}
-                    <span style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "right", fontWeight: 600 }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text-secondary)",
+                        textAlign: "right",
+                        fontWeight: 600,
+                      }}
+                    >
                       {r.traces_passed}/{r.cases_total}
                     </span>
                   </div>

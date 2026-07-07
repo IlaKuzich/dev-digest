@@ -106,27 +106,103 @@ export function FindingCard({
             </div>
           )}
 
-          <div style={s.actions}>
-            <Button
-              kind="secondary"
-              size="sm"
-              icon="Check"
-              disabled={pending}
-              active={accepted}
+          <div style={s.actions} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              disabled={pending || dismissed}
               onClick={() => onAction?.("accept")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: accepted ? "default" : "pointer",
+                border: accepted
+                  ? "1px solid var(--ok)"
+                  : "1px solid var(--border)",
+                background: accepted
+                  ? "color-mix(in srgb, var(--ok) 15%, transparent)"
+                  : "transparent",
+                color: accepted ? "var(--ok)" : "var(--text-secondary)",
+                opacity: dismissed ? 0.4 : 1,
+                transition: "all 0.15s",
+              }}
             >
+              <Icon.Check size={12} />
               {t("finding.accept")}
-            </Button>
-            <Button
-              kind="ghost"
-              size="sm"
-              icon="X"
-              disabled={pending}
-              active={dismissed}
+            </button>
+            {accepted && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => onAction?.("undo")}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  cursor: "pointer",
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--text-muted)",
+                  transition: "all 0.15s",
+                }}
+                title={t("finding.undo")}
+              >
+                ↩
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={pending || accepted}
               onClick={() => onAction?.("dismiss")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: dismissed ? "default" : "pointer",
+                border: dismissed
+                  ? "1px solid var(--text-muted)"
+                  : "1px solid var(--border)",
+                background: dismissed
+                  ? "color-mix(in srgb, var(--text-muted) 10%, transparent)"
+                  : "transparent",
+                color: dismissed
+                  ? "var(--text-muted)"
+                  : "var(--text-secondary)",
+                opacity: accepted ? 0.4 : 1,
+                transition: "all 0.15s",
+              }}
             >
+              <Icon.X size={12} />
               {t("finding.dismiss")}
-            </Button>
+            </button>
+            {dismissed && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => onAction?.("undo")}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  cursor: "pointer",
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--text-muted)",
+                  transition: "all 0.15s",
+                }}
+                title={t("finding.undo")}
+              >
+                ↩
+              </button>
+            )}
             {onCreateEvalCase && (
               <Button
                 kind="ghost"

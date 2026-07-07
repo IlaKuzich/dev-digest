@@ -1,4 +1,4 @@
-import type { Finding, ExpectedFinding } from '@devdigest/shared';
+import type { Finding, ExpectedFinding, RubricAssessment } from '@devdigest/shared';
 import { rangesOverlap } from '@devdigest/reviewer-core';
 
 /**
@@ -29,11 +29,22 @@ function isMatch(expected: ExpectedFinding, actual: Finding): boolean {
 }
 
 /**
+ * A rubric assessment "matches" the expected one iff they name the same
+ * dimension (case/whitespace-insensitive) — rubric scoring has no file/line
+ * range to compare against, unlike `isMatch` above.
+ */
+function isRubricMatch(expected: RubricAssessment, actual: RubricAssessment): boolean {
+  return expected.dimension.trim().toLowerCase() === actual.dimension.trim().toLowerCase();
+}
+
+/**
  * Derives the case type from `expected_output` alone — the SAME one-line rule
  * used by the client's POSITIVE/NEGATIVE banner (AC-10). Keep this the single
- * source of truth so server and client never disagree on a case's type.
+ * source of truth so server and client never disagree on a case's type. Works
+ * identically for `ExpectedFinding[]` (agent/finding-grounded skill cases) and
+ * `RubricAssessment[]` (rubric skill cases) — only `.length` is inspected.
  */
-export function caseTypeOf(expected: ExpectedFinding[]): EvalCaseType {
+export function caseTypeOf(expected: ExpectedFinding[] | RubricAssessment[]): EvalCaseType {
   return expected.length > 0 ? 'must_find' : 'must_not_flag';
 }
 
@@ -55,6 +66,28 @@ export function scoreCase(expected: ExpectedFinding[], actual: Finding[]): Score
 
   // AC-4: recall = 1.0 when there was nothing to find; precision = 1.0 when
   // nothing was flagged (both trivially "correct" — no missed / no false alarm).
+  const recall = expected.length === 0 ? 1.0 : tp / (tp + fn);
+  const precision = actual.length === 0 ? 1.0 : tp / (tp + fp);
+
+  return { recall, precision, tp, fp, fn };
+}
+
+/**
+ * Score one rubric-type case's actual dimension assessments against its
+ * expected ones. Identical tp/fp/fn/recall/precision math to `scoreCase`
+ * (matching by dimension name via `isRubricMatch` instead of file+range via
+ * `isMatch`). `score`/`reason` on either side do NOT affect pass/fail — they
+ * are diagnostic only, same role as `rationale` on a normal `Finding`.
+ */
+export function scoreRubricCase(
+  expected: RubricAssessment[],
+  actual: RubricAssessment[],
+): ScoreResult {
+  const tp = expected.filter((e) => actual.some((a) => isRubricMatch(e, a))).length;
+  const fn = expected.length - tp;
+  const matchedActualCount = actual.filter((a) => expected.some((e) => isRubricMatch(e, a))).length;
+  const fp = actual.length - matchedActualCount;
+
   const recall = expected.length === 0 ? 1.0 : tp / (tp + fn);
   const precision = actual.length === 0 ? 1.0 : tp / (tp + fp);
 
