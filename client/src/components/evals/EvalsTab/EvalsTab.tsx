@@ -98,168 +98,56 @@ export function EvalsTab({
 
       {/* Aggregated metric tiles — agents only; skills do not collect
           aggregate run statistics so this section is hidden for them. */}
-      {!isSkill && <div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            marginBottom: 4,
-          }}
-        >
-          <h2
+      {!isSkill && (
+        <div>
+          <div
             style={{
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              marginBottom: 4,
             }}
           >
-            {t("metricsTitle")}
-          </h2>
-          {!isSkill && (
-            <Link
-              href={`/eval/${ownerId}`}
+            <h2
               style={{
                 fontSize: 13,
-                color: "var(--accent)",
-                textDecoration: "none",
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
               }}
             >
-              {t("viewDashboard")}
-            </Link>
-          )}
-        </div>
+              {t("metricsTitle")}
+            </h2>
+            {!isSkill && (
+              <Link
+                href={`/eval/${ownerId}`}
+                style={{
+                  fontSize: 13,
+                  color: "var(--accent)",
+                  textDecoration: "none",
+                }}
+              >
+                {t("viewDashboard")}
+              </Link>
+            )}
+          </div>
 
-        {dashboard ? (
-          <>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isRubric
-                  ? "1fr 1fr 1fr"
-                  : "1fr 1fr 1fr 1fr",
-                gap: 10,
-                marginBottom: 10,
-              }}
-            >
-              {/* RECALL */}
-              {(() => {
-                const d = fmtDelta(dashboard.delta.recall);
-                return (
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg-elevated)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        letterSpacing: "0.07em",
-                        color: "var(--text-muted)",
-                        textTransform: "uppercase",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {td("metrics.recall")}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: 8,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 700,
-                          color: "var(--accent)",
-                        }}
-                      >
-                        {Math.round(dashboard.current.recall * 100)}%
-                      </span>
-                      {d && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: d.up ? "var(--ok)" : "var(--crit)",
-                          }}
-                        >
-                          {d.up ? "▲" : "▼"}
-                          {d.pts}pt
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-              {/* PRECISION */}
-              {(() => {
-                const d = fmtDelta(dashboard.delta.precision);
-                return (
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg-elevated)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        letterSpacing: "0.07em",
-                        color: "var(--text-muted)",
-                        textTransform: "uppercase",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {td("metrics.precision")}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: 8,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 700,
-                          color: "var(--warn)",
-                        }}
-                      >
-                        {Math.round(dashboard.current.precision * 100)}%
-                      </span>
-                      {d && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: d.up ? "var(--ok)" : "var(--crit)",
-                          }}
-                        >
-                          {d.up ? "▲" : "▼"}
-                          {d.pts}pt
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-              {/* CITATION ACCURACY — omitted for rubric skills: the
-                  single-call rubric strategy never populates it (no
-                  finding-grounding step to measure). */}
-              {!isRubric &&
-                (() => {
-                  const d = fmtDelta(dashboard.delta.citation_accuracy);
+          {dashboard ? (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isRubric
+                    ? "1fr 1fr 1fr"
+                    : "1fr 1fr 1fr 1fr",
+                  gap: 10,
+                  marginBottom: 10,
+                }}
+              >
+                {/* RECALL */}
+                {(() => {
+                  const d = fmtDelta(dashboard.delta.recall);
                   return (
                     <div
                       style={{
@@ -279,7 +167,7 @@ export function EvalsTab({
                           marginBottom: 4,
                         }}
                       >
-                        {td("metrics.citationAccuracy")}
+                        {td("metrics.recall")}
                       </div>
                       <div
                         style={{
@@ -292,13 +180,10 @@ export function EvalsTab({
                           style={{
                             fontSize: 22,
                             fontWeight: 700,
-                            color: "#f97316",
+                            color: "var(--accent)",
                           }}
                         >
-                          {Math.round(
-                            dashboard.current.citation_accuracy * 100,
-                          )}
-                          %
+                          {Math.round(dashboard.current.recall * 100)}%
                         </span>
                         {d && (
                           <span
@@ -315,69 +200,186 @@ export function EvalsTab({
                     </div>
                   );
                 })()}
-              {/* TRACES PASSED */}
-              <div
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-elevated)",
-                }}
-              >
+                {/* PRECISION */}
+                {(() => {
+                  const d = fmtDelta(dashboard.delta.precision);
+                  return (
+                    <div
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-elevated)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          letterSpacing: "0.07em",
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {td("metrics.precision")}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 22,
+                            fontWeight: 700,
+                            color: "var(--warn)",
+                          }}
+                        >
+                          {Math.round(dashboard.current.precision * 100)}%
+                        </span>
+                        {d && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: d.up ? "var(--ok)" : "var(--crit)",
+                            }}
+                          >
+                            {d.up ? "▲" : "▼"}
+                            {d.pts}pt
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* CITATION ACCURACY — omitted for rubric skills: the
+                  single-call rubric strategy never populates it (no
+                  finding-grounding step to measure). */}
+                {!isRubric &&
+                  (() => {
+                    const d = fmtDelta(dashboard.delta.citation_accuracy);
+                    return (
+                      <div
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                          background: "var(--bg-elevated)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            letterSpacing: "0.07em",
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            marginBottom: 4,
+                          }}
+                        >
+                          {td("metrics.citationAccuracy")}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "baseline",
+                            gap: 8,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 22,
+                              fontWeight: 700,
+                              color: "#f97316",
+                            }}
+                          >
+                            {Math.round(
+                              dashboard.current.citation_accuracy * 100,
+                            )}
+                            %
+                          </span>
+                          {d && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: d.up ? "var(--ok)" : "var(--crit)",
+                              }}
+                            >
+                              {d.up ? "▲" : "▼"}
+                              {d.pts}pt
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                {/* TRACES PASSED */}
                 <div
                   style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: "0.07em",
-                    color: "var(--text-muted)",
-                    textTransform: "uppercase",
-                    marginBottom: 4,
+                    padding: "12px 14px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-elevated)",
                   }}
                 >
-                  {t("tracesPassed")}
-                </div>
-                <div
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  {dashboard.current.traces_passed}/
-                  {dashboard.current.traces_total}
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: "0.07em",
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("tracesPassed")}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {dashboard.current.traces_passed}/
+                    {dashboard.current.traces_total}
+                  </div>
                 </div>
               </div>
-            </div>
-            <p
+              <p
+                style={{
+                  fontSize: 11.5,
+                  color: "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Icon.Code size={12} />
+                {t("scoringHint")}
+              </p>
+            </>
+          ) : (
+            <div
               style={{
-                fontSize: 11.5,
-                color: "var(--text-muted)",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
+                display: "grid",
+                gridTemplateColumns: isRubric
+                  ? "1fr 1fr 1fr"
+                  : "1fr 1fr 1fr 1fr",
+                gap: 10,
               }}
             >
-              <Icon.Code size={12} />
-              {t("scoringHint")}
-            </p>
-          </>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isRubric
-                ? "1fr 1fr 1fr"
-                : "1fr 1fr 1fr 1fr",
-              gap: 10,
-            }}
-          >
-            <Skeleton height={72} />
-            <Skeleton height={72} />
-            <Skeleton height={72} />
-            {!isRubric && <Skeleton height={72} />}
-          </div>
-        )}
-      </div>}
+              <Skeleton height={72} />
+              <Skeleton height={72} />
+              <Skeleton height={72} />
+              {!isRubric && <Skeleton height={72} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Case list */}
       <div>
@@ -581,34 +583,32 @@ export function EvalsTab({
 
                   {/* severity · category (finding-grounded) OR dimension
                       (rubric — `RubricAssessment` has no severity/category) */}
-                  {isRubric ? (
-                    dimensionLabel && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "var(--text-muted)",
-                          whiteSpace: "nowrap",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {t("dimension")}: {dimensionLabel}
-                      </div>
-                    )
-                  ) : (
-                    sevLabel && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "var(--text-muted)",
-                          whiteSpace: "nowrap",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {sevLabel}
-                        {catLabel ? ` · ${catLabel}` : ""}
-                      </div>
-                    )
-                  )}
+                  {isRubric
+                    ? dimensionLabel && (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--text-muted)",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {t("dimension")}: {dimensionLabel}
+                        </div>
+                      )
+                    : sevLabel && (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--text-muted)",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {sevLabel}
+                          {catLabel ? ` · ${catLabel}` : ""}
+                        </div>
+                      )}
 
                   {/* actions */}
                   <div
