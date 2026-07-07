@@ -2,6 +2,7 @@ import type { Container } from "../../platform/container.js";
 import type {
   Agent,
   AgentSkillLink,
+  AgentVersionSummary,
   CiFailOn,
   ModelInfo,
   Provider,
@@ -60,19 +61,35 @@ export class AgentsService {
 
   async list(workspaceId: string): Promise<Agent[]> {
     const rows = await this.repo.list(workspaceId);
-    // Attach skill_count to each agent (one extra query for all agents).
+    // Attach skill_count + bonus stats to each agent (two extra queries for
+    // ALL agents combined — never one query per agent).
     const skillCounts = await this.repo.skillCountsForWorkspace(workspaceId);
-    return rows.map((row) => ({
-      ...toAgentDto(row),
-      skill_count: skillCounts.get(row.id) ?? 0,
-    }));
+    const stats = await this.repo.statsForWorkspace(workspaceId);
+    return rows.map((row) => {
+      const s = stats.get(row.id);
+      return {
+        ...toAgentDto(row),
+        skill_count: skillCounts.get(row.id) ?? 0,
+        runs_count: s?.runsCount ?? 0,
+        accept_rate_pct: s?.acceptRatePct ?? 0,
+        avg_cost_usd: s?.avgCostUsd ?? null,
+      };
+    });
   }
 
   async get(workspaceId: string, id: string): Promise<Agent | undefined> {
     const row = await this.repo.getById(workspaceId, id);
     if (!row) return undefined;
     const skillCount = await this.repo.skillCount(id);
-    return { ...toAgentDto(row), skill_count: skillCount };
+    const stats = await this.repo.statsForWorkspace(workspaceId);
+    const s = stats.get(id);
+    return {
+      ...toAgentDto(row),
+      skill_count: skillCount,
+      runs_count: s?.runsCount ?? 0,
+      accept_rate_pct: s?.acceptRatePct ?? 0,
+      avg_cost_usd: s?.avgCostUsd ?? null,
+    };
   }
 
   /** Delete an agent (and its versions/skill-links, via cascade). */
@@ -179,6 +196,22 @@ export class AgentsService {
     const resolvedOrder = order ?? existing.length;
     await this.repo.linkSkill(agentId, skillId, resolvedOrder);
     return this.skillLinks(agentId);
+  }
+
+  /**
+   * Version history for an agent (newest first) — mirrors `SkillsService.versions()`.
+   * Guard: ensure the agent belongs to the workspace before exposing versions;
+   * returns `[]` (not a 404) when the agent isn't found, same as skills.
+   */
+  async listVersions(workspaceId: string, id: string): Promise<AgentVersionSummary[]> {
+    const agent = await this.repo.getById(workspaceId, id);
+    if (!agent) return [];
+    const rows = await this.repo.listVersions(id);
+    return rows.map((r) => ({
+      version: r.version,
+      system_prompt: r.systemPrompt,
+      created_at: r.createdAt.toISOString(),
+    }));
   }
 
   /**

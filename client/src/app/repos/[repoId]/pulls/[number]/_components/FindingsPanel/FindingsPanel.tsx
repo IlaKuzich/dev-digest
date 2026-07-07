@@ -6,9 +6,11 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Toggle, EmptyState, SEV, Icon } from "@devdigest/ui";
-import type { FindingRecord, Severity } from "@devdigest/shared";
+import type { FindingRecord, Severity, EvalCaseInput } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
+import { usePrefillEvalCase } from "@/lib/hooks/evals";
+import { EvalCaseModal } from "@/components/evals/EvalCaseModal";
 import { KEY_TO_ACTION, SEVERITY_FILTERS } from "./constants";
 import { visibleFindings } from "./helpers";
 import { s } from "./styles";
@@ -33,6 +35,10 @@ export function FindingsPanel({
     null,
   );
   const [focusIdx, setFocusIdx] = React.useState(0);
+  const prefillEvalCase = usePrefillEvalCase();
+  const [evalPrefill, setEvalPrefill] = React.useState<EvalCaseInput | null>(
+    null,
+  );
 
   const counts = React.useMemo(
     () => ({
@@ -69,6 +75,12 @@ export function FindingsPanel({
 
   return (
     <div>
+      {evalPrefill && (
+        <EvalCaseModal
+          prefill={evalPrefill}
+          onClose={() => setEvalPrefill(null)}
+        />
+      )}
       <div style={s.toolbar}>
         <div style={s.sevPills}>
           {SEVERITY_FILTERS.map(({ sev }) => {
@@ -116,6 +128,11 @@ export function FindingsPanel({
               headSha={headSha}
               onAction={(act) =>
                 action.mutate({ findingId: f.id, action: act, prId })
+              }
+              onCreateEvalCase={(finding) =>
+                prefillEvalCase.mutate(finding.id, {
+                  onSuccess: (input) => setEvalPrefill(input),
+                })
               }
             />
           ))

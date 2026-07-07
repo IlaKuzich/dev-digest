@@ -29,6 +29,7 @@ export function FindingCard({
   targeted,
   defaultExpanded,
   onAction,
+  onCreateEvalCase,
   pending,
   repoFullName,
   headSha,
@@ -38,11 +39,15 @@ export function FindingCard({
   targeted?: boolean;
   defaultExpanded?: boolean;
   onAction?: (action: FindingActionKind, reply?: string) => void;
+  /** "Turn into eval case" (AC-8/9) — separate from onAction since it never
+   *  mutates the finding itself, only prefills a new eval case. */
+  onCreateEvalCase?: (f: FindingRecord) => void;
   pending?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
 }) {
   const t = useTranslations("prReview");
+  const tEval = useTranslations("eval.findingCard");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
   const sevColor = SEV_COLOR[f.severity] ?? SEV_COLOR_FALLBACK;
   const fileHref =
@@ -122,6 +127,18 @@ export function FindingCard({
             >
               {t("finding.dismiss")}
             </Button>
+            {onCreateEvalCase && (
+              <Button
+                kind="ghost"
+                size="sm"
+                icon="FlaskConical"
+                disabled={!muted}
+                title={!muted ? tEval("turnIntoEvalCaseHint") : undefined}
+                onClick={() => onCreateEvalCase(f)}
+              >
+                {tEval("turnIntoEvalCase")}
+              </Button>
+            )}
           </div>
         </div>
       )}

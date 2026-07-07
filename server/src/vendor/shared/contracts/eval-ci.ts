@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Verdict, Finding } from './findings.js';
+import { Verdict, Finding, Severity, FindingCategory } from './findings.js';
 import { EvalRun, EvalOwnerKind, Conformance, Provider, CiFailOn } from './knowledge.js';
 
 /**
@@ -29,6 +29,21 @@ export const EvalCaseInput = z.object({
 });
 export type EvalCaseInput = z.infer<typeof EvalCaseInput>;
 
+/**
+ * A safely-typed shape for `eval_cases.expected_output` (stored as
+ * `z.unknown()` in `EvalCase`/`EvalCaseInput` — this is the parsed-out DTO
+ * used by the scoring engine and the findings-prefill endpoint).
+ */
+export const ExpectedFinding = z.object({
+  file: z.string(),
+  start_line: z.number().int(),
+  end_line: z.number().int(),
+  severity: Severity.optional(),
+  category: FindingCategory.optional(),
+  title: z.string().optional(),
+});
+export type ExpectedFinding = z.infer<typeof ExpectedFinding>;
+
 /** A persisted eval run row (one execution of a case), returned by the API. */
 export const EvalRunRecord = z.object({
   id: z.string(),
@@ -42,6 +57,11 @@ export const EvalRunRecord = z.object({
   citation_accuracy: z.number().nullable(),
   duration_ms: z.number().int().nullable(),
   cost_usd: z.number().nullable(),
+  /** Groups runs from the same "Run all evals" / skill-eval batch. Null for
+   *  legacy rows created before this field existed. */
+  batch_id: z.string().nullable(),
+  /** Snapshot of the agent's version at run time; null for skill-owned cases. */
+  agent_version: z.number().int().nullable(),
 });
 export type EvalRunRecord = z.infer<typeof EvalRunRecord>;
 
@@ -87,6 +107,39 @@ export const EvalDashboard = z.object({
   alert: z.string().nullable(),
 });
 export type EvalDashboard = z.infer<typeof EvalDashboard>;
+
+/**
+ * Aggregate summary for one batch run (one "Run all evals" invocation, or one
+ * single-case run via `POST /eval-cases/:id/run`) — the row shape for
+ * `GET /eval-dashboard`'s workspace-wide `recent_runs` list (per-batch, NOT
+ * per-case, unlike `EvalDashboard.recent_runs: EvalRunRecord[]` above).
+ */
+export const EvalBatchSummary = z.object({
+  batch_id: z.string(),
+  agent_id: z.string(),
+  agent_version: z.number().int().nullable(),
+  ran_at: z.string(),
+  cases_total: z.number().int(),
+  recall: z.number(),
+  precision: z.number(),
+  citation_accuracy: z.number(),
+  traces_passed: z.number().int(),
+  cost_usd: z.number().nullable(),
+});
+export type EvalBatchSummary = z.infer<typeof EvalBatchSummary>;
+
+/**
+ * Response of `GET /eval-dashboard` — the landing-page aggregate: one
+ * `EvalDashboard` per workspace agent (incl. 0-case/0-run agents), plus a flat
+ * cross-agent `recent_runs` list of the most recent batches. Deliberately a
+ * NEW wrapper contract rather than reusing `EvalDashboard.recent_runs` (which
+ * stays per-owner raw run history at a different nesting level).
+ */
+export const EvalDashboardOverview = z.object({
+  agents: z.array(EvalDashboard),
+  recent_runs: z.array(EvalBatchSummary),
+});
+export type EvalDashboardOverview = z.infer<typeof EvalDashboardOverview>;
 
 // ===========================================================================
 // Compose Review

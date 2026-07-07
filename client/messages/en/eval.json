@@ -55,7 +55,11 @@
     "invalidJson": "invalid JSON",
     "lastRunPassed": "Last run passed",
     "lastRunFailed": "Last run failed",
-    "resultSummary": "recall {recall}% · precision {precision}% · citation {citation}% · {duration}s"
+    "resultSummary": "recall {recall}% · precision {precision}% · citation {citation}% · {duration}s",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Why this case matters…",
+    "positiveBanner": "POSITIVE — asserts findings the agent SHOULD report",
+    "negativeBanner": "NEGATIVE — asserts the agent should NOT flag anything here"
   },
   "evalsTab": {
     "metricsTitle": "Eval metrics",
@@ -71,7 +75,43 @@
     "run": "Run",
     "running": "Running…",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "viewDashboard": "View full dashboard →",
+    "withSkill": "With skill",
+    "withoutSkill": "Without skill",
+    "tabLabel": "Evals"
+  },
+  "findingCard": {
+    "turnIntoEvalCase": "Turn into eval case",
+    "turnIntoEvalCaseHint": "Resolve this finding (accept or dismiss) first"
+  },
+  "compare": {
+    "title": "Compare runs",
+    "subtitle": "v{older} → v{newer}",
+    "promote": "Promote v{version}",
+    "alreadyCurrent": "Already the current prompt",
+    "noVersionData": "Prompt version data unavailable for this run",
+    "deltas": {
+      "recall": "Recall",
+      "precision": "Precision",
+      "citation_accuracy": "Citation",
+      "cost_usd": "Cost"
+    }
+  },
+  "landing": {
+    "title": "Eval Dashboard",
+    "runAllAgents": "Run all agents",
+    "running": "Running…",
+    "recentRuns": "Recent runs",
+    "noRecentRuns": "No eval runs yet across the workspace."
+  },
+  "detail": {
+    "runAllEvals": "Run all evals",
+    "running": "Running…",
+    "compareSelected": "Compare selected",
+    "metricTrend": "Metric trend",
+    "runHistory": "Run history",
+    "loadError": "Couldn't load this agent's eval dashboard"
   },
   "page": {
     "crumbSkillsLab": "Skills Lab",
