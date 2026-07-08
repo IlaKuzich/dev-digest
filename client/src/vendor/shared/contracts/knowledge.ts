@@ -158,15 +158,79 @@ export const UpdateSkillInput = z.object({
 export type UpdateSkillInput = z.infer<typeof UpdateSkillInput>;
 
 // ---- Conventions ----
+export const ConventionStatus = z.enum(['candidate', 'accepted', 'rejected']);
+export type ConventionStatus = z.infer<typeof ConventionStatus>;
+
+export const ConventionCategory = z.enum([
+  'naming',
+  'error-handling',
+  'structure',
+  'imports',
+  'api-shape',
+  'testing',
+]);
+export type ConventionCategory = z.infer<typeof ConventionCategory>;
+
+/** Persisted row DTO returned by the conventions API. */
 export const ConventionCandidate = z.object({
   id: z.string(),
+  scan_id: z.string().nullable(),
+  category: ConventionCategory,
   rule: z.string(),
+  edited_rule: z.string().nullable(),
   evidence_path: z.string(),
+  evidence_line_start: z.number().int().nullable(),
+  evidence_line_end: z.number().int().nullable(),
   evidence_snippet: z.string(),
   confidence: z.number().min(0).max(1),
-  accepted: z.boolean(),
+  status: ConventionStatus,
+  skill_id: z.string().nullable(),
+  created_at: z.string(),
 });
 export type ConventionCandidate = z.infer<typeof ConventionCandidate>;
+
+/** Model-output shape (one item per proposed convention) — the extract schema. */
+export const ConventionDraft = z.object({
+  category: ConventionCategory,
+  rule: z.string(),
+  evidence: z.object({
+    file: z.string(),
+    line: z.number().int(),
+    snippet: z.string(),
+  }),
+  confidence: z.number().min(0).max(1),
+});
+export type ConventionDraft = z.infer<typeof ConventionDraft>;
+
+export const ConventionScan = z.object({
+  id: z.string(),
+  repo_id: z.string(),
+  sample_count: z.number().int(),
+  model: z.string(),
+  created_at: z.string(),
+});
+export type ConventionScan = z.infer<typeof ConventionScan>;
+
+export const ExtractResult = z.object({
+  scan: ConventionScan,
+  candidates: z.array(ConventionCandidate),
+  dropped: z.number().int(),
+});
+export type ExtractResult = z.infer<typeof ExtractResult>;
+
+export const UpdateConventionInput = z.object({
+  status: ConventionStatus.optional(),
+  rule: z.string().min(1).optional(),
+  category: ConventionCategory.optional(),
+});
+export type UpdateConventionInput = z.infer<typeof UpdateConventionInput>;
+
+export const CreateConventionSkillInput = z.object({
+  name: z.string().min(1),
+  description: z.string(),
+  body: z.string().min(1),
+});
+export type CreateConventionSkillInput = z.infer<typeof CreateConventionSkillInput>;
 
 // ---- Agents ----
 export const Provider = z.enum(['openai', 'anthropic', 'openrouter']);
