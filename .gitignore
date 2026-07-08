@@ -26,3 +26,4 @@ test-results/
 
 # emdash worktree config (local)
 .emdash.json
+.omc

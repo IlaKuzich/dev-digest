@@ -14,7 +14,21 @@
       "Bash(git checkout *)",
       "Bash(git show *)",
       "Bash(git commit -q -o docs/superpowers/specs/2026-07-04-skills-core-loop-design.md -m ' *)",
-      "Bash(git commit -q -o .claude/settings.local.json -m ' *)"
+      "Bash(git commit -q -o .claude/settings.local.json -m ' *)",
+      "Read(//c/Users/User/.devdigest/**)",
+      "Bash(docker volume *)",
+      "Bash(PGPASSWORD=devdigest docker exec -e PGPASSWORD=devdigest devdigest-postgres psql -h 127.0.0.1 -U devdigest -d devdigest -c \"select 1;\")",
+      "Bash(netstat -ano)",
+      "Bash(docker port *)",
+      "Bash(powershell -NoProfile -Command 'Get-Service | Where-Object {$_.Name -like '\\\\''*postgres*'\\\\''} | Format-Table -AutoSize')",
+      "Bash(powershell -NoProfile -Command \"Get-Process -Id 8152 | Select-Object Id,ProcessName,Path\")",
+      "Bash(powershell -NoProfile -Command \"Get-Process -Id 664 | Select-Object Id,ProcessName,Path\")",
+      "Bash(docker exec *)",
+      "Bash(docker run *)",
+      "Bash(docker compose *)",
+      "Bash(pnpm db:migrate)",
+      "Bash(npx tsx *)",
+      "Bash(pnpm db:seed)"
     ]
   },
   "statusLine": {
