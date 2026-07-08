@@ -57,40 +57,57 @@ Skills + Agents machinery and is largely authored content plus an experiment pro
 
 ## Design
 
-### A1. Schema (two new files + one migration)
+### A1. Schema (extend an existing stub + one new file + one migration)
 
-Per server convention, add **new** schema files (never edit existing ones), then a
-generated migration. **After `pnpm db:generate`, read the generated `.sql` before
-committing** (project has a history of phantom/redundant ALTERs from hand-authored
-migrations — see `server/INSIGHTS.md`).
+**Reality (discovered after design approval):** the starter already ships a **minimal
+`conventions` table stub** in an *existing* schema file
+(`server/src/db/schema/knowledge.ts:31`) with only:
+`id, workspaceId, repoId, rule, evidencePath, evidenceSnippet, confidence
+(doublePrecision), accepted (boolean)`. It is unused. So this is an **additive
+extension of a stub**, not a from-scratch create. Extending the stub (rather than the
+"new file only" convention) is an approved deviation — precedent: the skills-core-loop
+`agent_skills.enabled` deviation. **After `pnpm db:generate`, read the generated `.sql`
+before committing** (history of phantom/redundant ALTERs — see `server/INSIGHTS.md`).
 
-- **`convention_scans`** — one row per extract run:
-  `id, repo_id (fk repos), workspace_id, sample_count int, model text, created_at`.
-- **`conventions`** — one row per candidate:
-  `id, scan_id (fk convention_scans, ON DELETE CASCADE), repo_id, workspace_id,
-  category text, rule text, evidence_file text, evidence_line_start int,
-  evidence_line_end int, evidence_snippet text, confidence NUMERIC(4,3),
-  status text ('candidate' | 'accepted' | 'rejected'), edited_rule text NULL,
-  skill_id (fk skills NULL — set when materialized into a skill),
-  created_at, updated_at`.
-  - `confidence` is `NUMERIC` → Drizzle returns it as a **string**; add `Number()` on
-    read and `String()` on write (see `server/INSIGHTS.md` NUMERIC note).
+- **Extend `conventions`** (knowledge.ts) — add columns additively:
+  `scanId (fk convention_scans, ON DELETE CASCADE, nullable), category text,
+  evidenceLineStart int, evidenceLineEnd int, status text ('candidate' | 'accepted' |
+  'rejected') NOT NULL DEFAULT 'candidate', editedRule text NULL, skillId (fk skills
+  NULL), createdAt, updatedAt`. Keep the stub's `rule`, `evidencePath`,
+  `evidenceSnippet`, `confidence`. The stub's `accepted` boolean is **superseded by
+  `status`** and left in place (additive-only; the service ignores it).
+  - `confidence` stays `doublePrecision` (it is a 0..1 score, **not** a financial
+    column — the `server/INSIGHTS.md` NUMERIC rule does not apply, and doublePrecision
+    avoids the string-cast dance).
+- **New `convention_scans`** (new file `server/src/db/schema/conventions.ts`, exported
+  from the schema barrel) — one row per extract run:
+  `id, repoId (fk repos), workspaceId, sampleCount int, model text, createdAt`.
 
 ### A2. Contracts (`@devdigest/shared` — mirror into BOTH vendored copies, one commit)
 
 Canonical: `server/src/vendor/shared/`; mirror into `client/src/vendor/shared/`. Missing
 one side causes runtime Zod parse failures (`INSIGHTS.md` cross-cutting note).
 
+**Reality:** a minimal `ConventionCandidate` DTO stub already exists
+(`server/src/vendor/shared/contracts/knowledge.ts:161`): `{ id, rule, evidence_path,
+evidence_snippet, confidence, accepted }`. We **extend it** (the row DTO) and add the
+rest.
+
 - `ConventionStatus = z.enum(['candidate','accepted','rejected'])`.
-- `Convention` — row DTO (ids, category, rule, edited_rule, evidence fields, confidence
-  as number, status, skill_id, timestamps).
-- `ConventionScan` — `{ id, repo_id, sample_count, model, created_at }`.
-- `ConventionCandidate` — **the `completeStructured` schema**:
-  `{ category: ConventionCategory, rule: string, evidence: { file: string, line:
-  number, snippet: string }, confidence: number (0..1) }`.
 - `ConventionCategory = z.enum(['naming','error-handling','structure','imports',
   'api-shape','testing'])` (enhancement #2, v1).
-- `ExtractResult = { scan: ConventionScan, candidates: Convention[], dropped: number }`.
+- **Extend `ConventionCandidate`** (persisted row DTO) → add `category:
+  ConventionCategory`, `evidence_line_start: number|null`, `evidence_line_end:
+  number|null`, `status: ConventionStatus`, `edited_rule: string|null`, `skill_id:
+  string|null`, `scan_id: string|null`, `created_at: string`. Keep `id, rule,
+  evidence_path, evidence_snippet, confidence`. Drop `accepted` from the DTO (replaced by
+  `status`; the column stays for additive-migration reasons but is not surfaced).
+- `ConventionDraft` — **the `completeStructured` model-output schema** (distinct from the
+  persisted DTO): `{ category: ConventionCategory, rule: string, evidence: { file:
+  string, line: number, snippet: string }, confidence: number (0..1) }`.
+- `ConventionScan = { id, repo_id, sample_count, model, created_at }`.
+- `ExtractResult = { scan: ConventionScan, candidates: ConventionCandidate[], dropped:
+  number }`.
 - `UpdateConventionInput = { status?: ConventionStatus, rule?: string,
   category?: ConventionCategory }` (accept/reject and/or edit).
 - `CreateConventionSkillInput = { name: string, description: string, body: string }`.
@@ -114,7 +131,7 @@ Repository owns `conventions` + `convention_scans`.
 2. **Samples:** `repoIntel.getConventionSamples(repoId, 12)` → read those files from the
    clone, **plus** read config files directly (eslint / tsconfig / prettier /
    package.json) as extra signal (**enhancement #1, v1**). Record `sample_count`.
-3. **Model call:** `llm.completeStructured({ schema: { candidates: [ConventionCandidate] },
+3. **Model call:** `llm.completeStructured({ schema: { candidates: [ConventionDraft] },
    model, messages })` — prompt asks for house conventions with file+line+snippet
    evidence and a confidence.
 4. **Grounding (moderate):** for each candidate, read `evidence.file` from the clone.
@@ -188,7 +205,7 @@ Uses the already-shipped Skills + Agents features — **no new backend**.
   → POST /repos/:id/conventions/extract
   → resolveFeatureModel('conventions')
   → getConventionSamples(repoId,12) + config files  → sample_count
-  → llm.completeStructured({ candidates:[ConventionCandidate] })
+  → llm.completeStructured({ candidates:[ConventionDraft] })
   → grounding: read evidence.file, match snippet, refine line | DROP
   → persist survivors (status='candidate') under new scan_id
   → ExtractResult { scan, candidates, dropped }
