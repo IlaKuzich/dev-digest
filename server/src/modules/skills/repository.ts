@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
-import type { SkillType } from '@devdigest/shared';
+import type { SkillSource, SkillType } from '@devdigest/shared';
 import type { SkillRow, SkillVersionRow } from '../../db/rows.js';
 export type { SkillRow, SkillVersionRow };
 
@@ -16,6 +16,8 @@ export interface InsertSkill {
   description: string;
   type: SkillType;
   body: string;
+  /** Provenance. Defaults to 'manual'; conventions-derived skills pass 'extracted'. */
+  source?: SkillSource;
 }
 
 export interface UpdateSkill {
@@ -49,7 +51,7 @@ export class SkillsRepository {
         name: values.name,
         description: values.description,
         type: values.type,
-        source: 'manual',
+        source: values.source ?? 'manual',
         body: values.body,
         version: 1,
       })

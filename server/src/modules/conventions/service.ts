@@ -131,12 +131,16 @@ export class ConventionsService {
     input: CreateConventionSkillInput,
   ): Promise<Skill> {
     const skills = new SkillsService(this.container);
-    const skill = await skills.create(workspaceId, {
-      name: input.name,
-      description: input.description,
-      type: 'convention',
-      body: input.body,
-    });
+    const skill = await skills.create(
+      workspaceId,
+      {
+        name: input.name,
+        description: input.description,
+        type: 'convention',
+        body: input.body,
+      },
+      'extracted',
+    );
     const accepted = await this.repo.acceptedForRepo(workspaceId, repoId);
     await this.repo.stampSkillId(
       accepted.map((r) => r.id),

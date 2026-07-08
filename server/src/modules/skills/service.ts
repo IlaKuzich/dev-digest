@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import type { CreateSkillInput, Skill, UpdateSkillInput } from '@devdigest/shared';
+import type { CreateSkillInput, Skill, SkillSource, UpdateSkillInput } from '@devdigest/shared';
 import { SkillsRepository } from './repository.js';
 import { toSkillDto } from './helpers.js';
 
@@ -21,13 +21,18 @@ export class SkillsService {
     return row ? toSkillDto(row) : undefined;
   }
 
-  async create(workspaceId: string, input: CreateSkillInput): Promise<Skill> {
+  async create(
+    workspaceId: string,
+    input: CreateSkillInput,
+    source: SkillSource = 'manual',
+  ): Promise<Skill> {
     const row = await this.repo.insert({
       workspaceId,
       name: input.name,
       description: input.description,
       type: input.type,
       body: input.body,
+      source,
     });
     return toSkillDto(row);
   }
