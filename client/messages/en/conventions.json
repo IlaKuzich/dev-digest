@@ -10,6 +10,11 @@
     "runExtraction": "Run extraction",
     "extractionFailed": "Extraction failed",
     "loadError": "Could not load conventions.",
+    "noRepo": "Select a repository to extract conventions.",
+    "detectedFrom": "Detected from {count} sample files",
+    "acceptedCount": "{accepted} of {total} accepted",
+    "createSkill": "Create skill",
+    "droppedNote": "{count} ungrounded candidates dropped",
     "empty": {
       "title": "No conventions extracted yet",
       "body": "Scan the repo to surface house-rules — naming, error handling, structure — each backed by evidence you can turn into a Skill.",
@@ -21,6 +26,21 @@
     "confidence": "Confidence",
     "accepted": "Accepted",
     "accepting": "Accepting…",
-    "acceptAsSkill": "Accept as Skill"
+    "acceptAsSkill": "Accept as Skill",
+    "accept": "Accept",
+    "reject": "Reject",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "modal": {
+    "title": "Create skill from conventions",
+    "mergedNote": "Merged from {count} accepted conventions in {repo}. Everything below is editable before you save.",
+    "name": "Name",
+    "description": "Description",
+    "body": "Skill body",
+    "create": "Create skill",
+    "cancel": "Cancel",
+    "creating": "Creating…"
   }
 }
