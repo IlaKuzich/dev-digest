@@ -24,7 +24,7 @@ let nextDrafts: unknown[] = [];
 
 /** Minimal LLM stub — only completeStructured is exercised by extract. */
 const stubLlm = {
-  id: 'openai',
+  id: 'openrouter',
   async listModels() {
     return [];
   },
@@ -34,7 +34,7 @@ const stubLlm = {
   async completeStructured() {
     return {
       data: { candidates: nextDrafts },
-      model: 'gpt-5.4',
+      model: 'deepseek/deepseek-v4-flash',
       tokensIn: 10,
       tokensOut: 20,
       costUsd: 0,
@@ -69,7 +69,7 @@ d('conventions module (it)', () => {
     return buildApp({
       config,
       db: pg.handle.db,
-      overrides: { git: new MockGitClient(), github: new MockGitHubClient(), llm: { openai: stubLlm } },
+      overrides: { git: new MockGitClient(), github: new MockGitHubClient(), llm: { openrouter: stubLlm } },
     });
   }
 
