@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { Container } from "../../platform/container.js";
 import type {
   Agent,
@@ -9,6 +10,7 @@ import type {
   ReviewStrategy,
   FeatureModelId,
 } from "@devdigest/shared";
+import * as t from "../../db/schema.js";
 import { AgentsRepository } from "./repository.js";
 import { toAgentDto } from "./helpers.js";
 
@@ -102,8 +104,14 @@ export class AgentsService {
     input: CreateAgentInput,
     userId?: string,
   ): Promise<Agent> {
+    const [repo] = await this.container.db
+      .select({ id: t.repos.id })
+      .from(t.repos)
+      .where(eq(t.repos.workspaceId, workspaceId))
+      .limit(1);
     const row = await this.repo.insert({
       workspaceId,
+      repoId: repo?.id,
       name: input.name,
       description: input.description,
       provider: input.provider,
