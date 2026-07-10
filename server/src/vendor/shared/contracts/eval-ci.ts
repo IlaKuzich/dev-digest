@@ -1,6 +1,12 @@
-import { z } from 'zod';
-import { Verdict, Finding, Severity, FindingCategory } from './findings.js';
-import { EvalRun, EvalOwnerKind, Conformance, Provider, CiFailOn } from './knowledge.js';
+import { z } from "zod";
+import { Verdict, Finding, Severity, FindingCategory } from "./findings.js";
+import {
+  EvalRun,
+  EvalOwnerKind,
+  Conformance,
+  Provider,
+  CiFailOn,
+} from "./knowledge.js";
 
 /**
  * A4 — Eval / CI / Compose / Conformance API contracts (L06).
@@ -21,7 +27,7 @@ export const EvalCaseInput = z.object({
   owner_kind: EvalOwnerKind,
   owner_id: z.string(),
   name: z.string().min(1),
-  input_diff: z.string().default(''),
+  input_diff: z.string().default(""),
   input_files: z.unknown().nullish(),
   input_meta: z.unknown().nullish(),
   expected_output: z.unknown(),
@@ -164,7 +170,7 @@ export const ComposeReviewInput = z.object({
   finding_ids: z.array(z.string()).default([]),
   /** Editable markdown body. If omitted, the server composes one from findings. */
   body: z.string().nullish(),
-  verdict: Verdict.default('comment'),
+  verdict: Verdict.default("comment"),
   /** When true, attach selected findings as inline comments (path+line+body). */
   inline_comments: z.boolean().default(false),
 });
@@ -197,7 +203,7 @@ export type ComposeReviewPreview = z.infer<typeof ComposeReviewPreview>;
 // Export-to-CI + CI Runs
 // ===========================================================================
 
-export const CiTarget = z.enum(['gha', 'circle', 'jenkins', 'cli']);
+export const CiTarget = z.enum(["gha", "circle", "jenkins", "cli"]);
 export type CiTarget = z.infer<typeof CiTarget>;
 
 /** One generated file in the CI bundle (path + editable contents). */
@@ -218,7 +224,7 @@ export type CiFile = z.infer<typeof CiFile>;
  */
 export const AgentManifest = z.object({
   name: z.string().min(1),
-  provider: Provider.default('openrouter'),
+  provider: Provider.default("openrouter"),
   model: z.string().min(1),
   system_prompt: z.string(),
   // Tolerate both a missing key and an explicit `null` (YAML `skills:` with no
@@ -228,10 +234,10 @@ export const AgentManifest = z.object({
     .array(z.string())
     .nullish()
     .transform((v) => v ?? []),
-  strategy: z.enum(['auto', 'single-pass', 'map-reduce']).default('auto'),
+  strategy: z.enum(["auto", "single-pass", "map-reduce"]).default("auto"),
   // CI gate policy (see CiFailOn) — when the posted review should BLOCK
   // (REQUEST_CHANGES + fail the check) vs just comment. Default: block on critical.
-  ci_fail_on: CiFailOn.default('critical'),
+  ci_fail_on: CiFailOn.default("critical"),
 });
 export type AgentManifest = z.infer<typeof AgentManifest>;
 /** Caller-facing input type — `.default()` fields stay optional. */
@@ -240,12 +246,14 @@ export type AgentManifestInput = z.input<typeof AgentManifest>;
 /** Request body for `POST /agents/:id/export-ci`. */
 export const CiExportInput = z.object({
   repo: z.string().min(1), // "owner/name"
-  target: CiTarget.default('gha'),
+  target: CiTarget.default("gha"),
   /** "open_pr" opens a PR with the files; "files" just returns/persists them. */
-  action: z.enum(['open_pr', 'files']).default('open_pr'),
-  post_as: z.enum(['github_review', 'pr_comment', 'none']).default('github_review'),
-  triggers: z.array(z.string()).default(['opened', 'synchronize', 'reopened']),
-  base: z.string().default('main'),
+  action: z.enum(["open_pr", "files"]).default("open_pr"),
+  post_as: z
+    .enum(["github_review", "pr_comment", "none"])
+    .default("github_review"),
+  triggers: z.array(z.string()).default(["opened", "synchronize", "reopened"]),
+  base: z.string().default("main"),
 });
 export type CiExportInput = z.infer<typeof CiExportInput>;
 /** Caller-facing input type — `.default()` fields stay optional (web hooks). */
@@ -269,7 +277,12 @@ export const CiExport = z.object({
 });
 export type CiExport = z.infer<typeof CiExport>;
 
-export const CiRunStatus = z.enum(['succeeded', 'failed', 'no_findings', 'running']);
+export const CiRunStatus = z.enum([
+  "succeeded",
+  "failed",
+  "no_findings",
+  "running",
+]);
 export type CiRunStatus = z.infer<typeof CiRunStatus>;
 
 /** A CI run row (mirrors `ci_runs`) — ingested from GitHub Actions artifacts. */
@@ -313,7 +326,7 @@ export type CiResultArtifact = z.infer<typeof CiResultArtifact>;
 export const ConformanceInput = z.object({
   /** Spec path/id to compare against; if omitted, the first available spec. */
   spec: z.string().nullish(),
-  provider: z.enum(['openai', 'anthropic', 'openrouter']).nullish(),
+  provider: z.enum(["openai", "anthropic", "openrouter"]).nullish(),
   model: z.string().nullish(),
 });
 export type ConformanceInput = z.infer<typeof ConformanceInput>;
@@ -330,7 +343,7 @@ export type ConformanceReport = z.infer<typeof ConformanceReport>;
 // Hooks (Secret-Leak + Phantom-API detectors) — emit grounding-exempt findings
 // ===========================================================================
 
-export const HookKind = z.enum(['secret_leak', 'phantom']);
+export const HookKind = z.enum(["secret_leak", "phantom"]);
 export type HookKind = z.infer<typeof HookKind>;
 
 /** Result of running the built-in detectors over a PR. */

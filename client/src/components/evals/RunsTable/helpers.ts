@@ -12,6 +12,8 @@ export interface EvalBatchRow {
   precision: number;
   citation_accuracy: number;
   cost_usd: number | null;
+  /** For single-case batches: the case name (truncated). Null for multi-case batches. */
+  case_name?: string | null;
 }
 
 /**
@@ -42,7 +44,9 @@ export function groupRunsByBatch(runs: EvalRunRecord[]): EvalBatchRow[] {
     const n = rows.length;
     const sum = (f: (r: EvalRunRecord) => number | null) =>
       rows.reduce((acc, r) => acc + (f(r) ?? 0), 0);
-    const costs = rows.map((r) => r.cost_usd).filter((c): c is number => c != null);
+    const costs = rows
+      .map((r) => r.cost_usd)
+      .filter((c): c is number => c != null);
     return {
       batch_id: key,
       ran_at: rows[0]!.ran_at,
@@ -53,6 +57,11 @@ export function groupRunsByBatch(runs: EvalRunRecord[]): EvalBatchRow[] {
       precision: sum((r) => r.precision) / n,
       citation_accuracy: sum((r) => r.citation_accuracy) / n,
       cost_usd: costs.length > 0 ? costs.reduce((a, b) => a + b, 0) : null,
+      case_name:
+        n === 1
+          ? (rows[0]!.case_name?.replace(/^From finding:\s*/i, "").trim() ??
+            null)
+          : null,
     };
   });
 }

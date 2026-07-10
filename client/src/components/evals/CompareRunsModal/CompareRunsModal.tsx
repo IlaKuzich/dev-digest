@@ -31,7 +31,9 @@ function DeltaCard({ delta, label }: { delta: MetricDelta; label: string }) {
 
   const fmtDelta = () => {
     if (d == null) return null;
-    return isCost ? `$${Math.abs(d).toFixed(2)}` : `${Math.abs(Math.round(d * 100))}pt`;
+    return isCost
+      ? `$${Math.abs(d).toFixed(2)}`
+      : `${Math.abs(Math.round(d * 100))}pt`;
   };
 
   return (
@@ -56,10 +58,16 @@ function DeltaCard({ delta, label }: { delta: MetricDelta; label: string }) {
         {label.toUpperCase()}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span className="tnum" style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+        <span
+          className="tnum"
+          style={{ fontSize: 14, color: "var(--text-secondary)" }}
+        >
           {fmt(delta.older)}
         </span>
-        <Icon.ArrowRight size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+        <Icon.ArrowRight
+          size={12}
+          style={{ color: "var(--text-muted)", flexShrink: 0 }}
+        />
         <span className="tnum" style={{ fontSize: 14, fontWeight: 700 }}>
           {fmt(delta.newer)}
         </span>
@@ -106,7 +114,10 @@ export function CompareRunsModal({
 
   const patch =
     olderPrompt && newerPrompt
-      ? buildPromptDiffPatch(olderPrompt.system_prompt, newerPrompt.system_prompt)
+      ? buildPromptDiffPatch(
+          olderPrompt.system_prompt,
+          newerPrompt.system_prompt,
+        )
       : null;
   const lines = patch ? parsePatch(patch) : [];
 
@@ -120,7 +131,9 @@ export function CompareRunsModal({
       subtitle={t("subtitle")}
       onClose={onClose}
       footer={
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 8 }}
+        >
           <Button kind="secondary" size="sm" onClick={onClose}>
             {t("close")}
           </Button>
@@ -149,8 +162,18 @@ export function CompareRunsModal({
 
         {patch ? (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <Icon.FileText size={13} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <Icon.FileText
+                size={13}
+                style={{ color: "var(--text-muted)", flexShrink: 0 }}
+              />
               <span
                 style={{
                   fontSize: 11,
@@ -161,7 +184,14 @@ export function CompareRunsModal({
               >
                 {t("diffHeader")}
               </span>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginLeft: 4,
+                }}
+              >
                 <Badge mono color="var(--crit)" bg="transparent">
                   ● v{older.agent_version} (old)
                 </Badge>
@@ -170,7 +200,13 @@ export function CompareRunsModal({
                 </Badge>
               </div>
             </div>
-            <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+            >
               {lines.map((ln, i) => (
                 <CodeLine key={i} ln={ln} path="system_prompt" threads={[]} />
               ))}
@@ -185,4 +221,3 @@ export function CompareRunsModal({
     </Modal>
   );
 }
-

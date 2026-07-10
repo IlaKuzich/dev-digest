@@ -7,7 +7,15 @@ import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AppShell } from "@/components/app-shell";
-import { Button, ErrorState, Skeleton, MetricCard, LineChart, Badge, Dropdown } from "@devdigest/ui";
+import {
+  Button,
+  ErrorState,
+  Skeleton,
+  MetricCard,
+  LineChart,
+  Badge,
+  Dropdown,
+} from "@devdigest/ui";
 import { useAgent, useAgents } from "@/lib/hooks/agents";
 import { useEvalDashboard, useRunAgentEvals } from "@/lib/hooks/evals";
 import { RunsTable, groupRunsByBatch } from "@/components/evals/RunsTable";
@@ -44,7 +52,11 @@ export default function EvalAgentDetailPage() {
   if (isError) {
     return (
       <AppShell crumb={crumb}>
-        <ErrorState fullScreen title={t("detail.loadError")} onRetry={() => refetch()} />
+        <ErrorState
+          fullScreen
+          title={t("detail.loadError")}
+          onRetry={() => refetch()}
+        />
       </AppShell>
     );
   }
@@ -60,7 +72,14 @@ export default function EvalAgentDetailPage() {
 
   return (
     <AppShell crumb={crumb}>
-      <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div
+        style={{
+          padding: 28,
+          display: "flex",
+          flexDirection: "column",
+          gap: 24,
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -75,7 +94,9 @@ export default function EvalAgentDetailPage() {
                 <Skeleton width={200} height={24} />
               ) : (
                 <>
-                  <h1 style={{ fontSize: 20, fontWeight: 700 }}>{agent?.name}</h1>
+                  <h1 style={{ fontSize: 20, fontWeight: 700 }}>
+                    {agent?.name}
+                  </h1>
                   {agent?.model && (
                     <Badge mono color="var(--text-muted)" bg="var(--bg-hover)">
                       {agent.model}
@@ -85,12 +106,25 @@ export default function EvalAgentDetailPage() {
               )}
             </div>
             {agent?.description && (
-              <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "var(--text-muted)",
+                  marginTop: 4,
+                }}
+              >
                 {agent.description}
               </p>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexShrink: 0,
+            }}
+          >
             <Dropdown
               align="right"
               trigger={
@@ -112,7 +146,9 @@ export default function EvalAgentDetailPage() {
               loading={runEvals.isPending}
               onClick={() => runEvals.mutate()}
             >
-              {runEvals.isPending ? t("detail.running") : t("detail.runAllEvals")}
+              {runEvals.isPending
+                ? t("detail.running")
+                : t("detail.runAllEvals")}
             </Button>
           </div>
         </div>
@@ -142,7 +178,9 @@ export default function EvalAgentDetailPage() {
                 label={t("dashboard.metrics.citationAccuracy")}
                 value={`${Math.round(dashboard.current.citation_accuracy * 100)}`}
                 suffix="%"
-                delta={showDeltas ? dashboard.delta.citation_accuracy : undefined}
+                delta={
+                  showDeltas ? dashboard.delta.citation_accuracy : undefined
+                }
                 trend={trend.map((p) => p.citation_accuracy)}
                 color="var(--warn)"
               />

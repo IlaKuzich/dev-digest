@@ -125,7 +125,7 @@ export default function EvalDashboardPage() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 140px 48px 1fr 1fr 1fr 56px",
+                  gridTemplateColumns: "160px 1fr 140px 48px 1fr 1fr 1fr 56px",
                   gap: 12,
                   padding: "4px 12px",
                   fontSize: 10,
@@ -134,6 +134,7 @@ export default function EvalDashboardPage() {
                 }}
               >
                 <span>AGENT</span>
+                <span>CASE</span>
                 <span>DATE</span>
                 <span>VER</span>
                 <span>RECALL</span>
@@ -152,7 +153,8 @@ export default function EvalDashboardPage() {
                     key={r.batch_id}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 140px 48px 1fr 1fr 1fr 56px",
+                      gridTemplateColumns:
+                        "160px 1fr 140px 48px 1fr 1fr 1fr 56px",
                       gap: 12,
                       alignItems: "center",
                       padding: "8px 12px",
@@ -161,8 +163,34 @@ export default function EvalDashboardPage() {
                       background: "var(--bg-elevated)",
                     }}
                   >
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
                       {agentName}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: r.case_name
+                          ? "var(--text-secondary)"
+                          : "var(--text-muted)",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                      }}
+                      title={r.case_name ?? undefined}
+                    >
+                      {r.case_name
+                        ? r.case_name.length > 30
+                          ? r.case_name.slice(0, 29) + "…"
+                          : r.case_name
+                        : `All (${r.cases_total})`}
                     </span>
                     <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
                       {new Date(r.ran_at).toLocaleString()}

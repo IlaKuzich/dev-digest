@@ -61,6 +61,8 @@ vi.mock("@/lib/hooks/evals", () => ({
   useEvalDashboard: () => ({ data: DASHBOARD }),
   useDeleteEvalCase: () => ({ mutate: deleteMutate, isPending: false }),
   useRunEvalCase: () => ({ mutate: runMutate, isPending: false }),
+  useRunAgentEvals: () => ({ mutate: vi.fn(), isPending: false }),
+  useRunSkillEvals: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/components/evals/EvalCaseModal/EvalCaseModal", () => ({

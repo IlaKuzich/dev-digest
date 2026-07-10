@@ -13,6 +13,8 @@ vi.mock("@/lib/hooks/evals", () => ({
   useEvalDashboard: () => ({ data: undefined }),
   useDeleteEvalCase: () => ({ mutate: vi.fn(), isPending: false }),
   useRunEvalCase: () => ({ mutate: vi.fn(), isPending: false }),
+  useRunAgentEvals: () => ({ mutate: vi.fn(), isPending: false }),
+  useRunSkillEvals: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 import { SkillEditor } from "./SkillEditor";

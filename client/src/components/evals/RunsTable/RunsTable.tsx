@@ -35,32 +35,77 @@ export function RunsTable({
       <thead>
         <tr style={{ borderBottom: "1px solid var(--border)" }}>
           <th style={{ width: 32 }} />
-          <th style={{ textAlign: "left", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "left",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("ranAt")}
           </th>
-          <th style={{ textAlign: "left", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "left",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("version")}
           </th>
-          <th style={{ textAlign: "right", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "right",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("recall")}
           </th>
-          <th style={{ textAlign: "right", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "right",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("precision")}
           </th>
-          <th style={{ textAlign: "right", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "right",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("citation")}
           </th>
-          <th style={{ textAlign: "right", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "right",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("pass")}
           </th>
-          <th style={{ textAlign: "right", padding: "8px 6px", color: "var(--text-muted)" }}>
+          <th
+            style={{
+              textAlign: "right",
+              padding: "8px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             {t("cost")}
           </th>
         </tr>
       </thead>
       <tbody>
         {batches.map((b) => (
-          <tr key={b.batch_id} style={{ borderBottom: "1px solid var(--border)" }}>
+          <tr
+            key={b.batch_id}
+            style={{ borderBottom: "1px solid var(--border)" }}
+          >
             <td style={{ padding: "8px 6px" }}>
               <Checkbox
                 checked={selected.includes(b.batch_id)}
@@ -72,7 +117,12 @@ export function RunsTable({
             </td>
             <td style={{ padding: "8px 6px" }}>
               {b.agent_version != null ? (
-                <Badge mono color="var(--accent)" bg="transparent" style={{ padding: "1px 0" }}>
+                <Badge
+                  mono
+                  color="var(--accent)"
+                  bg="transparent"
+                  style={{ padding: "1px 0" }}
+                >
                   v{b.agent_version}
                 </Badge>
               ) : (
@@ -81,7 +131,11 @@ export function RunsTable({
             </td>
             <td style={{ padding: "8px 6px", minWidth: 100 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <ProgressBar value={Math.round(b.recall * 100)} color="var(--accent)" height={4} />
+                <ProgressBar
+                  value={Math.round(b.recall * 100)}
+                  color="var(--accent)"
+                  height={4}
+                />
                 <span className="tnum" style={{ fontSize: 12, minWidth: 32 }}>
                   {Math.round(b.recall * 100)}%
                 </span>
@@ -89,7 +143,11 @@ export function RunsTable({
             </td>
             <td style={{ padding: "8px 6px", minWidth: 100 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <ProgressBar value={Math.round(b.precision * 100)} color="var(--ok)" height={4} />
+                <ProgressBar
+                  value={Math.round(b.precision * 100)}
+                  color="var(--ok)"
+                  height={4}
+                />
                 <span className="tnum" style={{ fontSize: 12, minWidth: 32 }}>
                   {Math.round(b.precision * 100)}%
                 </span>
@@ -97,16 +155,26 @@ export function RunsTable({
             </td>
             <td style={{ padding: "8px 6px", minWidth: 100 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <ProgressBar value={Math.round(b.citation_accuracy * 100)} color="var(--warn)" height={4} />
+                <ProgressBar
+                  value={Math.round(b.citation_accuracy * 100)}
+                  color="var(--warn)"
+                  height={4}
+                />
                 <span className="tnum" style={{ fontSize: 12, minWidth: 32 }}>
                   {Math.round(b.citation_accuracy * 100)}%
                 </span>
               </div>
             </td>
-            <td className="tnum" style={{ textAlign: "right", padding: "8px 6px" }}>
+            <td
+              className="tnum"
+              style={{ textAlign: "right", padding: "8px 6px" }}
+            >
               {b.traces_passed}/{b.cases_total}
             </td>
-            <td className="tnum" style={{ textAlign: "right", padding: "8px 6px" }}>
+            <td
+              className="tnum"
+              style={{ textAlign: "right", padding: "8px 6px" }}
+            >
               {b.cost_usd != null ? `$${b.cost_usd.toFixed(3)}` : "–"}
             </td>
           </tr>

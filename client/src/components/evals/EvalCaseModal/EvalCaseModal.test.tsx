@@ -6,6 +6,11 @@ import type { EvalCase } from "@devdigest/shared";
 import evalMessages from "../../../../messages/en/eval.json";
 import commonMessages from "../../../../messages/en/common.json";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("@/lib/hooks/evals", () => ({
   useCreateEvalCase: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateEvalCase: () => ({ mutate: vi.fn(), isPending: false }),
@@ -28,7 +33,11 @@ const POSITIVE_CASE: EvalCase = {
   notes: null,
 };
 
-const NEGATIVE_CASE: EvalCase = { ...POSITIVE_CASE, id: "c2", expected_output: [] };
+const NEGATIVE_CASE: EvalCase = {
+  ...POSITIVE_CASE,
+  id: "c2",
+  expected_output: [],
+};
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient();
@@ -49,19 +58,13 @@ describe("EvalCaseModal (AC-10)", () => {
     renderWithProviders(
       <EvalCaseModal initial={POSITIVE_CASE} onClose={() => {}} />,
     );
-    expect(
-      screen.getByText(/POSITIVE — asserts findings the agent SHOULD report/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/POSITIVE CASE/)).toBeInTheDocument();
   });
 
   it("shows the NEGATIVE banner when expected_output is empty", () => {
     renderWithProviders(
       <EvalCaseModal initial={NEGATIVE_CASE} onClose={() => {}} />,
     );
-    expect(
-      screen.getByText(
-        /NEGATIVE — asserts the agent should NOT flag anything here/,
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/NEGATIVE CASE/)).toBeInTheDocument();
   });
 });

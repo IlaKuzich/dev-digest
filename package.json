@@ -1,0 +1,11 @@
+{
+  "name": "dev-digest",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "packageManager": "pnpm@10.34.3",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

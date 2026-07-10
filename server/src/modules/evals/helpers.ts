@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 import {
   ExpectedFinding,
   RubricAssessment,
@@ -9,10 +9,14 @@ import {
   type EvalBatchSummary,
   type EvalOwnerKind,
   type SkillType,
-} from '@devdigest/shared';
-import type { EvalCaseRow, EvalRunRow, EvalRunJoinedRow } from './repository.js';
-import { caseTypeOf } from './scoring.js';
-import { RECENT_RUNS_LIMIT, MANUAL_SKILL_CASE_FILE_PATH } from './constants.js';
+} from "@devdigest/shared";
+import type {
+  EvalCaseRow,
+  EvalRunRow,
+  EvalRunJoinedRow,
+} from "./repository.js";
+import { caseTypeOf } from "./scoring.js";
+import { RECENT_RUNS_LIMIT, MANUAL_SKILL_CASE_FILE_PATH } from "./constants.js";
 
 /**
  * Pure application-layer helpers for the evals module: DB row ⇄ DTO mapping
@@ -22,7 +26,11 @@ import { RECENT_RUNS_LIMIT, MANUAL_SKILL_CASE_FILE_PATH } from './constants.js';
 
 // ---- expected_output parsing ------------------------------------------------
 
-const MANUAL_SKILL_TYPES = new Set<SkillType>(['convention', 'security', 'custom']);
+const MANUAL_SKILL_TYPES = new Set<SkillType>([
+  "convention",
+  "security",
+  "custom",
+]);
 
 /**
  * For manually-written finding-grounded skill cases (Code-tab skeletons omit
@@ -34,7 +42,7 @@ const MANUAL_SKILL_TYPES = new Set<SkillType>(['convention', 'security', 'custom
 function injectManualSkillCaseFile(raw: unknown): unknown {
   if (!Array.isArray(raw)) return raw;
   return raw.map((item) =>
-    item !== null && typeof item === 'object' && !('file' in item)
+    item !== null && typeof item === "object" && !("file" in item)
       ? { ...item, file: MANUAL_SKILL_CASE_FILE_PATH }
       : item,
   );
@@ -57,7 +65,7 @@ export function parseExpectedOutput(
   raw: unknown,
   skillType?: SkillType,
 ): ExpectedFinding[] | RubricAssessment[] {
-  if (skillType === 'rubric') {
+  if (skillType === "rubric") {
     const parsed = z.array(RubricAssessment).safeParse(raw);
     return parsed.success ? parsed.data : [];
   }
@@ -91,7 +99,7 @@ export function toEvalCaseDto(row: EvalCaseRow): EvalCase {
     owner_kind: row.ownerKind as EvalOwnerKind,
     owner_id: row.ownerId,
     name: row.name,
-    input_diff: row.inputDiff ?? '',
+    input_diff: row.inputDiff ?? "",
     input_files: row.inputFiles ?? null,
     input_meta: row.inputMeta ?? null,
     expected_output: row.expectedOutput ?? [],
@@ -99,7 +107,10 @@ export function toEvalCaseDto(row: EvalCaseRow): EvalCase {
   };
 }
 
-export function toEvalRunRecordDto(row: EvalRunRow, caseName: string | null): EvalRunRecord {
+export function toEvalRunRecordDto(
+  row: EvalRunRow,
+  caseName: string | null,
+): EvalRunRecord {
   return {
     id: row.id,
     case_id: row.caseId,
@@ -139,7 +150,9 @@ export function groupByBatch(runs: EvalRunJoinedRow[]): BatchGroup[] {
       map.set(key, { batchId: key, ranAt: r.run.ranAt, runs: [r] });
     }
   }
-  return [...map.values()].sort((a, b) => b.ranAt.getTime() - a.ranAt.getTime());
+  return [...map.values()].sort(
+    (a, b) => b.ranAt.getTime() - a.ranAt.getTime(),
+  );
 }
 
 export interface MacroAverage {
@@ -187,25 +200,35 @@ export function macroAverage(runs: EvalRunRow[]): MacroAverage {
  * produces an alert message (the reverse is an improvement — silent, even if
  * a later-sorted case regressed). Fewer than 2 batches → null.
  */
-export function computeAlert(batches: BatchGroup[], skillType?: SkillType): string | null {
+export function computeAlert(
+  batches: BatchGroup[],
+  skillType?: SkillType,
+): string | null {
   const [latest, prev] = batches;
   if (!latest || !prev) return null;
 
   const prevByCase = new Map(prev.runs.map((r) => [r.run.caseId, r]));
   const flips = latest.runs
     .filter((r) => prevByCase.has(r.run.caseId))
-    .filter((r) => (r.run.pass ?? false) !== (prevByCase.get(r.run.caseId)!.run.pass ?? false))
+    .filter(
+      (r) =>
+        (r.run.pass ?? false) !==
+        (prevByCase.get(r.run.caseId)!.run.pass ?? false),
+    )
     .sort((a, b) => a.caseName.localeCompare(b.caseName));
 
   const first = flips[0];
   if (!first) return null;
 
   const prevEntry = prevByCase.get(first.run.caseId)!;
-  const wentTrueToFalse = prevEntry.run.pass === true && first.run.pass === false;
+  const wentTrueToFalse =
+    prevEntry.run.pass === true && first.run.pass === false;
   if (!wentTrueToFalse) return null; // false→true is an improvement — no alert
 
-  const caseType = caseTypeOf(parseExpectedOutput(first.caseExpectedOutput, skillType));
-  return caseType === 'must_not_flag'
+  const caseType = caseTypeOf(
+    parseExpectedOutput(first.caseExpectedOutput, skillType),
+  );
+  return caseType === "must_not_flag"
     ? `New false positive: case '${first.caseName}' now flags a finding it previously didn't.`
     : `Regression: case '${first.caseName}' no longer finds the expected issue.`;
 }
@@ -223,13 +246,16 @@ export function buildDashboard(
   const batches = groupByBatch(allRuns);
   const [latest, prev] = batches;
 
-  const current = latest ? macroAverage(latest.runs.map((r) => r.run)) : ZERO_AVERAGE;
+  const current = latest
+    ? macroAverage(latest.runs.map((r) => r.run))
+    : ZERO_AVERAGE;
   const prevAvg = prev ? macroAverage(prev.runs.map((r) => r.run)) : null;
   const delta = prevAvg
     ? {
         recall: current.recall - prevAvg.recall,
         precision: current.precision - prevAvg.precision,
-        citation_accuracy: current.citation_accuracy - prevAvg.citation_accuracy,
+        citation_accuracy:
+          current.citation_accuracy - prevAvg.citation_accuracy,
       }
     : { recall: 0, precision: 0, citation_accuracy: 0 };
 
@@ -240,7 +266,8 @@ export function buildDashboard(
       recall: avg.recall,
       precision: avg.precision,
       citation_accuracy: avg.citation_accuracy,
-      pass_rate: avg.traces_total === 0 ? 0 : avg.traces_passed / avg.traces_total,
+      pass_rate:
+        avg.traces_total === 0 ? 0 : avg.traces_passed / avg.traces_total,
       cost_usd: avg.cost_usd,
     };
   });
@@ -272,21 +299,28 @@ export function buildRecentBatchSummaries(
     arr.push(r);
     map.set(key, arr);
   }
-  const summaries: EvalBatchSummary[] = [...map.entries()].map(([batchId, rows]) => {
-    const avg = macroAverage(rows.map((r) => r.run));
-    return {
-      batch_id: batchId,
-      agent_id: rows[0]!.ownerId,
-      agent_version: rows[0]!.run.agentVersion ?? null,
-      ran_at: rows[0]!.run.ranAt.toISOString(),
-      cases_total: rows.length,
-      recall: avg.recall,
-      precision: avg.precision,
-      citation_accuracy: avg.citation_accuracy,
-      traces_passed: avg.traces_passed,
-      cost_usd: avg.cost_usd,
-    };
-  });
+  const summaries: EvalBatchSummary[] = [...map.entries()].map(
+    ([batchId, rows]) => {
+      const avg = macroAverage(rows.map((r) => r.run));
+      const singleCaseName =
+        rows.length === 1
+          ? rows[0]!.caseName.replace(/^From finding:\s*/i, "").trim() || null
+          : null;
+      return {
+        batch_id: batchId,
+        agent_id: rows[0]!.ownerId,
+        agent_version: rows[0]!.run.agentVersion ?? null,
+        ran_at: rows[0]!.run.ranAt.toISOString(),
+        cases_total: rows.length,
+        recall: avg.recall,
+        precision: avg.precision,
+        citation_accuracy: avg.citation_accuracy,
+        traces_passed: avg.traces_passed,
+        cost_usd: avg.cost_usd,
+        case_name: singleCaseName,
+      };
+    },
+  );
   return summaries
     .sort((a, b) => new Date(b.ran_at).getTime() - new Date(a.ran_at).getTime())
     .slice(0, limit);
