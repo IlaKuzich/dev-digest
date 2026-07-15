@@ -6,8 +6,9 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@devdigest/ui";
 import type { PrFile } from "@/lib/types";
+import type { FindingRecord } from "@devdigest/shared";
 import { AUTO_EXPAND_MAX_LINES } from "../constants";
-import { parsePatch, type Line } from "../helpers";
+import { parsePatch, findingsByStartLine, highlightByLine, type Line } from "../helpers";
 import {
   buildThreads,
   keysForLine,
@@ -37,16 +38,33 @@ export function FileCard({
   file,
   commenting,
   focus,
+  findings,
+  defaultOpen,
+  onFocusLine,
 }: {
   file: PrFile;
   commenting?: DiffCommentApi;
   focus?: DiffFocus | null;
+  /** Opt-in inline-findings overlay: this file's active (non-dismissed)
+      findings. Highlights their whole `start_line..end_line` range and pins
+      a clickable badge at each finding's anchor line. Absent ⇒ no
+      badges/borders render (unchanged rendering). */
+  findings?: FindingRecord[];
+  /** Overrides the automatic line-count-based default-open heuristic below
+      (used by SmartDiffViewer to force role-based expansion: Core always
+      open, Boilerplate always closed). `undefined` keeps the heuristic. */
+  defaultOpen?: boolean;
+  /** Fires (this file's path, NEW-file line) when a finding badge is
+      clicked — only relevant when `findings` is passed. */
+  onFocusLine?: (file: string, line: number) => void;
 }) {
   const t = useTranslations("shell");
   const [open, setOpen] = React.useState(
-    (file.additions ?? 0) + (file.deletions ?? 0) <= AUTO_EXPAND_MAX_LINES
+    defaultOpen ?? (file.additions ?? 0) + (file.deletions ?? 0) <= AUTO_EXPAND_MAX_LINES
   );
   const lines = React.useMemo(() => parsePatch(file.patch), [file.patch]);
+  const highlightMap = React.useMemo(() => highlightByLine(findings ?? []), [findings]);
+  const badgesByLine = React.useMemo(() => findingsByStartLine(findings ?? []), [findings]);
 
   // Deep-link focus: open this file, scroll to the target line, flash it.
   // Smart fallback — prefer the new-side line number, fall back to the old side;
@@ -117,16 +135,23 @@ export function FileCard({
           {lines.length === 0 ? (
             <div style={s.noDiff}>{t("diffViewer.noDiffText")}</div>
           ) : (
-            lines.map((ln, i) => (
-              <CodeLine
-                key={i}
-                ln={ln}
-                path={file.path}
-                threads={threadsForLine(ln, matched)}
-                commenting={commenting}
-                highlight={highlight}
-              />
-            ))
+            lines.map((ln, i) => {
+              const sev = ln.newNo != null ? highlightMap.get(ln.newNo) : undefined;
+              const atLine = ln.newNo != null ? badgesByLine.get(ln.newNo) : undefined;
+              return (
+                <CodeLine
+                  key={i}
+                  ln={ln}
+                  path={file.path}
+                  threads={threadsForLine(ln, matched)}
+                  commenting={commenting}
+                  highlight={highlight}
+                  highlightSeverity={sev}
+                  findings={atLine}
+                  onFocusLine={atLine && atLine.length > 0 ? () => onFocusLine?.(file.path, ln.newNo!) : undefined}
+                />
+              );
+            })
           )}
           {commenting && commenting.showComments && <OutdatedComments threads={outdated} />}
         </div>
