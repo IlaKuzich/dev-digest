@@ -108,26 +108,58 @@ Derivation **always runs and always produces a best-effort intent.** There is no
 "no documentation → skip/error" path. Motivation signals are gathered in priority
 order and whatever is available is used:
 
-1. **Linked issue** (title + body), fetched live from GitHub when the PR body
-   references one (`closes/fixes/resolves #N`) — treated as the *primary* stated
-   motivation when present.
-2. **PR body** — spec links, ticket references, or an inline plan/motivation.
-3. **PR title.**
-4. **File list with hunk headers** (always available) — the structural signal.
+1. **An explicit plan or specification** — the strongest motivation signal. It may
+   arrive two ways, and **both must be honoured**:
+   - **Inline** in the PR body (a plan/spec written directly into the description).
+   - **Referenced by link** — resolved and read (see "Plan/spec reference
+     resolution" below).
+2. **Linked issue** (title + body), fetched live from GitHub when the PR body
+   references one (`closes/fixes/resolves #N` or a full GitHub issue/PR URL).
+3. **PR body** prose — any remaining ticket refs or motivation text.
+4. **PR title.**
+5. **File list with hunk headers** (always available) — the structural signal.
 
 Rules:
 
-- **A spec/issue/link, when present, is a bonus, not a prerequisite.** It is
-  included and weighted as the primary intent signal.
+- **A plan/spec/issue/link, when present, is weighted as the primary intent
+  signal — but it is a bonus, never a prerequisite.**
 - **When there is no explicit motivation at all**, the model still derives intent
   from the title + the shape of the changes (files + hunk headers). A thin signal
   yields a best-effort summary and scope lists — never a failure.
-- **A missing linked issue, or an unreachable GitHub call, is non-fatal.**
-  Derivation proceeds with body + files; the issue fetch is wrapped so its failure
-  degrades gracefully rather than aborting the derivation.
+- **Any single signal failing is non-fatal.** A missing linked issue, an
+  unreachable GitHub call, or an unresolvable link degrades gracefully — derivation
+  proceeds with whatever else is available.
 - The prompt instructs the model to infer intent from available evidence and to
   populate `in_scope`/`out_of_scope` from the changed files even when prose
   motivation is absent.
+
+### Plan/spec reference resolution (bounded)
+
+When the PR body **links** to a plan or spec (not inline text), we resolve and read
+its content so it can drive the intent — bounded to sources we already trust and
+can reach, never arbitrary external fetch:
+
+- **GitHub issue/PR references** — both `#N` and full
+  `github.com/<owner>/<repo>/issues|pull/N` URLs → fetched via the existing octokit
+  adapter. Non-fatal on failure.
+- **In-repo document links** — a GitHub `blob/<ref>/<path>` URL *or* a
+  repo-relative path (`docs/plans/foo.md`, `SPEC.md`) that points into the PR's own
+  repository → read from the **local clone**, which already exists at derive time
+  (same clone the Conventions feature reads sample/config files from). Guarded:
+  - resolve the path against the repo-clone root and **reject anything escaping it**
+    (`..`, absolute paths, symlinks leaving the root) — path-traversal safe;
+  - restrict to text/doc files and cap the bytes read (first ~N KB) so a huge or
+    binary file can't blow the token budget;
+  - **all resolved content is untrusted** (author-controlled) and flows into the
+    untrusted, delimiter-wrapped portion of the classifier prompt.
+- **External URLs** (Notion, Google Docs, Confluence, arbitrary sites) are **not
+  fetched** — out of scope for v1. The raw link text still reaches the model as a
+  weak signal, but its contents are not retrieved.
+
+Note: resolved plan/spec content is *motivation* input, deliberately distinct from
+the diff. The token-saving rule (headers-only, no hunk bodies) applies to the
+**diff**; a small, bounded plan/spec doc is an intentional, high-value input, and
+its size is capped as above.
 
 ## Token-saving core & logging
 
