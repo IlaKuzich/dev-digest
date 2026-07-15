@@ -31,7 +31,8 @@
     "reject": "Reject",
     "edit": "Edit",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "openOnGithub": "Open on GitHub"
   },
   "modal": {
     "title": "Create skill from conventions",

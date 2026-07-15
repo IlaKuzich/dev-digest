@@ -11,7 +11,10 @@ vi.mock("../../../../components/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("../../../../lib/repo-context", () => ({
-  useActiveRepo: () => ({ repoId: "r1", activeRepo: { full_name: "acme/payments-api" } }),
+  useActiveRepo: () => ({
+    repoId: "r1",
+    activeRepo: { full_name: "acme/payments-api", default_branch: "main" },
+  }),
 }));
 vi.mock("../../../../lib/hooks/conventions", () => ({
   useConventions: () => ({ data: CONVENTIONS, isLoading: false, isError: false, refetch: vi.fn() }),
@@ -60,6 +63,20 @@ describe("ConventionsView", () => {
     expect(screen.getByText("Always use async/await instead of .then() chains")).toBeInTheDocument();
     expect(screen.getByText("src/api/users.ts:23-31")).toBeInTheDocument();
     expect(screen.getByText("91%")).toBeInTheDocument();
+  });
+
+  it("links the file evidence and code snippet to GitHub at that file:line", () => {
+    CONVENTIONS = [candidate];
+    renderView();
+    const expectedHref = "https://github.com/acme/payments-api/blob/main/src/api/users.ts#L23-L31";
+    expect(screen.getByText("src/api/users.ts:23-31").closest("a")).toHaveAttribute(
+      "href",
+      expectedHref,
+    );
+    expect(screen.getByText(candidate.evidence_snippet).closest("a")).toHaveAttribute(
+      "href",
+      expectedHref,
+    );
   });
 
   it("Accept calls useUpdateConvention with status accepted", () => {

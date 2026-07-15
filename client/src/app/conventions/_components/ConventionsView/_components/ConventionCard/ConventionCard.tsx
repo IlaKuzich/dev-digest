@@ -2,17 +2,22 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { Button, Badge } from "@devdigest/ui";
+import { Button, Badge, MonoLink } from "@devdigest/ui";
 import type { ConventionCandidate } from "@devdigest/shared";
+import { githubBlobUrl } from "../../../../../../lib/github-urls";
 import { cs, confFill } from "./styles";
 
 export function ConventionCard({
   convention,
+  repoFullName,
+  defaultBranch,
   onAccept,
   onReject,
   onEdit,
 }: {
   convention: ConventionCandidate;
+  repoFullName?: string | null;
+  defaultBranch?: string | null;
   onAccept: () => void;
   onReject: () => void;
   onEdit: (rule: string) => void;
@@ -29,6 +34,18 @@ export function ConventionCard({
     c.evidence_line_start != null
       ? `${c.evidence_path}:${c.evidence_line_start}${c.evidence_line_end != null ? `-${c.evidence_line_end}` : ""}`
       : c.evidence_path;
+  // Conventions are scanned off the synced clone (tracks the default branch), not
+  // a specific PR, so the deep-link pins to `defaultBranch` rather than a head sha.
+  const fileHref =
+    repoFullName && defaultBranch
+      ? githubBlobUrl(
+          repoFullName,
+          defaultBranch,
+          c.evidence_path,
+          c.evidence_line_start ?? undefined,
+          c.evidence_line_end ?? undefined,
+        )
+      : undefined;
 
   function save() {
     const next = draft.trim();
@@ -87,8 +104,24 @@ export function ConventionCard({
         </div>
       </div>
 
-      <div style={cs.evidence}>{range}</div>
-      <pre style={cs.code}>{c.evidence_snippet}</pre>
+      {fileHref ? (
+        <MonoLink href={fileHref}>{range}</MonoLink>
+      ) : (
+        <div style={cs.evidence}>{range}</div>
+      )}
+      {fileHref ? (
+        <a
+          href={fileHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={cs.codeLink}
+          aria-label={t("card.openOnGithub")}
+        >
+          <pre style={cs.code}>{c.evidence_snippet}</pre>
+        </a>
+      ) : (
+        <pre style={cs.code}>{c.evidence_snippet}</pre>
+      )}
 
       <div style={cs.confRow}>
         <span style={cs.confLabel}>{t("card.confidence")}</span>

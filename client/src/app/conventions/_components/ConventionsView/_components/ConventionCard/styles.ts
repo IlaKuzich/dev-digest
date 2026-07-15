@@ -50,6 +50,11 @@ export const cs: Record<string, CSSProperties> = {
     fontSize: 12.5,
     color: "var(--text-secondary)",
   },
+  codeLink: {
+    display: "block",
+    textDecoration: "none",
+    cursor: "pointer",
+  },
   confRow: { display: "flex", alignItems: "center", gap: 10 },
   confLabel: { fontSize: 12, color: "var(--text-muted)" },
   confTrack: { flex: 1, maxWidth: 220, height: 6, borderRadius: 999, background: "var(--border)" },

@@ -106,6 +106,8 @@ export function ConventionsView() {
                   <ConventionCard
                     key={c.id}
                     convention={c}
+                    repoFullName={activeRepo?.full_name}
+                    defaultBranch={activeRepo?.default_branch}
                     onAccept={() => update.mutate({ id: c.id, patch: { status: "accepted" } })}
                     onReject={() => update.mutate({ id: c.id, patch: { status: "rejected" } })}
                     onEdit={(rule) => update.mutate({ id: c.id, patch: { rule } })}
