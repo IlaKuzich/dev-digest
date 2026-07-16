@@ -190,7 +190,7 @@ export async function runIncremental(
           contentHash,
         });
       }
-      const endpoints = extractEndpoints(source);
+      const endpoints = extractEndpoints(source, relPath);
       const crons = extractCrons(source);
       if (endpoints.length > 0 || crons.length > 0) {
         factsBuf.push({ filePath: relPath, endpoints, crons });

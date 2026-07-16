@@ -1,7 +1,7 @@
 import type { BlastRadius, DownstreamImpact } from '@devdigest/shared';
 import type { BlastCallerRow, BlastResult, IndexState } from '../repo-intel/types.js';
-import type { BlastIndexState } from './service.js';
-import { MAX_CALLERS_PER_SYMBOL } from './constants.js';
+import type { BlastCoverage, BlastIndexState } from './service.js';
+import { ANALYZABLE_EXT, MAX_CALLERS_PER_SYMBOL } from './constants.js';
 
 /**
  * Pure transforms for the blast radius module — no I/O, no container. The
@@ -29,6 +29,44 @@ import { MAX_CALLERS_PER_SYMBOL } from './constants.js';
  * as fact — the exact fabrication this feature exists to avoid. So the result's
  * own `degraded`/`reason` are folded in and always win.
  */
+/** True for files the indexer could have extracted symbols from. Plain string
+    ops — no dynamically-built RegExp (root INSIGHTS.md:29). */
+function isAnalyzable(path: string): boolean {
+  return ANALYZABLE_EXT.some((ext) => path.endsWith(ext));
+}
+
+/**
+ * How much of this PR the blast map can actually speak about.
+ *
+ * The index is a snapshot of the repo's DEFAULT BRANCH, so a file created by
+ * the PR under review does not exist in it and yields no symbols. That is not a
+ * bug and not a degraded index — new code genuinely has no downstream callers
+ * yet. But without this number the UI reports a huge PR as "3 symbols, 0
+ * endpoints" on a `status: full` index, which reads as "nothing is affected"
+ * when the truth is "most of this PR is new and outside the analysis".
+ *
+ * Measured on `IlaKuzich/next_js_harness_testing#3`: 22 changed files, +1592
+ * lines, but only 2 pre-existing files → 3 changed symbols. Every layer was
+ * telling the truth; the sum of them still misled.
+ *
+ * Non-code files (lockfiles, package.json, .md) are excluded from the
+ * denominator — they are not coverage gaps, so counting them would manufacture
+ * a caveat rather than report one.
+ */
+export function toCoverage(
+  changedFiles: string[],
+  changedSymbols: { file: string }[],
+): BlastCoverage {
+  const codeFiles = changedFiles.filter(isAnalyzable);
+  const withSymbols = new Set(changedSymbols.map((s) => s.file));
+  const analyzed = codeFiles.filter((f) => withSymbols.has(f));
+  return {
+    changed_code_files: codeFiles.length,
+    analyzed_files: analyzed.length,
+    unanalyzed_files: codeFiles.filter((f) => !withSymbols.has(f)),
+  };
+}
+
 export function toIndexStateDto(
   s: IndexState,
   resDegraded?: boolean,

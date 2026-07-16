@@ -100,3 +100,63 @@ jobs.register('poll_repo', handler);
     expect(crons).toContain('job:poll_repo');
   });
 });
+
+describe('extractEndpoints — Next.js App Router (T8)', () => {
+  const src = `
+export async function GET(request: Request) {
+  return Response.json([]);
+}
+
+export async function POST(request: Request) {
+  return Response.json({}, { status: 201 });
+}
+
+export async function DELETE(request: Request) {
+  return new Response(null, { status: 204 });
+}
+`;
+
+  it('maps src/app/**/route.ts exported verbs to "METHOD /path"', () => {
+    const eps = extractEndpoints(src, 'src/app/api/reviews/route.ts');
+    expect(eps).toContain('GET /api/reviews');
+    expect(eps).toContain('POST /api/reviews');
+    expect(eps).toContain('DELETE /api/reviews');
+    expect(eps.length).toBe(3);
+  });
+
+  it('keeps a [param] dynamic segment as-is', () => {
+    const single = `export async function GET(request: Request) { return Response.json({}); }`;
+    const eps = extractEndpoints(single, 'src/app/api/reviews/[id]/route.ts');
+    expect(eps).toContain('GET /api/reviews/[id]');
+  });
+
+  it('drops a (group) route group segment from the path', () => {
+    const single = `export async function GET(request: Request) { return Response.json({}); }`;
+    const eps = extractEndpoints(single, 'src/app/(dashboard)/api/settings/route.ts');
+    expect(eps).toContain('GET /api/settings');
+    expect(eps).not.toContain('GET /(dashboard)/api/settings');
+  });
+
+  it('does not fold src/app/**/page.tsx into endpoints', () => {
+    const page = `export default function Page() { return null; }`;
+    const eps = extractEndpoints(page, 'src/app/api/reviews/page.tsx');
+    expect(eps).toEqual([]);
+  });
+
+  it('ignores non-app-router files even when a filePath is passed', () => {
+    const notRoute = `export async function GET(request: Request) { return Response.json({}); }`;
+    expect(extractEndpoints(notRoute, 'src/lib/http.ts')).toEqual([]);
+  });
+
+  it('still matches Express/Fastify patterns when filePath is provided (regression)', () => {
+    const mixed = `app.get('/legacy', handler);\n${src}`;
+    const eps = extractEndpoints(mixed, 'src/app/api/reviews/route.ts');
+    expect(eps).toContain('GET /legacy');
+    expect(eps).toContain('GET /api/reviews');
+  });
+
+  it('still matches Express/Fastify patterns with no filePath argument at all (regression)', () => {
+    const eps = extractEndpoints("app.get('/users', handler);");
+    expect(eps).toContain('GET /users');
+  });
+});

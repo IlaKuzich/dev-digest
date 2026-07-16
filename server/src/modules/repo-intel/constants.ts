@@ -46,8 +46,15 @@ export const MAX_CALLERS_PER_SYMBOL = 20;
  * short-circuits when no files changed, so a repo already at the latest SHA
  * would keep its empty graph forever. Bumping the version is what forces the
  * full reindex that rebuilds it (`pipeline/incremental.ts:78`).
+ *
+ * v4 (T8): `extractEndpoints` (`adapters/codeindex/extract.ts`) now also
+ * recognises Next.js App Router `src/app/**\/route.ts` handlers, so
+ * `file_facts.endpoints` gains entries it never had before for any App
+ * Router repo. Same trap as v3: `resync` alone won't rebuild an already
+ * up-to-date repo (`pipeline/incremental.ts:120`), so the version bump is
+ * what forces the full reindex that repopulates `file_facts`.
  */
-export const INDEXER_VERSION = 3;
+export const INDEXER_VERSION = 4;
 
 // --- [T2] Full-index limits (documented now, enforced in the pipeline) ------
 export const MAX_INDEXED_FILES = 5000;

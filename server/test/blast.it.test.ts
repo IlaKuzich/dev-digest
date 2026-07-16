@@ -62,6 +62,40 @@ async function seedRepoAndPr(db: PgFixture['handle']['db'], workspaceId: string)
   return pr!;
 }
 
+/**
+ * Insert a SECOND PR under the given workspace/repo that touches `path` —
+ * used to populate "Prior PRs touching these files" (T11). `pr.repoId` off
+ * `seedRepoAndPr`'s return already carries the repo id, so no separate repo
+ * lookup is needed.
+ */
+async function seedPriorPr(
+  db: PgFixture['handle']['db'],
+  workspaceId: string,
+  repoId: string,
+  opts: { path: string; number?: number; status?: string; updatedAt?: Date },
+) {
+  const [pr] = await db
+    .insert(t.pullRequests)
+    .values({
+      workspaceId,
+      repoId,
+      number: opts.number ?? 3,
+      title: 'Add rate limiter tests',
+      author: 'yuki.tanaka',
+      branch: 'fix/prior',
+      base: 'main',
+      headSha: 'cafebabe',
+      additions: 4,
+      deletions: 1,
+      filesCount: 1,
+      status: opts.status ?? 'merged',
+      updatedAt: opts.updatedAt ?? new Date(),
+    })
+    .returning();
+  await db.insert(t.prFiles).values([{ prId: pr!.id, path: opts.path, additions: 4, deletions: 1 }]);
+  return pr!;
+}
+
 /** Fully implements RepoIntel so tests can inject only the two methods the
  * blast route actually calls (getBlastRadius, getIndexState). */
 function fakeRepoIntel(result: BlastResult, state: IndexState): RepoIntel {
@@ -232,6 +266,71 @@ d('blast routes (Testcontainers pg)', () => {
     const app = await buildApp({ config: config(), db: pg.handle.db, overrides: {} });
     const res = await app.inject({ method: 'GET', url: '/pulls/not-a-uuid/blast' });
     expect(res.statusCode).toBe(422);
+    await app.close();
+  });
+
+  it('prior_prs: a prior PR touching an overlapping file appears, newest-ish first', async () => {
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: {
+        secrets: new MockSecretsProvider(),
+        repoIntel: fakeRepoIntel(
+          { changedSymbols: [], callers: [], impactedEndpoints: [] },
+          FULL_STATE,
+        ),
+      },
+    });
+    const pr = await seedRepoAndPr(pg.handle.db, workspaceId);
+    const prior = await seedPriorPr(pg.handle.db, workspaceId, pr.repoId, {
+      path: 'src/middleware/ratelimit.ts', // overlaps with seedRepoAndPr's default file
+      status: 'merged',
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/pulls/${pr.id}/blast` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as BlastResponse;
+
+    expect(body.prior_prs).toHaveLength(1);
+    expect(body.prior_prs[0]).toEqual({
+      id: prior.id,
+      number: prior.number,
+      title: prior.title,
+      author: prior.author,
+      merged_at: prior.updatedAt!.toISOString(),
+    });
+
+    await app.close();
+  });
+
+  it('prior_prs: a PR touching the same path in a DIFFERENT workspace/repo does not appear (cross-tenant guard)', async () => {
+    const [otherWs] = await pg.handle.db
+      .insert(t.workspaces)
+      .values({ name: `other-ws-prior-${repoSeq++}` })
+      .returning();
+    // Same overlapping file path, but under a completely different
+    // workspace + repo — must never leak into this workspace's prior_prs.
+    await seedRepoAndPr(pg.handle.db, otherWs!.id);
+
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: {
+        secrets: new MockSecretsProvider(),
+        repoIntel: fakeRepoIntel(
+          { changedSymbols: [], callers: [], impactedEndpoints: [] },
+          FULL_STATE,
+        ),
+      },
+    });
+    const pr = await seedRepoAndPr(pg.handle.db, workspaceId);
+
+    const res = await app.inject({ method: 'GET', url: `/pulls/${pr.id}/blast` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as BlastResponse;
+
+    expect(body.prior_prs).toEqual([]);
+
     await app.close();
   });
 });

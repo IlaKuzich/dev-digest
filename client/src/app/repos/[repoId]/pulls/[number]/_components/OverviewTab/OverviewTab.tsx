@@ -9,15 +9,16 @@ import { s } from "./styles";
 interface OverviewTabProps {
   prBody: string | null | undefined;
   prId: string | null;
-  onOpenBlast: () => void;
+  repoFullName: string | null;
+  headSha: string;
 }
 
-export function OverviewTab({ prBody, prId, onOpenBlast }: OverviewTabProps) {
+export function OverviewTab({ prBody, prId, repoFullName, headSha }: OverviewTabProps) {
   return (
     <>
       <div style={s.cardGrid}>
         <IntentCard prId={prId} />
-        <BlastCard prId={prId} onOpenBlast={onOpenBlast} />
+        <BlastCard prId={prId} repoFullName={repoFullName} headSha={headSha} />
       </div>
 
       {prBody && (

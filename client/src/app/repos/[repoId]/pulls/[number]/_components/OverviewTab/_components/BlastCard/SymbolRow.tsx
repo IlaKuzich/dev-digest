@@ -1,6 +1,13 @@
 /* SymbolRow — one collapsible row in the blast radius tree: a changed
    symbol's downstream callers (level 2) and affected endpoints/crons
-   (level 3). Mirrors the collapsible-row precedent in
+   (level 3).
+
+   The collapsed header carries the symbol name and caller count ONLY. Endpoint
+   and cron chips live in the expanded body, where they name the actual
+   endpoints — per the design. Count chips in the header crowd the row and
+   truncate the symbol name, and they duplicate the card's stat strip.
+
+   Mirrors the collapsible-row precedent in
    components/diff-viewer/FileCard/FileCard.tsx (there is no Tree primitive
    in @devdigest/ui). Callers live outside the PR diff (the facade excludes
    the declaration's own file), so each caller links out to GitHub instead
@@ -51,14 +58,6 @@ export function SymbolRow({
           </span>
           <span style={s.symbolMeta}>{t("callerCount", { count: impact.callers.length })}</span>
         </button>
-        <div style={s.symbolChips}>
-          <Chip icon="Globe" count={showUnknownEndpoints ? undefined : endpoints.length}>
-            {showUnknownEndpoints ? "unknown" : t("stat.endpoints")}
-          </Chip>
-          <Chip icon="Clock" count={showUnknownCrons ? undefined : crons.length}>
-            {showUnknownCrons ? "unknown" : t("stat.crons")}
-          </Chip>
-        </div>
       </div>
 
       {open && (

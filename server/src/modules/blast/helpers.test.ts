@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toBlastRadius, toIndexStateDto } from './helpers.js';
+import { toBlastRadius, toCoverage, toIndexStateDto } from './helpers.js';
 import type { BlastCallerRow, BlastResult, IndexState } from '../repo-intel/types.js';
 
 /** Hermetic — no Docker, no container. Pure fixtures of BlastResult/IndexState. */
@@ -131,6 +131,49 @@ describe('toBlastRadius', () => {
   it('always sets summary to the empty string', () => {
     const res: BlastResult = { changedSymbols: [], callers: [], impactedEndpoints: [] };
     expect(toBlastRadius(res).summary).toBe('');
+  });
+});
+
+describe('toCoverage', () => {
+  it('reports how many changed code files the index actually had symbols for', () => {
+    // The IlaKuzich/next_js_harness_testing#3 shape: a big PR of mostly-new
+    // files. The index snapshots the default branch, so the new files yield no
+    // symbols — a healthy index with a legitimately narrow view.
+    const changed = [
+      'src/app/admin/layout.tsx', // pre-existing → indexed
+      'src/api/orders/service.ts', // new in this PR → not in the index
+      'src/app/api/orders/route.ts', // new in this PR → not in the index
+    ];
+    const symbols = [{ file: 'src/app/admin/layout.tsx' }];
+
+    expect(toCoverage(changed, symbols)).toEqual({
+      changed_code_files: 3,
+      analyzed_files: 1,
+      unanalyzed_files: ['src/api/orders/service.ts', 'src/app/api/orders/route.ts'],
+    });
+  });
+
+  it('excludes non-code files from the denominator — a lockfile is not a coverage gap', () => {
+    const changed = ['bun.lock', 'package.json', 'README.md', 'src/a.ts'];
+    const symbols = [{ file: 'src/a.ts' }];
+
+    // Only src/a.ts counts, and it was analyzed → full coverage, no caveat.
+    expect(toCoverage(changed, symbols)).toEqual({
+      changed_code_files: 1,
+      analyzed_files: 1,
+      unanalyzed_files: [],
+    });
+  });
+
+  it('counts a file once even when it declares several symbols', () => {
+    const changed = ['src/ui/header.tsx'];
+    const symbols = [{ file: 'src/ui/header.tsx' }, { file: 'src/ui/header.tsx' }];
+
+    expect(toCoverage(changed, symbols)).toEqual({
+      changed_code_files: 1,
+      analyzed_files: 1,
+      unanalyzed_files: [],
+    });
   });
 });
 

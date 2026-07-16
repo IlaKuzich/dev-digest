@@ -5,14 +5,24 @@ Answer the reviewer's first question — **"what can these changes break?"** —
 served **entirely from the pre-built repo-intel index**. Near-zero AI, **zero analysis at
 review time**: we only READ through the `repoIntel.*` facade and never write/build the index.
 
-Delivers **both** surfaces:
-- a compact **`BlastCard`** on the Overview tab (sibling of the existing `IntentCard`) that
-  summarises impact and links to the full view;
-- a full **`Blast` tab** on the PR page rendering a **tree** (changed symbols → callers →
-  affected endpoints/crons), where clicking a caller navigates to the code on GitHub.
+Delivers **one** surface: a **`BlastCard`** on the Overview tab, sibling of the existing
+`IntentCard`, which holds the **whole** feature inline — stat strip, a **Tree / Graph** view
+toggle, the tree itself (changed symbols → callers → affected endpoints/crons, each caller
+deep-linking to GitHub), and a collapsible **"Prior PRs touching these files"** footer.
 
-**Out of scope for the whole feature:** Graph mode, "Prior PRs touching these files",
-any index building/writing, any import-graph traversal (the facade already does it).
+> ### ⚠ 2026-07-16 — design correction (supersedes the original scope)
+> The first pass of this plan invented a **card + separate `Blast` tab** split and cut Graph
+> mode and Prior PRs as "out of scope". **The approved mockup contradicts all three.** In the
+> mockup the tab strip is exactly `Overview · Agent runs · Files changed` — there is **no Blast
+> tab** — and the Overview card carries the tree, the Tree/Graph toggle, and the Prior PRs
+> footer. The shipped T1–T3 code follows the old scope and is therefore off-design; the
+> pre-seeded `view.{tree,graph}` and `graph.*` keys in `client/messages/en/blast.json`, which
+> the old plan told implementers to ignore, were the standing hint that Graph was always
+> intended. **Tasks T9–T12 below correct this and take precedence over T2/T3 wherever they
+> disagree.**
+
+**Out of scope for the whole feature:** any index building/writing, any import-graph traversal
+(the facade already does it).
 
 ## Constraints from INSIGHTS & CLAUDE.md
 - **The `BlastRadius` contract ALREADY EXISTS** and is byte-identical in both vendor copies
@@ -432,6 +442,102 @@ Agreed constant (owned by T1): `MAX_CALLERS_PER_SYMBOL = 20` in `server/src/modu
 - **Verify:** `cd server && pnpm exec vitest run test/extract.test.ts && pnpm typecheck`. Then live: bump the version, `POST /repos/:id/resync`, and confirm `GET /pulls/:id/blast` for PR #2 returns `GET /api/reviews` under `getReviewsForProduct`'s `endpoints_affected`.
 - **Out of scope:** cron detection (`extractCrons` — separate heuristic, separate gap). Express/Fastify pattern coverage. The `downstream`/caller logic (T7 fixed it; it works). Pages-as-routes unless step 3 is decided affirmatively.
 
+### T9 — Design correction: the card holds the tree; delete the `Blast` tab
+- **Area:** Frontend
+- **Owns (files):**
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/_components/BlastCard/**`,
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/BlastTab/**` *(deleted — code MOVES, is not rewritten)*,
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/OverviewTab.tsx`,
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/PrDetailHeader/PrDetailHeader.tsx`,
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/PrDetailView/PrDetailView.tsx`
+- **Depends on:** nothing (pure client restructure over the existing hook + contract)
+- **Skills to invoke:** `client-project-structure`, `react-best-practices`, `react-testing-library`, `next-best-practices`
+- **Why:** The mockup's tab strip is `Overview · Agent runs · Files changed`. The shipped
+  `?tab=blast` entry and the counts-only card are both artefacts of the superseded scope.
+- **Steps:**
+  1. Move `BlastTab/{SymbolRow,helpers,styles}.ts(x)` into `BlastCard/` — `SymbolRow`, `helpers.ts`
+     (`blastCounts`, `degradationSentence`, `symbolsWithoutDownstream`) and the tree styles are
+     **already correct** and are the mockup's tree. This is a move, not a rewrite.
+  2. Rewrite `BlastCard.tsx` as the single surface: `SectionLabel icon="Zap"` header with the
+     **view toggle** on the `right` slot, stat strip, degradation banner, tree, Prior PRs footer.
+     Keep `useBlast(prId)` — the key `["blast", prId]` is unchanged.
+  3. Delete `BlastTab/` entirely, drop the `{ key: "blast", ... }` entry from the `Tabs` array in
+     `PrDetailHeader.tsx`, and drop the `tab === "blast"` render branch + the `onOpenBlast` prop
+     from `PrDetailView.tsx` / `OverviewTab.tsx`. `onOpenBlast` has no meaning once there is no
+     tab to open — removing it is part of the task, not a leftover.
+  4. Keep the T4 **Explain** button, de-emphasized (footer row, `kind="ghost"`, `size="sm"`). It is
+     not in the mockup but the route ships and works; the mockup does not forbid it.
+  5. The card is now tall. `OverviewTab/styles.ts` `cardGrid` must let it size naturally beside
+     `IntentCard` (mockup: two columns, independent heights) — use `alignItems: "start"`.
+- **Verify:** `cd client && pnpm test && pnpm typecheck`
+- **Out of scope:** `server/**`. The graph renderer (T10) and Prior PRs data (T11) — T9 lays out
+  their slots and lands green without them.
+
+### T10 — Graph mode: the `Tree / Graph` toggle the mockup shows
+- **Area:** Frontend
+- **Owns (files):**
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/_components/BlastCard/ViewToggle.tsx` *(new)*,
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/_components/BlastCard/BlastGraph.tsx` *(new)*
+- **Depends on:** T9 (needs the card's toggle slot)
+- **Skills to invoke:** `react-best-practices`, `client-project-structure`, `react-testing-library`
+- **Why:** `blast.json` already ships `view.tree`, `view.graph`, `graph.empty`, `graph.ariaLabel`.
+- **Steps:**
+  1. `ViewToggle` — a segmented control. **There is no segmented/toggle-group primitive in
+     `@devdigest/ui`** (grepped: none) — build it locally from two `button`s in a bordered rail,
+     with `role="tablist"`/`role="tab"` + `aria-selected`. Label via `t("view.tree")`/`t("view.graph")`.
+  2. `BlastGraph` — render `downstream` as a directed graph, callers → symbol. **Do not add a
+     dependency**: `mermaid` is already a client dep and is the in-repo precedent for rendered
+     diagrams. Node ids must be sanitised (symbol names and file paths are untrusted index data
+     and mermaid ids are not string-safe) — and **no dynamically-built `RegExp`** (root `INSIGHTS.md:29`).
+  3. Empty case → `t("graph.empty")`. Container gets `aria-label={t("graph.ariaLabel")}`.
+  4. View state is local `useState<"tree"|"graph">("tree")` in `BlastCard` — **not** a URL param.
+     The mockup shows Tree preselected.
+- **Verify:** `cd client && pnpm test && pnpm typecheck`
+- **Out of scope:** Making graph the default. Persisting the view choice. Any new npm dependency.
+
+### T11 — "Prior PRs touching these files" (backend read + card footer)
+- **Area:** Full-stack
+- **Owns (files):**
+  `server/src/modules/blast/repository.ts` *(new)*,
+  `server/src/modules/blast/service.ts` *(edit)*,
+  `server/src/modules/blast/routes.ts` *(edit)*,
+  `server/test/blast.it.test.ts` *(edit)*,
+  `client/src/lib/hooks/blast.ts` *(edit)*,
+  `client/src/app/repos/[repoId]/pulls/[number]/_components/OverviewTab/_components/BlastCard/PriorPrs.tsx` *(new)*
+- **Depends on:** T9 (card footer slot)
+- **Skills to invoke:** `drizzle-orm-patterns`, `onion-architecture`, `fastify-best-practices`, `security`, `react-best-practices`
+- **Why:** In the mockup this is a collapsible footer with a count badge (`3`). It answers "who
+  else has been here" — the history half of "what can this break".
+- **Steps:**
+  1. **No new table.** `pr_files` (`src/db/schema/pulls.ts:36`, `prId` + `path`) already records
+     every PR's touched paths. Query: join `pr_files` → `pulls`, `path` IN changed files,
+     `pulls.id != :prId`, same `repo_id`, **workspace-scoped**, distinct, newest first, cap 5.
+  2. **This module gets a `repository.ts` after all.** The original T1 said "no `repository.ts` —
+     it reads only through the facade"; that stops being true the moment blast reads `pr_files`
+     directly. Raw Drizzle in the service would violate the onion rule.
+  3. **IDOR:** the query MUST filter on `workspace_id` via the `pulls` join — never trust `prId`
+     alone. This is the one place T11 can introduce a cross-tenant leak.
+  4. Extend `BlastResponse` with `prior_prs: PriorPr[]` (`{ id, number, title, author, merged_at }`),
+     **snake_case outer keys**, declared in BOTH `server/src/modules/blast/service.ts` and
+     `client/src/lib/hooks/blast.ts` — same local-copy convention as `index_state`. **Not** a
+     `brief.ts` edit; `brief.ts` stays read-only.
+  5. `PriorPrs.tsx` — collapsible footer, `Icon.History`, count badge, each row links to the PR.
+     Empty → render nothing (a PR touching brand-new files legitimately has no history; this is
+     **not** a degraded state and must not borrow the "unknown" affordance).
+  6. Extend `blast.it.test.ts`: a prior PR on an overlapping path appears; a prior PR in a
+     **different workspace** does NOT (the cross-tenant guard).
+- **Verify:** `cd server && pnpm exec vitest run --exclude '**/*.it.test.ts' && pnpm typecheck`,
+  `cd server && pnpm exec vitest run test/blast.it.test.ts` (Docker), `cd client && pnpm test && pnpm typecheck`
+- **Out of scope:** Ranking prior PRs by relevance. Showing their findings/verdicts. Any new table.
+
+> **T8 is now on the critical path, not a nice-to-have.** The mockup's stat strip reads
+> `3 endpoints · 1 cron`, and the tree's third level is endpoint/cron chips. Verified live via the
+> `get_blast_radius` MCP tool on `IlaKuzich/next_js_harness_testing#2`: `downstream` populates
+> correctly (T7 landed) but **every** `endpoints_affected` is `[]`, because `extractEndpoints`
+> (`adapters/codeindex/extract.ts:182`) only matches Express/Fastify shapes and this is a Next.js
+> App Router repo. Without T8 the endpoints level of the mockup renders empty on the exact repo
+> being demoed. See T8 for the full diagnosis; note its `INDEXER_VERSION` bump requirement.
+
 ## Execution order
 
 ```mermaid
@@ -464,6 +570,20 @@ other or with T4, so **T5 ∥ T6 ∥ T7 can all run in parallel** — and T7 ∥
 | **T5** — flaky `waitForPrRuns` timeout | `server/test/helpers/runs.ts` | nothing | T4, T6, T7 |
 | **T6** — implement the `get_blast_radius` MCP tool | `devdigest-mcp/**` | needs T1's route (already shipped) | T4, T5, T7 |
 | **T7** — depgraph adapter: zero callers on every repo | `server/src/adapters/depgraph/**`, `pipeline/{full,incremental}.ts` | nothing | T4, T5, T6 |
+
+**Wave 4 — the design correction (T8 ∥ T9 → T10 ∥ T11).** Added 2026-07-16 after the shipped UI was
+compared against the approved mockup.
+
+| Task | Owns | Depends on | Parallel with |
+|---|---|---|---|
+| **T8** — Next.js App Router endpoints | `adapters/codeindex/extract.ts`, `test/extract.test.ts` | nothing | T9, T10, T11 |
+| **T9** — card holds the tree, delete the tab | `BlastCard/**`, `BlastTab/**` (del), `OverviewTab`, `PrDetailHeader`, `PrDetailView` | nothing | T8 |
+| **T10** — Tree/Graph toggle + graph | `BlastCard/{ViewToggle,BlastGraph}.tsx` | T9 | T8, T11 |
+| **T11** — Prior PRs | `modules/blast/{repository,service,routes}.ts`, `hooks/blast.ts`, `BlastCard/PriorPrs.tsx` | T9 | T8, T10 |
+
+T9 is the gate: it establishes the card's slots, and T10/T11 only fill them. T8 is backend-only and
+shares no file with any of them. **T9 deletes files T2 created** — that is intentional and is the
+whole point of the correction, not a merge conflict to resolve in T2's favour.
 
 **T7 is the priority.** Until it lands, `downstream` is empty for every repo with path aliases, so the tab and
 card render only the "changed symbols" level — the callers → endpoints levels that justify the whole feature
