@@ -260,7 +260,11 @@ export async function runFullIndex(
     ranked: rankCount,
     factsWritten: factsBuf.length,
     hotnessAvailable: false, // Option B — rank = pagerank only
-    ...(graphFailed ? { graphFailed } : {}),
+    // `reason` (not just `graphFailed`) must land in `stats` — repository.ts's
+    // `tryGetIndexState` projects `IndexState.reason` off `stats.reason` (T7
+    // fix (c)); without this key the persisted/observed IndexState never
+    // surfaces 'graph_failed' even though `status` correctly goes 'partial'.
+    ...(graphFailed ? { graphFailed, reason: 'graph_failed' } : {}),
     softBudgetReached,
     parseDegraded,
     durationMs: Date.now() - startedAt,

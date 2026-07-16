@@ -14,6 +14,7 @@ import { PrDetailHeader } from "../PrDetailHeader";
 import { OverviewTab } from "../OverviewTab";
 import { FindingsTab } from "../FindingsTab";
 import { DiffTab } from "../DiffTab";
+import { BlastTab } from "../BlastTab";
 import RunTraceDrawer from "../RunTraceDrawer";
 import { usePullDetail, usePulls } from "@/lib/hooks";
 import { useQueryClient } from "@tanstack/react-query";
@@ -200,7 +201,9 @@ export function PrDetailView() {
       />
 
       <div style={{ padding: "24px 32px 44px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 1080, margin: "0 auto" }}>
-        {tab === "overview" && <OverviewTab prBody={pr.body} prId={prId} />}
+        {tab === "overview" && (
+          <OverviewTab prBody={pr.body} prId={prId} onOpenBlast={() => setTab("blast")} />
+        )}
 
         {tab === "findings" && (
           <FindingsTab
@@ -240,6 +243,8 @@ export function PrDetailView() {
             focus={diffFocus}
           />
         )}
+
+        {tab === "blast" && <BlastTab prId={prId} repoFullName={repoFullName} headSha={pr.head_sha} />}
       </div>
 
       {prId && traceRunId && (

@@ -35,8 +35,19 @@ export const MAX_CALLERS_PER_SYMBOL = 20;
  *
  * v2 (T3): graph + decl_file resolution + file_rank + repo-map landed, so every
  * T2 `partial` index must be rebuilt to gain the rank-driven data.
+ *
+ * v3 (T7): the depgraph adapter was broken, so EVERY v2 index holds a graph
+ * that is silently empty — `file_edges` = 0 and therefore `references.decl_file`
+ * = 0 resolved, which starves blast radius of every caller. Two independent
+ * bugs (win32 path separators in `toRel`; cruise resolving tsconfig `paths`
+ * against `process.cwd()` rather than the clone root) are fixed in
+ * `adapters/depgraph/index.ts`. A v2 row's data is not merely incomplete — it is
+ * wrong, and `resync` alone will NOT repair it: `pipeline/incremental.ts:120`
+ * short-circuits when no files changed, so a repo already at the latest SHA
+ * would keep its empty graph forever. Bumping the version is what forces the
+ * full reindex that rebuilds it (`pipeline/incremental.ts:78`).
  */
-export const INDEXER_VERSION = 2;
+export const INDEXER_VERSION = 3;
 
 // --- [T2] Full-index limits (documented now, enforced in the pipeline) ------
 export const MAX_INDEXED_FILES = 5000;

@@ -249,7 +249,11 @@ export async function runIncremental(
     referencesWritten: refsBuf.length,
     edgesWritten: edgeRows.length,
     hotnessAvailable: false,
-    ...(graphFailed ? { graphFailed } : {}),
+    // `reason` (not just `graphFailed`) must land in `stats` — repository.ts's
+    // `tryGetIndexState` projects `IndexState.reason` off `stats.reason` (T7
+    // fix (c)); without this key the persisted/observed IndexState never
+    // surfaces 'graph_failed' even though `status` correctly goes 'partial'.
+    ...(graphFailed ? { graphFailed, reason: 'graph_failed' } : {}),
     parseDegraded,
     durationMs: Date.now() - startedAt,
   };
@@ -275,7 +279,7 @@ export async function runIncremental(
     filesIndexed,
     filesSkipped,
     durationMs: Date.now() - startedAt,
-    reason: 'incremental',
+    reason: graphFailed ? 'graph_failed' : 'incremental',
   };
 }
 

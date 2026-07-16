@@ -52,7 +52,7 @@ export const getConventionsShape = {
 };
 export const getConventionsSchema = z.object(getConventionsShape).strict();
 
-// ---- get_blast_radius (STUB) -------------------------------------------------
+// ---- get_blast_radius --------------------------------------------------------
 export const getBlastRadiusShape = {
   repo: z.string().min(1),
   pr: z.number().int().positive(),
@@ -88,4 +88,45 @@ export const trimmedConventionShape = {
 export const getConventionsOutputShape = {
   conventions: z.array(z.object(trimmedConventionShape)),
   has_more: z.boolean(),
+};
+
+// ---- get_blast_radius output shape ---------------------------------------
+// Local copies of the server's `BlastRadius`/`DownstreamImpact`/`IndexState`
+// contracts (`server/src/vendor/shared/contracts/brief.ts:17-44`,
+// `server/src/modules/repo-intel/types.ts` `IndexState`) — this package does
+// NOT vendor `@devdigest/shared` (root `INSIGHTS.md:16`), so these narrow
+// shapes are redeclared here and guarded by `test/blast.test.ts`.
+export const blastChangedSymbolShape = {
+  name: z.string(),
+  file: z.string(),
+  kind: z.string(),
+};
+
+export const blastCallerShape = {
+  name: z.string(),
+  file: z.string(),
+  line: z.number().int(),
+};
+
+export const blastDownstreamShape = {
+  symbol: z.string(),
+  callers: z.array(z.object(blastCallerShape)),
+  endpoints_affected: z.array(z.string()),
+  crons_affected: z.array(z.string()),
+};
+
+export const blastIndexStateShape = {
+  status: z.string(),
+  filesIndexed: z.number().int(),
+  filesSkipped: z.number().int(),
+  degraded: z.boolean().optional(),
+  degradedReason: z.string().optional(),
+};
+
+export const getBlastRadiusOutputShape = {
+  changed_symbols: z.array(z.object(blastChangedSymbolShape)),
+  downstream: z.array(z.object(blastDownstreamShape)),
+  index_state: z.object(blastIndexStateShape),
+  summary: z.string().optional(),
+  degraded_note: z.string().optional(),
 };

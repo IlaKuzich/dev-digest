@@ -59,9 +59,21 @@ describe('registerAllTools', () => {
     expect(server.tools.map((t) => t.name).sort()).toEqual([...EXPECTED_TOOL_NAMES].sort());
   });
 
-  it('registers a get_blast_radius handler that returns a not_implemented stub without erroring', async () => {
+  it('registers a get_blast_radius handler that calls the real /pulls/:id/blast route', async () => {
     const server = fakeServer();
-    const deps: ToolDeps = { http: mockHttp(), resolve: mockResolvers() };
+    const http = mockHttp();
+    (http.get as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
+      if (path === '/pulls/pr-1/blast') {
+        return {
+          changed_symbols: [],
+          downstream: [],
+          summary: '',
+          index_state: { status: 'full', filesIndexed: 1, filesSkipped: 0 },
+        };
+      }
+      throw new Error(`unmocked GET ${path}`);
+    });
+    const deps: ToolDeps = { http, resolve: mockResolvers() };
 
     registerAllTools(server as never, deps);
 
@@ -70,7 +82,11 @@ describe('registerAllTools', () => {
 
     const result = await blastRadius.handler({ repo: 'acme/payments-api', pr: 482 });
 
-    expect(result.isError).toBe(false);
-    expect(result.structuredContent).toEqual({ status: 'not_implemented' });
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent).toEqual({
+      changed_symbols: [],
+      downstream: [],
+      index_state: { status: 'full', filesIndexed: 1, filesSkipped: 0 },
+    });
   });
 });
