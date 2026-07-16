@@ -8,8 +8,12 @@ obsolete entries only during a deliberate review.
 
 ## What Works
 ## What Doesn't Work
+- 2026-07-16 — The vendored `Markdown` primitive renders **headings and lists unstyled**. `client/src/vendor/ui/primitives/Markdown.tsx:12-36` overrides only `p`, `strong`, `code`, `a`; everything else falls through to Tailwind's preflight, which resets `h1`/`h2` to inherit font-size. The wrapper's `className="dd-md"` (`:9`) is a **dead hook — no CSS defines `.dd-md` anywhere in the repo** (grep it: only the compiled `.next` output and that one line). So a skill body like `# PR Quality Rubric` renders as plain body text: the `#` is consumed, but no heading style is applied. Not a regression — it has been this way since the initial snapshot, and both the old side-by-side preview and the new Preview tab look identical. Styling it means touching the sealed `vendor/ui` design-system copy, so don't do it casually; if a design calls for real heading hierarchy in previews, that's a deliberate design-system change.
+
 ## Codebase Patterns
 ## Tool & Library Notes
+- 2026-07-16 — **`@testing-library/user-event` is NOT a dependency** of `client/` — don't reach for `userEvent.setup()`, the import fails at collection with "Failed to resolve import". Every interactive test here uses `fireEvent` from `@testing-library/react` (precedents: `ConventionsView.test.tsx`, `FindingsPanel.test.tsx`, `SeverityFilter.test.tsx`, `RunTraceDrawer.test.tsx`). For a controlled `Textarea`/`TextInput`, `fireEvent.change(el, { target: { value: "…" } })` is the way. Also note `getByDisplayValue` is unreliable for a multi-line textarea body — grab it with `container.querySelector("textarea")` instead.
+
 ## Decisions
 ## Recurring Errors & Fixes
 ## Session Notes
