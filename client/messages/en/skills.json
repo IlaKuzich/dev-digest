@@ -3,7 +3,6 @@
     "crumbLab": "Skills Lab",
     "crumb": "Skills",
     "title": "Skills",
-    "subtitle": "Reusable rules and rubrics an agent can attach to its review prompt.",
     "searchPlaceholder": "Search skills…",
     "addSkill": "Add Skill",
     "createFromScratch": "Create",
@@ -24,11 +23,6 @@
     "security": "Security",
     "custom": "Custom"
   },
-  "preview": {
-    "edit": "Edit",
-    "enabled": "Enabled",
-    "disabled": "Disabled"
-  },
   "create": {
     "title": "Create skill",
     "subtitle": "A skill is a reusable rule or rubric an agent can attach to its review prompt.",
@@ -47,8 +41,6 @@
     }
   },
   "editor": {
-    "crumbFallback": "Skill",
-    "back": "← All skills",
     "loadErrorTitle": "Couldn't load this skill",
     "loadErrorBody": "The skill could not be loaded.",
     "notFoundTitle": "Skill not found",

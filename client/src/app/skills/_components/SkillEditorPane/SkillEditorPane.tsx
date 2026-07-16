@@ -4,7 +4,6 @@ import React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ErrorState, Skeleton, Icon, Badge, Toggle } from "@devdigest/ui";
-import { AppShell } from "@/components/app-shell";
 import { useSkill, useUpdateSkill, useDeleteSkill } from "@/lib/hooks/skills";
 import { useToast } from "@/lib/toast";
 import { ApiError } from "@/lib/api";
@@ -13,7 +12,9 @@ import { VALID_TABS } from "../SkillEditor/constants";
 import { EMPTY_DRAFT } from "./constants";
 import { s } from "./styles";
 
-export function SkillEditorView() {
+/* The right pane of the Skills workbench. Page chrome (AppShell, breadcrumb, the
+   skill list) belongs to SkillsWorkbench — this renders the selected skill only. */
+export function SkillEditorPane() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const search = useSearchParams();
@@ -49,33 +50,24 @@ export function SkillEditorView() {
     });
   }, [skill?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const crumb = [
-    { label: t("list.crumbLab") },
-    { label: t("list.crumb"), href: "/skills" },
-    { label: skill?.name ?? t("editor.crumbFallback") },
-  ];
-
   if (isError || (!isLoading && !skill)) {
     return (
-      <AppShell crumb={crumb}>
+      <div style={s.wrap}>
         <ErrorState
-          fullScreen
           title={t("editor.loadErrorTitle")}
           body={error instanceof ApiError ? error.message : t("editor.loadErrorBody")}
           onRetry={() => refetch()}
         />
-      </AppShell>
+      </div>
     );
   }
 
   if (isLoading || !skill) {
     return (
-      <AppShell crumb={crumb}>
-        <div style={s.wrap}>
-          <Skeleton height={24} width={240} />
-          <Skeleton height={300} />
-        </div>
-      </AppShell>
+      <div style={s.wrap}>
+        <Skeleton height={24} width={240} />
+        <Skeleton height={300} />
+      </div>
     );
   }
 
@@ -113,36 +105,29 @@ export function SkillEditorView() {
   };
 
   return (
-    <AppShell crumb={crumb}>
-      <div style={s.wrap}>
-        <div style={s.header}>
-          <button onClick={() => router.push("/skills")} style={s.backLink}>
-            {t("editor.back")}
-          </button>
-        </div>
-        <div style={s.titleRow}>
-          <Icon.Sparkles size={18} style={{ color: "var(--accent)" }} />
-          <h1 style={s.h1}>{skill.name}</h1>
-          <Badge color="var(--text-secondary)" mono>
-            {t("editor.version", { version: skill.version })}
-          </Badge>
-          <label style={s.enabledLabel}>
-            {t("editor.enabled")}
-            <Toggle on={draft.enabled} onChange={toggleEnabled} size={16} />
-          </label>
-        </div>
-        <SkillEditor
-          skill={skill}
-          draft={draft}
-          onDraft={onDraft}
-          tab={tab}
-          onTab={setTab}
-          onSave={save}
-          onDelete={remove}
-          saving={update.isPending}
-          deleting={del.isPending}
-        />
+    <div style={s.wrap}>
+      <div style={s.titleRow}>
+        <Icon.Sparkles size={18} style={{ color: "var(--accent)" }} />
+        <h1 style={s.h1}>{skill.name}</h1>
+        <Badge color="var(--text-secondary)" mono>
+          {t("editor.version", { version: skill.version })}
+        </Badge>
+        <label style={s.enabledLabel}>
+          {t("editor.enabled")}
+          <Toggle on={draft.enabled} onChange={toggleEnabled} size={16} />
+        </label>
       </div>
-    </AppShell>
+      <SkillEditor
+        skill={skill}
+        draft={draft}
+        onDraft={onDraft}
+        tab={tab}
+        onTab={setTab}
+        onSave={save}
+        onDelete={remove}
+        saving={update.isPending}
+        deleting={del.isPending}
+      />
+    </div>
   );
 }

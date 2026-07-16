@@ -2,8 +2,8 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Skill, SkillVersion } from "@devdigest/shared";
-import messages from "../../../../../../messages/en/skills.json";
-import { ToastProvider } from "../../../../../lib/toast";
+import messages from "../../../../../messages/en/skills.json";
+import { ToastProvider } from "../../../../lib/toast";
 
 const replace = vi.fn();
 /** Drives `?tab=` for the view under test; mutated per-test. */
@@ -15,11 +15,9 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 
-vi.mock("../../../../../components/app-shell", () => ({
-  AppShell: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+// No AppShell mock needed — the pane renders no page chrome; SkillsWorkbench owns it.
 
-vi.mock("../../../../../lib/hooks/skills", () => ({
+vi.mock("../../../../lib/hooks/skills", () => ({
   useSkill: () => ({ data: SKILL, isLoading: false, isError: false, refetch: vi.fn() }),
   useUpdateSkill: () => ({ mutate: vi.fn(), isPending: false, isSuccess: false, data: undefined }),
   useDeleteSkill: () => ({ mutate: vi.fn(), isPending: false }),
@@ -27,7 +25,7 @@ vi.mock("../../../../../lib/hooks/skills", () => ({
   useRestoreSkillVersion: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-import { SkillEditorView } from "./SkillEditorView";
+import { SkillEditorPane } from "./SkillEditorPane";
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -71,16 +69,16 @@ function renderWithIntl(ui: React.ReactElement) {
   );
 }
 
-describe("A1 Skill Editor (smoke)", () => {
+describe("A1 Skill Editor pane (smoke)", () => {
   it("renders the skill's fields and version badge", () => {
-    renderWithIntl(<SkillEditorView />);
+    renderWithIntl(<SkillEditorPane />);
     expect(screen.getAllByText("Security rubric").length).toBeGreaterThan(0);
     expect(screen.getByText("v3")).toBeInTheDocument();
     expect(screen.getByText("Save skill")).toBeInTheDocument();
   });
 
   it("defaults to Config and pushes the chosen tab into ?tab=", () => {
-    renderWithIntl(<SkillEditorView />);
+    renderWithIntl(<SkillEditorPane />);
     expect(screen.getByText("Save skill")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Versions" }));
@@ -89,19 +87,19 @@ describe("A1 Skill Editor (smoke)", () => {
 
   it("renders the tab named by ?tab= on load", () => {
     searchParams = new URLSearchParams("tab=versions");
-    renderWithIntl(<SkillEditorView />);
+    renderWithIntl(<SkillEditorPane />);
     expect(screen.getByText("Version history")).toBeInTheDocument();
     expect(screen.queryByText("Save skill")).not.toBeInTheDocument();
   });
 
   it("falls back to Config for an unknown ?tab=", () => {
     searchParams = new URLSearchParams("tab=bogus");
-    renderWithIntl(<SkillEditorView />);
+    renderWithIntl(<SkillEditorPane />);
     expect(screen.getByText("Save skill")).toBeInTheDocument();
   });
 
   it("keeps unsaved body edits when switching to Preview", () => {
-    const { container, rerender } = renderWithIntl(<SkillEditorView />);
+    const { container, rerender } = renderWithIntl(<SkillEditorPane />);
 
     const body = container.querySelector("textarea")!;
     expect(body).toHaveValue("# Rule\nFlag hardcoded credentials.");
@@ -112,7 +110,7 @@ describe("A1 Skill Editor (smoke)", () => {
     rerender(
       <NextIntlClientProvider locale="en" messages={{ skills: messages }}>
         <ToastProvider>
-          <SkillEditorView />
+          <SkillEditorPane />
         </ToastProvider>
       </NextIntlClientProvider>,
     );
@@ -129,7 +127,7 @@ describe("Versions tab", () => {
   });
 
   it("marks the live version as current and offers Restore only on older ones", () => {
-    renderWithIntl(<SkillEditorView />);
+    renderWithIntl(<SkillEditorPane />);
 
     expect(screen.getByText("2 versions")).toBeInTheDocument();
     expect(screen.getByText("Current")).toBeInTheDocument();

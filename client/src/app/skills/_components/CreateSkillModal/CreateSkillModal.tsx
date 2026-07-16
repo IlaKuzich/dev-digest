@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Modal, FormField, TextInput, SelectInput, Textarea } from "@devdigest/ui";
 import type { SkillType } from "@devdigest/shared";
-import { useCreateSkill } from "../../../../../../lib/hooks/skills";
+import { useCreateSkill } from "@/lib/hooks/skills";
 import { DEFAULT_TYPE, MODAL_WIDTH, TYPE_VALUES } from "./constants";
 import { s } from "./styles";
 

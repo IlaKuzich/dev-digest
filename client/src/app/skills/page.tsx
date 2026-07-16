@@ -1,8 +1,8 @@
-import { SkillsListView } from "./_components/SkillsListView";
+import { SkillsWorkbench } from "./_components/SkillsWorkbench";
 
-/* Route: /skills (Skills list + preview). Thin route entry — the view, its
-   create modal, styles, constants, helpers and i18n are colocated under
-   _components/SkillsListView. */
+/* Route: /skills (Skills workbench, nothing selected). Thin route entry — the same
+   workbench serves /skills/:id; with no id it renders the skill list beside an
+   empty right pane. */
 export default function SkillsPage() {
-  return <SkillsListView />;
+  return <SkillsWorkbench />;
 }
