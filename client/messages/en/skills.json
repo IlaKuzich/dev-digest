@@ -53,13 +53,23 @@
     "loadErrorBody": "The skill could not be loaded.",
     "notFoundTitle": "Skill not found",
     "notFoundBody": "It may have been deleted.",
+    "tabs": {
+      "config": "Config",
+      "preview": "Preview",
+      "versions": "Versions"
+    },
     "name": "Name",
     "description": "Description",
     "descriptionHint": "The skill's directive interface — write it as an instruction.",
     "type": "Type",
     "body": "Body (Markdown)",
     "bodyHint": "Saving a changed body creates a new immutable version.",
+    "note": "What changed",
+    "noteHint": "Recorded on the version snapshot. Only used when the body changes.",
+    "notePlaceholder": "e.g. Added Tests dimension",
     "preview": "Preview",
+    "previewHint": "Rendered as the reviewing agent receives it. Shows unsaved edits.",
+    "previewEmpty": "Nothing to preview — the skill body is empty.",
     "enabled": "Enabled",
     "version": "v{version}",
     "save": "Save skill",
@@ -68,5 +78,16 @@
     "savedToast": "Skill saved (v{version})",
     "delete": "Delete skill",
     "deleteConfirm": "Delete skill \"{name}\"? This cannot be undone."
+  },
+  "versions": {
+    "title": "Version history",
+    "count": "{count, plural, one {# version} other {# versions}}",
+    "subtitle": "Every save snapshots the body so eval runs stay reproducible against the exact text they scored.",
+    "current": "Current",
+    "noNote": "No description",
+    "restore": "Restore",
+    "restoreConfirm": "Restore v{version}? This is applied as a new version — nothing is overwritten.",
+    "restoredToast": "Restored v{version} as v{next}",
+    "loadError": "Couldn't load the version history."
   }
 }

@@ -29,7 +29,7 @@ export function CreateSkillModal({ onClose }: { onClose: () => void }) {
       body,
     });
     onClose();
-    router.push(`/skills/${skill.id}`);
+    router.push(`/skills/${skill.id}?tab=config`);
   };
 
   return (

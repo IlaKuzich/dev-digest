@@ -1,4 +1,11 @@
-import type { SkillType } from "@devdigest/shared";
+import type { SkillDraft } from "../SkillEditor";
 
-/** Selectable skill types (labels are i18n'd in the component). */
-export const TYPE_VALUES: readonly SkillType[] = ["rubric", "convention", "security", "custom"];
+/** Draft placeholder used until the skill query resolves. */
+export const EMPTY_DRAFT: SkillDraft = {
+  name: "",
+  description: "",
+  type: "convention",
+  body: "",
+  enabled: true,
+  note: "",
+};

@@ -3,7 +3,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { CreateSkillInput, Skill, UpdateSkillInput } from "@devdigest/shared";
+import type { CreateSkillInput, Skill, SkillVersion, UpdateSkillInput } from "@devdigest/shared";
 
 export function useSkills() {
   return useQuery({
@@ -40,6 +40,36 @@ export function useUpdateSkill() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["skills"] });
       qc.setQueryData(["skill", data.id], data);
+      // A body edit appends a version — the history view must refetch.
+      qc.invalidateQueries({ queryKey: ["skill-versions", data.id] });
+    },
+  });
+}
+
+export function useSkillVersions(skillId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["skill-versions", skillId],
+    queryFn: () => api.get<SkillVersion[]>(`/skills/${skillId}/versions`),
+    enabled: !!skillId,
+  });
+}
+
+export interface RestoreSkillVersionArgs {
+  id: string;
+  version: number;
+  note?: string;
+}
+
+/** Restore is forward-only — it appends a version and swaps the live body. */
+export function useRestoreSkillVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, version, note }: RestoreSkillVersionArgs) =>
+      api.post<Skill>(`/skills/${id}/versions/${version}/restore`, note ? { note } : {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["skills"] });
+      qc.setQueryData(["skill", data.id], data);
+      qc.invalidateQueries({ queryKey: ["skill-versions", data.id] });
     },
   });
 }

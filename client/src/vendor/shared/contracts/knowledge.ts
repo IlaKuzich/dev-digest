@@ -154,8 +154,27 @@ export const UpdateSkillInput = z.object({
   type: SkillType.optional(),
   body: z.string().optional(),
   enabled: z.boolean().optional(),
+  /** Summary of what changed. Recorded only when `body` actually changes. */
+  note: z.string().optional(),
 });
 export type UpdateSkillInput = z.infer<typeof UpdateSkillInput>;
+
+// Every body edit snapshots the new body under the new version number, so the
+// newest row always mirrors the live skill. Restoring an old version appends a
+// new version carrying that body — history is never rewritten.
+export const SkillVersion = z.object({
+  skill_id: z.string(),
+  version: z.number().int(),
+  body: z.string(),
+  note: z.string().nullable(),
+  created_at: z.string(),
+});
+export type SkillVersion = z.infer<typeof SkillVersion>;
+
+export const RestoreSkillVersionInput = z.object({
+  note: z.string().optional(),
+});
+export type RestoreSkillVersionInput = z.infer<typeof RestoreSkillVersionInput>;
 
 // ---- Conventions ----
 export const ConventionStatus = z.enum(['candidate', 'accepted', 'rejected']);

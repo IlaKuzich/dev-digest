@@ -107,7 +107,7 @@ export function SkillsListView() {
                   kind="secondary"
                   size="sm"
                   icon="Edit"
-                  onClick={() => router.push(`/skills/${selected.id}`)}
+                  onClick={() => router.push(`/skills/${selected.id}?tab=config`)}
                 >
                   {t("preview.edit")}
                 </Button>
