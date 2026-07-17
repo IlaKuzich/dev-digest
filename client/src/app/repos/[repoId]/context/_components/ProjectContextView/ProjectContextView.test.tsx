@@ -80,19 +80,17 @@ const EMPTY_ROOTS_RESPONSE: ContextDocsResponse = {
 };
 
 describe("ProjectContextView", () => {
-  it("lists documents with root badges, per-doc attach counts, and a footer naming count/tokens/age (AC-1, AC-4, AC-26)", () => {
+  it("lists documents with root badges in the left column, and a footer naming count/tokens/age (AC-1, AC-4)", () => {
     mockDocs = { data: TWO_DOCS_RESPONSE, isLoading: false };
     mockContent = { data: undefined, isLoading: false };
     renderView();
 
-    expect(screen.getByText("pricing.md")).toBeInTheDocument();
+    // The first doc auto-selects, so its filename appears in both the list row
+    // and the detail header — hence getAllByText for it.
+    expect(screen.getAllByText("pricing.md").length).toBeGreaterThan(0);
     expect(screen.getByText("readme.md")).toBeInTheDocument();
     expect(screen.getByText("specs")).toBeInTheDocument();
     expect(screen.getByText("docs")).toBeInTheDocument();
-
-    // AC-26: per-document attach count.
-    expect(screen.getByText("Used by 2 agents")).toBeInTheDocument();
-    expect(screen.getByText("Not attached to any agent")).toBeInTheDocument();
 
     // AC-4: document count, aggregate token estimate, last-synced age.
     expect(screen.getByText("2 documents")).toBeInTheDocument();
@@ -100,7 +98,20 @@ describe("ProjectContextView", () => {
     expect(screen.getByText(/Last synced 3h ago/)).toBeInTheDocument();
   });
 
-  it("opens a document's Preview as read-only Markdown, with no edit/create/upload/delete affordance (AC-6)", () => {
+  it("shows the selected document's attach count in the detail pane, and updates it when another is selected (AC-26)", () => {
+    mockDocs = { data: TWO_DOCS_RESPONSE, isLoading: false };
+    mockContent = { data: undefined, isLoading: false };
+    renderView();
+
+    // pricing.md is auto-selected first (used_by_agents: 2).
+    expect(screen.getByText("Used by 2 agents")).toBeInTheDocument();
+
+    // Select readme.md (used_by_agents: 0) — the count follows the selection.
+    fireEvent.click(screen.getByText("readme.md"));
+    expect(screen.getByText("Not attached to any agent")).toBeInTheDocument();
+  });
+
+  it("previews the selected document as read-only Markdown inline, with no edit/create/upload/delete affordance (AC-6)", () => {
     mockDocs = { data: TWO_DOCS_RESPONSE, isLoading: false };
     mockContent = {
       data: { path: "specs/billing/pricing.md", text: "# Pricing rule\n\nNever discount below cost." },
@@ -108,8 +119,7 @@ describe("ProjectContextView", () => {
     };
     renderView();
 
-    fireEvent.click(screen.getByRole("button", { name: "Preview pricing.md" }));
-
+    // Auto-selected first doc renders inline — no modal, no click needed.
     expect(screen.getByText(/Never discount below cost/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /save/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^edit/i })).not.toBeInTheDocument();

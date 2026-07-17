@@ -1,6 +1,26 @@
 # Spec: Project Context  |  Spec ID: 2026-07-17-project-context  |  Status: approved
 Supersedes: None
 
+## Design reference
+
+![Project Context — two-pane layout](./assets/2026-07-17-project-context/project-context.png)
+
+The discovery page (`/repos/:repoId/context`) is a **two-pane master-detail** layout,
+mirroring the Skills workbench (`client/src/app/skills/_components/SkillsWorkbench`):
+
+- **Left column** — a `PROJECT CONTEXT` label, the configured roots, a single **refresh
+  (resync)** toolbar action, the scrollable document list (file icon · filename · repo-relative
+  directory · root badge, with the selected row highlighted), and a footer reading document
+  count · aggregate token estimate · last-synced age.
+- **Right pane** — the selected document's filename, a `Preview` pill, its `Used by N agents`
+  count, and the document's Markdown rendered **inline** (no modal).
+
+**Deliberately NOT built from the mockup** (see Non-goals — all cut for reasons that still
+hold): the `+` / new-folder / upload toolbar actions, the `Preview / Edit` toggle's **Edit**
+side, the `COVERAGE` ring, and the `chunks` figure in the footer (this feature has no chunk
+store — the footer shows the token estimate instead). The refresh action IS kept: a manual
+resync already exists and writes nothing into the clone.
+
 ## Problem & why
 
 A repository's specs, docs and insight logs are written for humans and read by nobody at
@@ -194,9 +214,12 @@ Per root `INSIGHTS.md:26`, both vendored copies must receive them in the same co
   state; IF the request fails, THEN the system SHALL render the load-error state with a
   retry affordance.
 - **AC-6** — WHEN a user selects a document, the system SHALL render its Markdown content
-  read-only, and SHALL NOT offer any affordance to edit, create, upload, or delete a
-  document.
-- **AC-26** — The system SHALL display, per document, how many agents currently attach it.
+  read-only **inline in the detail pane** (not a modal), and SHALL NOT offer any affordance to
+  edit, create, upload, or delete a document. On first load the system SHALL auto-select the
+  first document so the pane is never blank while documents exist.
+- **AC-26** — WHEN a user selects a document, the system SHALL display in the detail pane how
+  many agents currently attach it. *(Two-pane layout: the count follows the selection rather
+  than repeating on every list row — see Design reference.)*
 
 **Attach — the Context tab (agent and skill)**
 

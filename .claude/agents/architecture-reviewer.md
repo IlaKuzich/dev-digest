@@ -2,7 +2,14 @@
 name: architecture-reviewer
 description: Use when a diff needs an architecture-level review — enforcing the onion dependency rule, DI-container usage, repository/tenancy/DTO boundaries, client colocation and the RSC boundary, and cross-package boundaries. Read-only; never edits; returns a markdown review report to its caller.
 tools: Read, Grep, Glob, Bash, Skill
-model: opus
+# sonnet, not opus (2026-07-17, cost). This agent does not search for a defect from a blank
+# page — it checks a diff against four rule-sets that are PRELOADED below and cite their own
+# sections, which is recognition against a known list rather than open-ended design
+# reasoning. That is the shape sonnet handles well. Watch the one thing it may cost: a
+# CRITICAL that needs several hops to see (an adapter `new`-ed here breaks tenancy three
+# modules away). If findings start reading shallow or a real boundary defect reaches Mode B,
+# put this back to opus first — it is the gate where an escape is expensive.
+model: sonnet
 permissionMode: plan
 # Preloaded into context at startup — these four skills ARE the semantic rule-sets
 # this agent enforces: onion-architecture (server layering + DI container),

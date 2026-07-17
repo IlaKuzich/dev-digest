@@ -73,13 +73,6 @@ export function ContextAttachTab({ owner }: { owner: ContextAttachOwner }) {
     setDragIndex(null);
   };
 
-  // Keyboard-reachable reorder (accessibility requirement) — no pointer needed.
-  const move = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= rows.length) return;
-    setRows((prev) => reorder(prev, index, target));
-  };
-
   const save = () =>
     setMutation.mutate(toSetContextBody(rows), {
       onSuccess: () => toast.success(t("savedToast")),
@@ -117,18 +110,15 @@ export function ContextAttachTab({ owner }: { owner: ContextAttachOwner }) {
       />
       <div style={s.list}>
         {visible.map(({ row, index }) => (
-          <div key={row.doc.path} style={s.row}>
-            <button
-              type="button"
-              draggable
-              onDragStart={() => setDragIndex(index)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => onDrop(index)}
-              aria-label={t("dragHandleLabel", { name: docFilename(row.doc.path) })}
-              style={s.dragHandle}
-            >
-              <Icon.Menu size={14} />
-            </button>
+          <div
+            key={row.doc.path}
+            draggable
+            onDragStart={() => setDragIndex(index)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => onDrop(index)}
+            style={s.row}
+          >
+            <Icon.Menu size={14} style={s.dragHandle} />
             <Checkbox checked={row.attached} onChange={(v) => toggle(row.doc.path, v)} label={docFilename(row.doc.path)} />
             <span style={s.dir}>{docDirectory(row.doc.path) || "/"}</span>
             <Badge>{row.doc.root}</Badge>
@@ -137,20 +127,6 @@ export function ContextAttachTab({ owner }: { owner: ContextAttachOwner }) {
               label={t("previewLabel", { name: docFilename(row.doc.path) })}
               onClick={() => setPreviewPath(row.doc.path)}
             />
-            <div style={s.reorderButtons}>
-              <IconBtn
-                icon="ArrowUp"
-                size={20}
-                label={t("moveUpLabel", { name: docFilename(row.doc.path) })}
-                onClick={() => move(index, -1)}
-              />
-              <IconBtn
-                icon="ArrowDown"
-                size={20}
-                label={t("moveDownLabel", { name: docFilename(row.doc.path) })}
-                onClick={() => move(index, 1)}
-              />
-            </div>
           </div>
         ))}
       </div>

@@ -11,6 +11,13 @@ accepts `specs`, wraps each untrusted, renders `## Project context`, and records
 This feature wires the injection, adds the discovery + attach surface, and surfaces the injected
 docs in the run trace — with **zero new LLM/embedding calls**.
 
+## Design reference
+The discovery page is a **two-pane master-detail** layout (left file list + inline preview
+pane), mirroring the Skills workbench. See the mockup and the layout breakdown in the spec:
+`specs/assets/2026-07-17-project-context/project-context.png` and the spec's `## Design
+reference` section. The mockup's `+`/upload/new-folder, Edit toggle, coverage ring, and chunk
+count are intentionally NOT built (Non-goals).
+
 ## Requirements source
 - Spec: `specs/2026-07-17-project-context.md` — the request itself points here.
 - Spec ID: `2026-07-17-project-context` · Status: **approved** (header verified: line 1).

@@ -71,6 +71,28 @@ something that changed underneath it.
 A superseded spec stays as it was written. It records what was agreed and built at the time,
 and the shipped code still matches it.
 
+## Design references — `assets/<spec-id>/`
+
+A spec built from a visual design keeps its reference files (mockups, screenshots, wireframe
+exports, design PDFs) in a sibling `assets/<spec-id>/` folder, linked from the spec's
+`## Design sources` section with the relative path `./assets/<spec-id>/<file>`:
+
+```
+specs/2026-07-17-onboarding-reading-path.md
+specs/assets/2026-07-17-onboarding-reading-path/dashboard.png
+```
+
+The folder mirrors the spec's location, so a package spec's assets sit under
+`server/specs/assets/<id>/`, `client/specs/assets/<id>/`, etc., and the relative link is the
+same everywhere. It exists so `implementation-planner` and `implementer` — which start cold and
+never see the authoring conversation — can open the real design the feature is built from.
+
+**`spec-creator` cannot place these files** (it may write specification markdown only, and
+holds no shell to copy binaries — that write barrier is deliberate). The files are copied in by
+the orchestrator's [`/design-assets`](../.claude/skills/design-assets/SKILL.md) skill, run in
+the human-driven session; `spec-creator` only references them. Design references only — not
+source, config, or arbitrary files.
+
 ## Not to be confused with
 
 | Directory | Owner | Holds |
