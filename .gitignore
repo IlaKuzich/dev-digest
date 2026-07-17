@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .claude/settings.local.json
+# pr-self-review verdict artifact — local, per-working-tree state
+.claude/.pr-self-review-state.json
 # agent-runner ships as a JS GitHub Action — its bundled dist/ MUST be committed
 # (GitHub runs action.yml `main: dist/index.js` as-is, with no build step).
 !agent-runner/dist/
@@ -24,3 +26,5 @@ test-results/
 
 # emdash worktree config (local)
 .emdash.json
+.omc
+.gstack/

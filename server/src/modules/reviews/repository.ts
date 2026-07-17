@@ -1,6 +1,7 @@
 import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type { Finding, Intent, RunSummary, RunTrace } from '@devdigest/shared';
+import type { ReviewScoreRow, RunCostRow, FindingRollupRow } from '../pulls/helpers.js';
 
 /**
  * A2 — review data-access. The ONLY layer touching the DB for the review
@@ -62,6 +63,20 @@ export class ReviewRepository {
   /** Reviews for a PR (newest first), each with its findings. */
   reviewsForPull(prId: string): Promise<{ review: ReviewRow; findings: FindingRow[] }[]> {
     return reviewRepo.reviewsForPull(this.db, prId);
+  }
+
+  // ---- PR-list rollups (consumed by the pulls list endpoint) --------------
+
+  reviewScoresForPrs(prIds: string[]): Promise<ReviewScoreRow[]> {
+    return reviewRepo.reviewScoresForPrs(this.db, prIds);
+  }
+
+  activeFindingsForPrs(prIds: string[]): Promise<FindingRollupRow[]> {
+    return reviewRepo.activeFindingsForPrs(this.db, prIds);
+  }
+
+  doneRunCostsForPrs(prIds: string[]): Promise<RunCostRow[]> {
+    return runRepo.doneRunCostsForPrs(this.db, prIds);
   }
 
   getReview(reviewId: string): Promise<ReviewRow | undefined> {

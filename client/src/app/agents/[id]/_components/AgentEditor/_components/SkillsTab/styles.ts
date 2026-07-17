@@ -1,0 +1,34 @@
+import type { CSSProperties } from "react";
+
+/** Co-located styles for SkillsTab. */
+export const s = {
+  wrap: { maxWidth: 640 } satisfies CSSProperties,
+  header: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 } satisfies CSSProperties,
+  h2: { fontSize: 18, fontWeight: 700 } satisfies CSSProperties,
+  count: { marginLeft: "auto", fontSize: 13, color: "var(--text-secondary)" } satisfies CSSProperties,
+  hint: { fontSize: 13, color: "var(--text-muted)", marginBottom: 14 } satisfies CSSProperties,
+  filter: {
+    width: "100%",
+    fontSize: 13,
+    padding: "8px 12px",
+    borderRadius: 7,
+    border: "1px solid var(--border)",
+    background: "var(--bg-surface)",
+    color: "var(--text-primary)",
+    marginBottom: 14,
+  } satisfies CSSProperties,
+  list: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 } satisfies CSSProperties,
+  row: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 12px",
+    borderRadius: 7,
+    border: "1px solid var(--border)",
+    background: "var(--bg-elevated)",
+    cursor: "grab",
+  } satisfies CSSProperties,
+  dragHandle: { color: "var(--text-muted)", flexShrink: 0 } satisfies CSSProperties,
+  name: { fontSize: 13, fontWeight: 600, flex: 1 } satisfies CSSProperties,
+  actions: { display: "flex", gap: 10 } satisfies CSSProperties,
+} as const;

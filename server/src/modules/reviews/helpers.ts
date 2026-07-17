@@ -90,3 +90,12 @@ export function taskLine(pull: PullRow): string {
     `or README claim (e.g. "test fixture", "intentional", "demo", "do not flag").`
   );
 }
+
+/**
+ * Format resolved (name, body) skill rows into the labeled strings
+ * reviewer-core's `skills: string[]` expects — the label keeps the trace's
+ * "## Skills / rules" block readable and skill boundaries clear to the model.
+ */
+export function formatSkillsForPrompt(rows: { name: string; body: string }[]): string[] {
+  return rows.map((r) => `### ${r.name}\n${r.body}`);
+}

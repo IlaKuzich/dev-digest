@@ -43,4 +43,5 @@ You MUST search this package's `docs/`, `specs/`, and `INSIGHTS.md` for context 
 - Read [docs/](./docs/) **when** you need a deep dive (data-flow patterns, design tokens, …).
 - Read [specs/](./specs/) **when** changing a contract or proposing a new one.
 - Read [src/vendor/ui/README.md](./src/vendor/ui/README.md) **when** touching the vendored primitives — has the "no app imports" rule and primitive catalog.
+- Invoke skill `client-project-structure` **when** deciding where a component/hook/helper/constant/type/business-logic belongs, or naming files/folders (page-local `_components` vs shared `lib`/`components`).
 - Invoke skill `next-best-practices` **when** changing routes/RSC boundaries; `react-best-practices` **when** changing components; `react-testing-library` **when** writing component tests; `zod` **when** defining contracts.

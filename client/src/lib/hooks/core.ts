@@ -42,14 +42,14 @@ export function useTestConnection() {
       const body = typeof input === "string" ? { provider: input } : input;
       return api.post<ConnTestResult>("/settings/test-connection", body);
     },
-    // Saving/validating a provider key can change which models resolve — drop the
-    // cached (possibly empty) model lists so the agent picker refetches, and
-    // refresh the "Configured / Not set" key-status badges.
-    onSuccess: (res) => {
-      if (res.ok) {
-        qc.invalidateQueries({ queryKey: ["provider-models"] });
-        qc.invalidateQueries({ queryKey: ["secrets-status"] });
-      }
+    // The server persists a submitted key to secrets.json BEFORE testing it
+    // (so the test reflects the new value) — meaning the stored secret changes
+    // regardless of whether the live test call below ends up ok or not. Refresh
+    // unconditionally so a failed test can't leave the UI showing stale status
+    // for a key that's already been overwritten underneath it.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["provider-models"] });
+      qc.invalidateQueries({ queryKey: ["secrets-status"] });
     },
   });
 }

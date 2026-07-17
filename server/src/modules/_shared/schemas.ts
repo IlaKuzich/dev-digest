@@ -10,3 +10,14 @@ import { z } from 'zod';
  */
 export const IdParams = z.object({ id: z.string().uuid() });
 export type IdParams = z.infer<typeof IdParams>;
+
+/**
+ * Params for the `/:id/versions/:version` sub-resources (agents, skills).
+ * `z.coerce` turns a non-numeric version into a 422 at the edge rather than a
+ * confusing 404 for a version that could never exist.
+ */
+export const VersionParams = z.object({
+  id: z.string().uuid(),
+  version: z.coerce.number().int().positive(),
+});
+export type VersionParams = z.infer<typeof VersionParams>;

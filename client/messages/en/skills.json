@@ -1,101 +1,85 @@
 {
-  "page": {
+  "list": {
     "crumbLab": "Skills Lab",
-    "crumbSkills": "Skills",
-    "heading": "Skills",
-    "addSkill": "Add Skill",
+    "crumb": "Skills",
+    "title": "Skills",
     "searchPlaceholder": "Search skills…",
+    "addSkill": "Add Skill",
+    "createFromScratch": "Create",
+    "importSoon": "Import (coming soon)",
     "loadError": "Could not load skills.",
-    "menu": {
-      "fromFile": "Import from file",
-      "fromUrl": "Import from URL",
-      "community": "Search community skills…"
-    },
-    "empty": {
-      "title": "No skills yet",
-      "body": "Import a skill from a file, a URL, or the community catalog.",
-      "cta": "Import from file"
-    },
-    "selectPrompt": {
-      "title": "Select a skill",
-      "body": "Pick a skill on the left to preview its body."
+    "emptyTitle": "No skills yet",
+    "emptyBody": "A skill is a reusable rule or rubric an agent can attach to its review prompt.",
+    "emptyCta": "Create your first skill",
+    "selectTitle": "Select a skill",
+    "selectBody": "Pick a skill on the left to preview its body."
+  },
+  "card": {
+    "noDescription": "No description"
+  },
+  "typeOptions": {
+    "rubric": "Rubric",
+    "convention": "Convention",
+    "security": "Security",
+    "custom": "Custom"
+  },
+  "create": {
+    "title": "Create skill",
+    "subtitle": "A skill is a reusable rule or rubric an agent can attach to its review prompt.",
+    "cancel": "Cancel",
+    "create": "Create skill",
+    "creating": "Creating…",
+    "defaultName": "New Skill",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "PR quality rubric",
+      "description": "Description",
+      "descriptionPlaceholder": "What this skill checks for",
+      "type": "Type",
+      "body": "Body (Markdown)",
+      "bodyPlaceholder": "# Rule\nDescribe the rule…"
     }
   },
-  "detail": {
-    "crumbSkill": "Skill",
-    "back": "← All skills",
-    "loadError": "Could not load this skill.",
-    "notFound": {
-      "title": "Skill not found",
-      "body": "It may have been deleted."
-    }
-  },
-  "drawer": {
-    "title": "Add a skill",
-    "subtitle": "Import from a file, a URL, or search vetted community skills",
+  "editor": {
+    "loadErrorTitle": "Couldn't load this skill",
+    "loadErrorBody": "The skill could not be loaded.",
+    "notFoundTitle": "Skill not found",
+    "notFoundBody": "It may have been deleted.",
     "tabs": {
-      "file": "From file",
-      "url": "From URL",
-      "community": "Community"
+      "config": "Config",
+      "preview": "Preview",
+      "versions": "Versions"
     },
-    "importFailed": "Import failed"
-  },
-  "file": {
-    "nameLabel": "Skill name",
-    "nameHint": "Optional — derived from the first heading if blank.",
-    "namePlaceholder": "pr-quality-rubric",
-    "bodyLabel": "Skill body (Markdown)",
-    "bodyHint": "Pasted content is wrapped as untrusted data — never executed as instructions.",
-    "bodyPlaceholder": "# Rule\nDescribe the rule…",
-    "importing": "Importing…",
-    "import": "Import skill",
-    "success": "Imported \"{name}\" (stored as untrusted data)."
-  },
-  "url": {
-    "label": "Skill URL",
-    "hint": "Fetched server-side, stored as untrusted, and left disabled until vetted.",
-    "placeholder": "https://example.com/skills/security.md",
-    "fetching": "Fetching…",
-    "import": "Import from URL",
-    "success": "Imported \"{name}\". Disabled until you vet + enable it."
-  },
-  "community": {
-    "searchPlaceholder": "Search community skills (e.g. security)…",
-    "allLanguages": "All languages",
-    "loadError": "Could not load community skills",
-    "retry": "Retry",
-    "noMatch": {
-      "title": "No matching skills",
-      "body": "Try a different search term."
-    },
-    "importing": "Importing…",
-    "import": "Import"
-  },
-  "listItem": {
-    "needsVetting": "needs vetting",
-    "vettingTitle": "Untrusted source — vet before enabling",
-    "type": {
-      "rubric": "rubric",
-      "convention": "convention",
-      "security": "security",
-      "custom": "custom"
-    },
-    "source": {
-      "manual": "Manual",
-      "extracted": "Extracted",
-      "community": "Community",
-      "imported_url": "Imported"
-    }
-  },
-  "preview": {
-    "untrustedBadge": "untrusted source",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "save": "Save",
-    "edit": "Edit",
-    "untrustedNotice": "This skill came from an untrusted source. Its body is stored as data (delimiter-wrapped) and must be vetted before it is enabled for an agent.",
-    "bodyLabel": "Skill body (Markdown)",
+    "name": "Name",
+    "description": "Description",
+    "descriptionHint": "The skill's directive interface — write it as an instruction.",
+    "type": "Type",
+    "body": "Body (Markdown)",
     "bodyHint": "Saving a changed body creates a new immutable version.",
-    "version": "v{version}"
+    "note": "What changed",
+    "noteHint": "Recorded on the version snapshot. Only used when the body changes.",
+    "notePlaceholder": "e.g. Added Tests dimension",
+    "preview": "Preview",
+    "previewHint": "Rendered as the reviewing agent receives it. Shows unsaved edits.",
+    "previewEmpty": "Nothing to preview — the skill body is empty.",
+    "enabled": "Enabled",
+    "version": "v{version}",
+    "save": "Save skill",
+    "saving": "Saving…",
+    "saved": "Saved (v{version})",
+    "savedToast": "Skill saved (v{version})",
+    "delete": "Delete skill",
+    "deleteConfirm": "Delete skill \"{name}\"? This cannot be undone."
+  },
+  "versions": {
+    "title": "Version history",
+    "count": "{count, plural, one {# version} other {# versions}}",
+    "subtitle": "Every save snapshots the body so eval runs stay reproducible against the exact text they scored.",
+    "current": "Current",
+    "noNote": "No description",
+    "restore": "Restore",
+    "restoreConfirm": "Restore v{version}? This is applied as a new version — nothing is overwritten.",
+    "restoredToast": "Restored v{version} as v{next}",
+    "loadError": "Couldn't load the version history."
   }
 }

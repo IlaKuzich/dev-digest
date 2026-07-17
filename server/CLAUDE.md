@@ -44,4 +44,5 @@ You MUST search this package's `docs/`, `specs/`, and `INSIGHTS.md` for context 
 - Read [docs/](./docs/) **when** you need a deep dive (pipeline architecture, module design, etc.).
 - Read [specs/](./specs/) **when** changing a contract or proposing a new one.
 - Read [src/modules/repo-intel/README.md](./src/modules/repo-intel/README.md) **when** touching repo-intel — degraded-mode rules and T1/T3 layering live there.
+- Invoke skill `onion-architecture` **when** adding/refactoring a feature module (`src/modules/<name>`), deciding where code goes (routes/service/repository), or wiring a new adapter through the DI container.
 - Invoke skill `fastify-best-practices` **when** adding routes/plugins; `drizzle-orm-patterns` and `postgresql-table-design` **when** changing schema; `zod` **when** defining or evolving contracts.

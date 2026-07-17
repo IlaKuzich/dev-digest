@@ -85,6 +85,27 @@
       "when": 1782432010000,
       "tag": "0011_change_cost_usd_to_numeric",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783142240582,
+      "tag": "0012_wandering_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783520905659,
+      "tag": "0013_big_vanisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784213389883,
+      "tag": "0014_wonderful_meggan",
+      "breakpoints": true
     }
   ]
 }
