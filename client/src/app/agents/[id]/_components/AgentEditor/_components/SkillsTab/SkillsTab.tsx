@@ -7,6 +7,7 @@ import type { Agent } from "@devdigest/shared";
 import { useSkills } from "../../../../../../../lib/hooks/skills";
 import { useAgentSkills, useSetAgentSkills } from "../../../../../../../lib/hooks/agents";
 import { useToast } from "../../../../../../../lib/toast";
+import { SKILL_TYPE_COLOR } from "@/lib/skill-type";
 import { mergeSkillsWithLinks, reorder, type SkillRowState } from "./helpers";
 import { s } from "./styles";
 
@@ -76,7 +77,9 @@ export function SkillsTab({ agent }: { agent: Agent }) {
             <Icon.Menu size={14} style={s.dragHandle} />
             <Checkbox checked={row.enabled} onChange={(v) => toggle(row.skill.id, v)} />
             <span style={s.name}>{row.skill.name}</span>
-            <Badge color="var(--text-secondary)">{row.skill.type}</Badge>
+            <Badge color={SKILL_TYPE_COLOR[row.skill.type].c} bg={SKILL_TYPE_COLOR[row.skill.type].bg}>
+              {row.skill.type}
+            </Badge>
           </div>
         ))}
       </div>

@@ -12,16 +12,17 @@ export const s = {
     marginBottom: 10,
   }),
   headerRow: { display: "flex", alignItems: "center", gap: 10 } satisfies CSSProperties,
-  iconBox: {
+  /** Tinted to match the skill's type, like the type badge below it. */
+  iconBox: (color: { c: string; bg: string }): CSSProperties => ({
     width: 26,
     height: 26,
     borderRadius: 7,
-    background: "var(--accent-bg)",
-    color: "var(--accent)",
+    background: color.bg,
+    color: color.c,
     display: "grid",
     placeItems: "center",
     flexShrink: 0,
-  } satisfies CSSProperties,
+  }),
   name: {
     fontSize: 14,
     fontWeight: 600,
