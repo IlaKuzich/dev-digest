@@ -27,6 +27,7 @@ import { AgentsRepository } from '../modules/agents/repository.js';
 import { ReviewRepository } from '../modules/reviews/repository.js';
 import { RepoRepository } from '../modules/repos/repository.js';
 import { PullsRepository } from '../modules/pulls/repository.js';
+import { ContextRepository } from '../modules/context/repository.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
@@ -76,6 +77,7 @@ export class Container {
   private _reviewRepo?: ReviewRepository;
   private _reposRepo?: RepoRepository;
   private _pullsRepo?: PullsRepository;
+  private _contextRepo?: ContextRepository;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
@@ -110,6 +112,14 @@ export class Container {
 
   get pullsRepo(): PullsRepository {
     return (this._pullsRepo ??= new PullsRepository(this.db));
+  }
+
+  /** Owns `agent_context`/`skill_context` (architecture-review W2 fix,
+   *  `docs/plans/2026-07-17-project-context.md` T4) — `agents/service.ts`
+   *  reads an agent's own attached context paths through here for the
+   *  version-snapshot (AC-27) rather than re-querying the table itself. */
+  get contextRepo(): ContextRepository {
+    return (this._contextRepo ??= new ContextRepository(this.db));
   }
 
   get codeIndex(): CodeIndex {

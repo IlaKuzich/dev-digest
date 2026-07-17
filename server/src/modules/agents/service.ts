@@ -93,18 +93,31 @@ export class AgentsService {
     id: string,
     patch: UpdateAgentInput,
   ): Promise<Agent | undefined> {
-    const row = await this.repo.update(workspaceId, id, {
-      ...(patch.name !== undefined ? { name: patch.name } : {}),
-      ...(patch.description !== undefined ? { description: patch.description } : {}),
-      ...(patch.provider !== undefined ? { provider: patch.provider } : {}),
-      ...(patch.model !== undefined ? { model: patch.model } : {}),
-      ...(patch.system_prompt !== undefined ? { systemPrompt: patch.system_prompt } : {}),
-      ...(patch.output_schema !== undefined ? { outputSchema: patch.output_schema } : {}),
-      ...(patch.strategy !== undefined ? { strategy: patch.strategy } : {}),
-      ...(patch.ci_fail_on !== undefined ? { ciFailOn: patch.ci_fail_on } : {}),
-      ...(patch.repo_intel !== undefined ? { repoIntel: patch.repo_intel } : {}),
-      ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
-    });
+    // AC-27 / architecture-review W2 fix: read the agent's attached context
+    // paths through the OWNING repository (`container.contextRepo` — T3's
+    // `context` module) rather than have `agents/repository.ts` re-query
+    // `agent_context` itself. Only actually persisted if this update turns
+    // out to be a config change (the repository decides that); read
+    // unconditionally here since the service is the one layer that both
+    // holds the `Container` and knows the row is about to be touched.
+    const contextPaths = await this.container.contextRepo.pathsForAgent(id);
+    const row = await this.repo.update(
+      workspaceId,
+      id,
+      {
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.description !== undefined ? { description: patch.description } : {}),
+        ...(patch.provider !== undefined ? { provider: patch.provider } : {}),
+        ...(patch.model !== undefined ? { model: patch.model } : {}),
+        ...(patch.system_prompt !== undefined ? { systemPrompt: patch.system_prompt } : {}),
+        ...(patch.output_schema !== undefined ? { outputSchema: patch.output_schema } : {}),
+        ...(patch.strategy !== undefined ? { strategy: patch.strategy } : {}),
+        ...(patch.ci_fail_on !== undefined ? { ciFailOn: patch.ci_fail_on } : {}),
+        ...(patch.repo_intel !== undefined ? { repoIntel: patch.repo_intel } : {}),
+        ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+      },
+      contextPaths,
+    );
     return row ? toAgentDto(row) : undefined;
   }
 
