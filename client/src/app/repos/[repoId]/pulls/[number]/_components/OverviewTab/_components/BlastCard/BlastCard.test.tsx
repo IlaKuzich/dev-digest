@@ -111,6 +111,13 @@ vi.mock("@/components/mermaid-diagram/MermaidDiagram", () => ({
   MermaidDiagram: ({ chart }: { chart: string }) => <pre data-testid="chart">{chart}</pre>,
 }));
 
+// ResyncButton owns a route param (useParams), a mutation and a polling query.
+// Stubbed to a marker so these tests stay about what the CARD renders; the
+// resync round-trip itself is covered in ResyncButton.test.tsx.
+vi.mock("./ResyncButton", () => ({
+  ResyncButton: () => <div data-testid="resync-button" />,
+}));
+
 import { BlastCard } from "./BlastCard";
 
 afterEach(cleanup);
@@ -236,5 +243,37 @@ describe("BlastCard", () => {
     mockResult = { data: DEGRADED_RESPONSE, isLoading: false };
     renderCard();
     expect(screen.queryByText(/Prior PRs touching these files/i)).not.toBeInTheDocument();
+  });
+
+  // The copy in `emptyExplanation` ends "— resync the repo to find out", and
+  // `degradationSentence` describes a stale/partial index. Both are dead-end
+  // advice unless the action is on screen, which is exactly the bug this
+  // button fixes: the hook shipped with no caller at all.
+  it("offers the resync action wherever it tells the user the index may be behind", () => {
+    // Healthy index, no symbols for these files → "resync to find out".
+    mockResult = { data: EMPTY_BUT_FULL_RESPONSE, isLoading: false };
+    const { unmount } = renderCard();
+    expect(screen.getByTestId("resync-button")).toBeInTheDocument();
+    unmount();
+
+    // Degraded AND empty → same branch, still actionable.
+    mockResult = { data: DEGRADED_EMPTY_RESPONSE, isLoading: false };
+    const second = renderCard();
+    expect(screen.getByTestId("resync-button")).toBeInTheDocument();
+    second.unmount();
+
+    // Degraded WITH data: the map is real but incomplete — still offer the fix.
+    mockResult = { data: DEGRADED_RESPONSE, isLoading: false };
+    renderCard();
+    expect(screen.getByTestId("resync-button")).toBeInTheDocument();
+  });
+
+  it("keeps a healthy, fully-covered card clean — no resync button to explain away", () => {
+    // FULL_RESPONSE: index full, coverage 1/1. Nothing is stale, so the button
+    // would be unexplained noise on the happy path.
+    mockResult = { data: FULL_RESPONSE, isLoading: false };
+    renderCard();
+
+    expect(screen.queryByTestId("resync-button")).not.toBeInTheDocument();
   });
 });

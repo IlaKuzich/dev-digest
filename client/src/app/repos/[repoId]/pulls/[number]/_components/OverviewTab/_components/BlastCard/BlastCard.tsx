@@ -28,6 +28,7 @@ import { SymbolRow } from "./SymbolRow";
 import { ViewToggle, type BlastView } from "./ViewToggle";
 import { BlastGraph } from "./BlastGraph";
 import { PriorPrs } from "./PriorPrs";
+import { ResyncButton } from "./ResyncButton";
 import { s } from "./styles";
 
 interface BlastCardProps {
@@ -121,6 +122,11 @@ export function BlastCard({ prId, repoFullName, headSha }: BlastCardProps) {
           <span style={s.degradedText}>{emptyExplanation(data.index_state)}</span>
         </div>
         {coverageNote}
+        {/* The explanation above ends in "resync the repo to find out" — this is
+            that action. Rendered below the banner rather than inside it: the
+            Overview card is half-width, and a button as a banner flex child
+            squeezes the sentence (client INSIGHTS.md:44). */}
+        <ResyncButton prId={prId} />
         <PriorPrs priorPrs={data.prior_prs} repoFullName={repoFullName} />
       </CardShell>
     );
@@ -169,6 +175,10 @@ export function BlastCard({ prId, repoFullName, headSha }: BlastCardProps) {
 
       {banner}
       {coverageNote}
+      {/* Data present but the index is behind/partial — the map is real yet
+          incomplete, so offer the same fix as the empty branch. Healthy +
+          full-coverage cards stay clean: no banner, no button. */}
+      {degraded && <ResyncButton prId={prId} />}
 
       {view === "tree" ? (
         <>

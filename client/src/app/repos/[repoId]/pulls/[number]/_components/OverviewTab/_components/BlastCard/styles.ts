@@ -62,6 +62,21 @@ export const s: Record<string, CSSProperties> = {
     margin: 0,
   },
 
+  // ── resync affordance ───────────────────────────────────────────────────
+  // Wraps in a column on the narrow Overview card so the note never squeezes
+  // the button; the note only appears on the error/timeout paths.
+  resyncRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  resyncNote: {
+    fontSize: 12.5,
+    lineHeight: 1.45,
+    color: "var(--text-muted)",
+  },
+
   // ── degradation banner ──────────────────────────────────────────────────
   degradedBanner: {
     display: "flex",
