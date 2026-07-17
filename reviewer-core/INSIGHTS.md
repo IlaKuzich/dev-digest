@@ -9,6 +9,7 @@ obsolete entries only during a deliberate review.
 ## What Works
 ## What Doesn't Work
 ## Codebase Patterns
+- 2026-07-15 — Adding a new optional prompt input to `assemblePrompt` (the `intent` seam is the reference impl) follows a two-sided trust-boundary rule: (1) the derived / author-controlled **content** renders as a `wrapUntrusted('<name>', ...)`-wrapped `## Section` in the USER message, gated so an empty/whitespace value yields a byte-identical prompt — the same "omit when empty" contract as `repoMap`/`callers` (`src/prompt.ts`); (2) any **behavioral rule** about that content (e.g. `SCOPE_RULE` — "review within intent, one signal finding out-of-scope") goes in the TRUSTED `system` string beside `INJECTION_GUARD`, appended only when the input is present, and must NOT weaken `INJECTION_GUARD` (derived intent can never zero-out a real finding). Policy rule and untrusted content stay on opposite sides of the trust boundary. Thread the field through `ReviewInput` → `promptParts` in `src/review/run.ts`, mirroring `prDescription`.
 ## Tool & Library Notes
 ## Decisions
 ## Recurring Errors & Fixes

@@ -1,6 +1,15 @@
 import type { CSSProperties } from "react";
 
 export const s = {
+  // Responsive card grid: single column on narrow viewports, auto-fits
+  // additional cards (e.g. a future Blast Radius card) beside Intent once
+  // there's room — no placeholder slot is reserved for the unbuilt card.
+  cardGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: 20,
+    alignItems: "start",
+  } satisfies CSSProperties,
   descriptionBox: {
     border: "1px solid var(--border)",
     borderRadius: 8,

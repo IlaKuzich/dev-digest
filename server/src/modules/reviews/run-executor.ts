@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import type { Provider, Review, RunTrace, UnifiedDiff } from '@devdigest/shared';
+import type { Intent, Provider, Review, RunTrace, UnifiedDiff } from '@devdigest/shared';
 import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
 import { RunLogger } from '../../platform/run-logger.js';
 import * as schema from '../../db/schema.js';
@@ -8,6 +8,8 @@ import type { ReviewRepository, FindingRow, PullRow, ReviewRow } from './reposit
 import { REVIEW_STRATEGY } from './constants.js';
 import { taskLine, formatSkillsForPrompt } from './helpers.js';
 import { loadDiff } from './diff-loader.js';
+import { IntentService } from '../intent/service.js';
+import { formatIntentForPrompt } from '../intent/helpers.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -105,6 +107,22 @@ export class ReviewRunExecutor {
     }
     runLog.info(`Diff ready — ${diff.files.length} changed file(s); starting ${jobs.length} agent run(s)`);
 
+    // Derive-if-missing ONCE per PR run (not once per agent) — best-effort:
+    // a derivation failure logs a warning and never fails the review run.
+    // Manual button and this auto-derive share the same IntentService.derive().
+    let intent: Intent | null = null;
+    try {
+      const intentService = new IntentService(this.container);
+      intent = await intentService.getIntent(workspaceId, pull.id);
+      if (!intent) intent = await intentService.derive(workspaceId, pull.id, logger);
+    } catch (err) {
+      logger?.warn(
+        { prId: pull.id, err: (err as Error).message },
+        'review: intent derivation failed — continuing without intent',
+      );
+      intent = null;
+    }
+
     for (const { agent, runId } of jobs) {
       const agentStart = Date.now();
       logger?.info(
@@ -112,7 +130,7 @@ export class ReviewRunExecutor {
         `review: agent "${agent.name}" started (${agent.provider}/${agent.model})`,
       );
       try {
-        const outcome = await this.runOneAgent(workspaceId, pull, repo, diff, agent, runId, runLog);
+        const outcome = await this.runOneAgent(workspaceId, pull, repo, diff, agent, runId, runLog, intent);
         logger?.info(
           {
             runId,
@@ -144,6 +162,7 @@ export class ReviewRunExecutor {
     agent: AgentRow,
     runId: string,
     parentLog: RunLogger,
+    intent: Intent | null,
   ): Promise<RunOutcome> {
     const start = Date.now();
     // Narrow the fanned-out pre-work logger to THIS run; the shared diff/intent
@@ -210,6 +229,9 @@ export class ReviewRunExecutor {
         // PR author's description/body — untrusted; assemblePrompt wraps +
         // truncates it. Omitted when the PR has no body.
         ...(pull.body ? { prDescription: pull.body } : {}),
+        // Derived (or previously stored) intent + scope — same omit-when-empty
+        // contract; null when derivation failed above.
+        ...(intent ? { intent: formatIntentForPrompt(intent) } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),
