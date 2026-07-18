@@ -52,8 +52,12 @@ let structuredCalls: { messages: ChatMessage[] }[] = [];
  *  exercised (AC-25). */
 const STUB_DELAY_MS = 20;
 
+// Injected under the `openrouter` id: project policy routes ALL generation
+// through OpenRouter (server `enforceOpenRouterForGeneration`), so risk_brief —
+// whose registry default is `openai`/`gpt-4.1` — resolves to `openrouter`/
+// `openai/gpt-4.1` and the service calls `container.llm('openrouter')`.
 const stubLlm = {
-  id: 'openai',
+  id: 'openrouter',
   async listModels() {
     return [];
   },
@@ -66,13 +70,35 @@ const stubLlm = {
     if (nextError) throw nextError;
     return {
       data: nextBrief,
-      model: 'gpt-4.1',
+      model: 'openai/gpt-4.1',
       tokensIn: 10,
       tokensOut: 20,
       costUsd: 0,
       raw: '',
       attempts: 1,
     };
+  },
+  async embed() {
+    return [];
+  },
+} as unknown as LLMProvider;
+
+// OpenAI must NEVER be used for generation — the provider guard routes every
+// generation through OpenRouter. Injected under the `openai` id so that if the
+// guard ever regressed and the service resolved `openai`, every test would fail
+// loudly HERE instead of silently reaching the real OpenAI SDK.
+let openaiTrapCalls = 0;
+const openaiTrap = {
+  id: 'openai',
+  async listModels() {
+    return [];
+  },
+  async complete() {
+    throw new Error('openai.complete must not be used for generation');
+  },
+  async completeStructured() {
+    openaiTrapCalls += 1;
+    throw new Error('generation routed to OpenAI directly — it must go through OpenRouter');
   },
   async embed() {
     return [];
@@ -206,6 +232,7 @@ d('brief routes (Testcontainers pg)', () => {
     nextBrief = VALID_BRIEF;
     nextError = null;
     structuredCalls = [];
+    openaiTrapCalls = 0;
   });
 
   function makeApp() {
@@ -214,7 +241,7 @@ d('brief routes (Testcontainers pg)', () => {
       db: pg.handle.db,
       overrides: {
         secrets: new MockSecretsProvider(),
-        llm: { openai: stubLlm },
+        llm: { openrouter: stubLlm, openai: openaiTrap },
         repoIntel: fakeRepoIntel(EMPTY_RESULT, DEGRADED_STATE),
       },
     });
@@ -260,6 +287,19 @@ d('brief routes (Testcontainers pg)', () => {
     expect(structuredCalls).toHaveLength(1); // GET made no additional call
 
     await app.close();
+  });
+
+  it('routes generation through OpenRouter, never OpenAI directly (provider guard)', async () => {
+    const app = await makeApp();
+    const pr = await seedRepoAndPr(pg.handle.db, workspaceId);
+
+    const res = await app.inject({ method: 'POST', url: `/pulls/${pr.id}/brief` });
+    expect(res.statusCode).toBe(200);
+    // The one structured call reached the OpenRouter stub; the OpenAI provider —
+    // risk_brief's registry default — was never touched, because the guard
+    // rewrote the resolved choice to openrouter / openai/gpt-4.1.
+    expect(structuredCalls.length).toBe(1);
+    expect(openaiTrapCalls).toBe(0);
   });
 
   it('second GET after caching serves the SAME brief with ZERO further LLM calls (AC-8)', async () => {

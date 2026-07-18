@@ -14,16 +14,22 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { SectionLabel, Button, Badge, Skeleton, ErrorState, Markdown, SEV } from "@devdigest/ui";
-import type { Risk, RiskSeverity, ReviewFocus } from "@devdigest/shared";
+import { SectionLabel, Button, Badge, Skeleton, ErrorState, Markdown, SEV, CircularScore, Icon } from "@devdigest/ui";
+import type { Risk, RiskSeverity, ReviewFocus, Verdict } from "@devdigest/shared";
 import { useBrief, useRegenerateBrief } from "@/lib/hooks/brief";
-import { RISK_LEVEL_TO_SEV, shouldAutoGenerate, formatFileRef, fileRefLink } from "./helpers";
+import { formatCost } from "@/components/run-cost-badge";
+import type { PrReviewSummary } from "./helpers";
+import { RISK_LEVEL_TO_SEV, VERDICT_META, shouldAutoGenerate, formatFileRef, fileRefLink, focusTarget } from "./helpers";
 import { s } from "./styles";
 
 interface PrBriefCardProps {
   prId: string | null;
   repoFullName: string | null;
   headSha: string;
+  /** Latest review-run headline numbers for the header band (score/cost/findings). */
+  reviewSummary: PrReviewSummary;
+  /** Focus a file:line in the internal Files-changed tab (review-focus clicks). */
+  onFocusDiffLine: (file: string, line: number) => void;
 }
 
 function CardShell({
@@ -40,6 +46,22 @@ function CardShell({
       </SectionLabel>
       {children}
     </section>
+  );
+}
+
+function VerdictChip({ verdict, t }: { verdict: Verdict; t: ReturnType<typeof useTranslations> }) {
+  // Icon/color reflect the aggregate verdict (most severe finding across all
+  // runs) — a red XCircle for blockers, an approve check when nothing is
+  // flagged, etc. — not a fixed glyph.
+  const meta = VERDICT_META[verdict];
+  const VIcon = Icon[meta.icon];
+  return (
+    <span style={s.verdictChip}>
+      <span style={{ ...s.verdictIconBox, background: meta.bg, color: meta.c }}>
+        <VIcon size={16} />
+      </span>
+      <span style={{ ...s.verdictLabel, color: meta.c }}>{t(`verdict.${meta.labelKey}`)}</span>
+    </span>
   );
 }
 
@@ -114,22 +136,38 @@ function RiskRow({
 
 function FocusRow({
   item,
-  repoFullName,
-  headSha,
+  onFocusDiffLine,
 }: {
   item: ReviewFocus;
-  repoFullName: string | null;
-  headSha: string;
+  onFocusDiffLine: (file: string, line: number) => void;
 }) {
+  // Review-focus documents open the INTERNAL Files-changed tab (not GitHub):
+  // navigable file refs render as a button that focuses the diff line; endpoint
+  // refs (no file to open) stay plain text.
+  const target = focusTarget(item.file_ref, item.line);
+  const label = formatFileRef(item.file_ref, item.line);
   return (
     <li style={s.focusRow}>
-      <FileRefLink fileRef={item.file_ref} line={item.line} repoFullName={repoFullName} headSha={headSha} />
+      {target ? (
+        <button
+          type="button"
+          className="mono"
+          style={s.focusLinkBtn}
+          onClick={() => onFocusDiffLine(target.path, target.line)}
+        >
+          {label}
+        </button>
+      ) : (
+        <span className="mono" style={s.fileRefPlain}>
+          {label}
+        </span>
+      )}
       <span style={s.focusReason}>— {item.reason}</span>
     </li>
   );
 }
 
-export function PrBriefCard({ prId, repoFullName, headSha }: PrBriefCardProps) {
+export function PrBriefCard({ prId, repoFullName, headSha, reviewSummary, onFocusDiffLine }: PrBriefCardProps) {
   const t = useTranslations("brief");
   const { data, isLoading, isError: queryError, refetch } = useBrief(prId);
   const regenerate = useRegenerateBrief(prId);
@@ -216,8 +254,26 @@ export function PrBriefCard({ prId, repoFullName, headSha }: PrBriefCardProps) {
     </div>
   );
 
+  const showBand = reviewSummary.score != null || reviewSummary.findingsCount > 0;
+
   return (
     <CardShell right={regenButton}>
+      {showBand && (
+        <div style={s.reviewBand}>
+          <div style={s.reviewMeta}>
+            {reviewSummary.verdict && <VerdictChip verdict={reviewSummary.verdict} t={t} />}
+            <Badge color="var(--text-secondary)">
+              {t("review.findings", { count: reviewSummary.findingsCount })}
+              {reviewSummary.blockers > 0 ? t("review.blockers", { count: reviewSummary.blockers }) : ""}
+            </Badge>
+          </div>
+          <div style={s.scoreCol}>
+            {reviewSummary.score != null && <CircularScore score={reviewSummary.score} size={48} stroke={5} />}
+            {reviewSummary.score != null && <span style={s.scoreLabel}>{t("review.prScore")}</span>}
+            {reviewSummary.costUsd != null && <span style={s.cost}>{formatCost(reviewSummary.costUsd)}</span>}
+          </div>
+        </div>
+      )}
       {stale && <p style={s.staleHint}>{t("stale.hint")}</p>}
       {regenerate.isError && (
         <p role="alert" style={s.inlineError}>
@@ -255,7 +311,7 @@ export function PrBriefCard({ prId, repoFullName, headSha }: PrBriefCardProps) {
         ) : (
           <ul style={s.focusList}>
             {brief.review_focus.map((item, i) => (
-              <FocusRow key={`${item.file_ref}-${i}`} item={item} repoFullName={repoFullName} headSha={headSha} />
+              <FocusRow key={`${item.file_ref}-${i}`} item={item} onFocusDiffLine={onFocusDiffLine} />
             ))}
           </ul>
         )}

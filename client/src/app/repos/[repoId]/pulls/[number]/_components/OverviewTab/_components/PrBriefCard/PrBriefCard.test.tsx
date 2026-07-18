@@ -9,6 +9,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Brief, BriefEnvelope } from "@devdigest/shared";
+import type { PrReviewSummary } from "./helpers";
 import messages from "../../../../../../../../../../messages/en/brief.json";
 
 const BRIEF: Brief = {
@@ -53,6 +54,21 @@ const EMPTY_ENVELOPE: BriefEnvelope = {
   stale: false,
 };
 
+const NO_REVIEW: PrReviewSummary = {
+  verdict: null,
+  score: null,
+  costUsd: null,
+  findingsCount: 0,
+  blockers: 0,
+};
+const REVIEW: PrReviewSummary = {
+  verdict: "request_changes",
+  score: 61,
+  costUsd: 0.014,
+  findingsCount: 6,
+  blockers: 2,
+};
+
 let mockResult: {
   data: BriefEnvelope | null | undefined;
   isLoading: boolean;
@@ -60,6 +76,7 @@ let mockResult: {
   refetch?: () => void;
 };
 const regenerateMutate = vi.fn();
+const focusDiffLine = vi.fn();
 let regenerateState: { mutate: () => void; isPending: boolean; isError: boolean };
 
 vi.mock("@/lib/hooks/brief", () => ({
@@ -71,21 +88,32 @@ import { PrBriefCard } from "./PrBriefCard";
 
 beforeEach(() => {
   regenerateMutate.mockClear();
+  focusDiffLine.mockClear();
   regenerateState = { mutate: regenerateMutate, isPending: false, isError: false };
 });
 
 afterEach(cleanup);
 
-function renderCard(props?: { prId?: string | null; repoFullName?: string | null }) {
-  return render(
+function cardEl(props?: {
+  prId?: string | null;
+  repoFullName?: string | null;
+  reviewSummary?: PrReviewSummary;
+}) {
+  return (
     <NextIntlClientProvider locale="en" messages={{ brief: messages }}>
       <PrBriefCard
         prId={props?.prId === undefined ? "pr1" : props.prId}
         repoFullName={props?.repoFullName === undefined ? "acme/payments-api" : props.repoFullName}
         headSha="abc123"
+        reviewSummary={props?.reviewSummary ?? NO_REVIEW}
+        onFocusDiffLine={focusDiffLine}
       />
-    </NextIntlClientProvider>,
+    </NextIntlClientProvider>
   );
+}
+
+function renderCard(props?: { prId?: string | null; repoFullName?: string | null; reviewSummary?: PrReviewSummary }) {
+  return render(cardEl(props));
 }
 
 describe("PrBriefCard", () => {
@@ -98,7 +126,7 @@ describe("PrBriefCard", () => {
     expect(screen.queryByRole("button", { name: /regenerate/i })).not.toBeInTheDocument();
   });
 
-  it("renders the loaded brief: color-coded risk_level with a text label, review_focus rows linking to files with reasons, and risk rows with severity + file links", () => {
+  it("renders the loaded brief: color-coded risk_level with a text label, review_focus rows (internal file buttons) with reasons, and risk rows with severity + github file links", () => {
     mockResult = { data: ENVELOPE, isLoading: false };
     renderCard();
 
@@ -106,15 +134,11 @@ describe("PrBriefCard", () => {
     expect(screen.getByText("Risk level")).toBeInTheDocument();
     expect(screen.getAllByText("High risk").length).toBeGreaterThan(0);
 
-    // review_focus rows: file link (+ line) plus its reason.
-    const focusLink = screen.getByRole("link", { name: "src/middleware/ratelimit.ts:52" });
-    expect(focusLink).toHaveAttribute(
-      "href",
-      "https://github.com/acme/payments-api/blob/abc123/src/middleware/ratelimit.ts#L52",
-    );
+    // review_focus rows: an INTERNAL button (not a github link) + its reason.
+    expect(screen.getByRole("button", { name: "src/middleware/ratelimit.ts:52" })).toBeInTheDocument();
     expect(screen.getByText(/429 branch omits the Retry-After header/)).toBeInTheDocument();
 
-    // risks rows: severity badge + explanation + a link per file_ref.
+    // risks rows: severity badge + explanation + a (github) link per file_ref.
     expect(screen.getByText("N+1 query under the new limiter")).toBeInTheDocument();
     const riskLink = screen.getByRole("link", { name: "src/api/users.ts:46" });
     expect(riskLink).toHaveAttribute(
@@ -122,6 +146,57 @@ describe("PrBriefCard", () => {
       "https://github.com/acme/payments-api/blob/abc123/src/api/users.ts#L46",
     );
     expect(regenerateMutate).not.toHaveBeenCalled();
+  });
+
+  it("review-focus click opens the INTERNAL Files-changed tab (onFocusDiffLine with file+line), not GitHub", () => {
+    mockResult = { data: ENVELOPE, isLoading: false };
+    renderCard();
+
+    fireEvent.click(screen.getByRole("button", { name: "src/middleware/ratelimit.ts:52" }));
+    expect(focusDiffLine).toHaveBeenCalledWith("src/middleware/ratelimit.ts", 52);
+    // Review-focus is no longer a github link.
+    expect(
+      screen.queryByRole("link", { name: "src/middleware/ratelimit.ts:52" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a non-file review-focus ref (endpoint) as plain text, not an internal link", () => {
+    const withEndpoint: Brief = {
+      ...BRIEF,
+      review_focus: [{ file_ref: "GET /api/public/items", line: null, reason: "rate-limited path" }],
+    };
+    mockResult = { data: { brief: withEndpoint, generated_at: "now", stale: false }, isLoading: false };
+    renderCard();
+
+    expect(screen.queryByRole("button", { name: "GET /api/public/items" })).not.toBeInTheDocument();
+    expect(screen.getByText("GET /api/public/items")).toBeInTheDocument();
+  });
+
+  it("renders the review header band — aggregate verdict, PR score, cost, and findings·blockers — when a review exists", () => {
+    mockResult = { data: ENVELOPE, isLoading: false };
+    renderCard({ reviewSummary: REVIEW });
+
+    expect(screen.getByText("Request changes")).toBeInTheDocument();
+    expect(screen.getByText(/6 findings/)).toBeInTheDocument();
+    expect(screen.getByText(/· 2 blockers/)).toBeInTheDocument();
+    expect(screen.getByText("PR score")).toBeInTheDocument();
+    expect(screen.getByText("$0.014")).toBeInTheDocument();
+  });
+
+  it("renders an 'Approve' verdict when the review has no blockers", () => {
+    mockResult = { data: ENVELOPE, isLoading: false };
+    renderCard({ reviewSummary: { verdict: "approve", score: 95, costUsd: 0.002, findingsCount: 0, blockers: 0 } });
+
+    expect(screen.getByText("Approve")).toBeInTheDocument();
+    expect(screen.queryByText("Request changes")).not.toBeInTheDocument();
+  });
+
+  it("omits the review band when there is no review yet (no score, no findings)", () => {
+    mockResult = { data: ENVELOPE, isLoading: false };
+    renderCard({ reviewSummary: NO_REVIEW });
+
+    expect(screen.queryByText("PR score")).not.toBeInTheDocument();
+    expect(screen.queryByText(/findings/)).not.toBeInTheDocument();
   });
 
   it("shows explicit 'none flagged' copy for empty risks and review_focus, never a blank region", () => {
@@ -150,11 +225,7 @@ describe("PrBriefCard", () => {
     expect(regenerateMutate).toHaveBeenCalledTimes(1);
 
     regenerateState = { mutate: regenerateMutate, isPending: true, isError: false };
-    rerender(
-      <NextIntlClientProvider locale="en" messages={{ brief: messages }}>
-        <PrBriefCard prId="pr1" repoFullName="acme/payments-api" headSha="abc123" />
-      </NextIntlClientProvider>,
-    );
+    rerender(cardEl());
     expect(screen.getByRole("button", { name: /regenerate/i })).toBeDisabled();
   });
 
@@ -168,11 +239,7 @@ describe("PrBriefCard", () => {
     // Re-render several times with the same (still-null) data — must not
     // fire a second POST (AC-25 client-side guard).
     for (let i = 0; i < 3; i++) {
-      rerender(
-        <NextIntlClientProvider locale="en" messages={{ brief: messages }}>
-          <PrBriefCard prId="pr1" repoFullName="acme/payments-api" headSha="abc123" />
-        </NextIntlClientProvider>,
-      );
+      rerender(cardEl());
     }
     await waitFor(() => expect(regenerateMutate).toHaveBeenCalledTimes(1));
   });

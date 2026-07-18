@@ -2,6 +2,16 @@
   "placeholder": "Open a PR to see its brief.",
   "generating": "Generating brief…",
   "regenerate": "Regenerate",
+  "review": {
+    "findings": "{count} findings",
+    "blockers": " · {count} blockers",
+    "prScore": "PR score"
+  },
+  "verdict": {
+    "requestChanges": "Request changes",
+    "approve": "Approve",
+    "comment": "Comment"
+  },
   "riskLevel": {
     "label": "Risk level",
     "high": "High risk",
