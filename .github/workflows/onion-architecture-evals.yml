@@ -1,0 +1,47 @@
+# Regression eval for the onion-architecture skill (.claude/skills/onion-architecture).
+#
+# Re-runs each fixture in evals/fixtures/ through `claude -p` with the skill
+# and grades the review against evals/evals.json's expectations. Costs
+# Anthropic API credits per run (~20 `claude -p` calls: 10 reviews + 10
+# gradings), so this is scoped to only fire when the skill itself changes,
+# plus manual dispatch — not on every PR.
+name: onion-architecture skill evals
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.claude/skills/onion-architecture/**'
+      - '.github/workflows/onion-architecture-evals.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: onion-architecture-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run onion-architecture skill evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 .claude/skills/onion-architecture/evals/scripts/run_evals.py --threshold 0.9
+
+      - name: Upload eval outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: onion-architecture-eval-results
+          path: .claude/skills/onion-architecture/evals/ci-runs/

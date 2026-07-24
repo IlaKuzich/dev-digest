@@ -1,0 +1,175 @@
+{
+  "skill_name": "onion-architecture",
+  "evals": [
+    {
+      "id": 1,
+      "name": "service-news-adapter",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/01-service-news-adapter/modules/webhooks/` as if it lived at `server/src/modules/webhooks/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that WebhookService directly instantiates a concrete adapter (`new SlackNotifier(...)` in service.ts) instead of resolving it off the Container (`this.container.slack` or similar), citing service.ts and the 'Service `new`s an adapter' common mistake.",
+      "files": [
+        "evals/fixtures/01-service-news-adapter/modules/webhooks/routes.ts",
+        "evals/fixtures/01-service-news-adapter/modules/webhooks/service.ts",
+        "evals/fixtures/01-service-news-adapter/modules/webhooks/repository.ts",
+        "evals/fixtures/01-service-news-adapter/modules/webhooks/helpers.ts",
+        "evals/fixtures/01-service-news-adapter/modules/webhooks/constants.ts"
+      ],
+      "expectations": [
+        "Identifies that service.ts instantiates a concrete adapter class directly instead of resolving it via the Container",
+        "Does not raise this same complaint about repository.ts or routes.ts (which are compliant)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "route-business-logic",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/02-route-business-logic/modules/labels/` as if it lived at `server/src/modules/labels/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that routes.ts contains business logic (dedupe/merge of labels, capping at MAX_LABELS_PER_PR) that belongs in service.ts, citing the PUT /pulls/:id/labels handler.",
+      "files": [
+        "evals/fixtures/02-route-business-logic/modules/labels/routes.ts",
+        "evals/fixtures/02-route-business-logic/modules/labels/service.ts",
+        "evals/fixtures/02-route-business-logic/modules/labels/repository.ts",
+        "evals/fixtures/02-route-business-logic/modules/labels/helpers.ts",
+        "evals/fixtures/02-route-business-logic/modules/labels/constants.ts"
+      ],
+      "expectations": [
+        "Identifies that routes.ts contains branching/looping business logic instead of delegating to LabelService",
+        "Points out this logic (or an equivalent) belongs in service.ts, not the transport layer"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "repository-row-leak",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/03-repository-row-leak/modules/comments/` as if it lived at `server/src/modules/comments/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that CommentService returns the raw Drizzle row type (CommentRow) straight through to routes.ts / the HTTP client instead of mapping it to a contract DTO, and notes the missing helpers.ts row->DTO mapping step.",
+      "files": [
+        "evals/fixtures/03-repository-row-leak/modules/comments/routes.ts",
+        "evals/fixtures/03-repository-row-leak/modules/comments/service.ts",
+        "evals/fixtures/03-repository-row-leak/modules/comments/repository.ts",
+        "evals/fixtures/03-repository-row-leak/modules/comments/constants.ts"
+      ],
+      "expectations": [
+        "Identifies that the Drizzle row (CommentRow) is exposed to the client without being mapped to a DTO",
+        "Notes the absence of a helpers.ts mapping function as part of the same issue"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "cross-module-reach-in",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/04-cross-module-reach-in/modules/exports/` as if it lived at `server/src/modules/exports/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that ExportService imports and instantiates `RepoRepository` from the `repos` module directly (`import { RepoRepository } from '../repos/repository.js'`) instead of going through the Container, citing 'cross-module reach-in'.",
+      "files": [
+        "evals/fixtures/04-cross-module-reach-in/modules/exports/routes.ts",
+        "evals/fixtures/04-cross-module-reach-in/modules/exports/service.ts",
+        "evals/fixtures/04-cross-module-reach-in/modules/exports/repository.ts",
+        "evals/fixtures/04-cross-module-reach-in/modules/exports/helpers.ts",
+        "evals/fixtures/04-cross-module-reach-in/modules/exports/constants.ts"
+      ],
+      "expectations": [
+        "Identifies the direct import of another module's repository.ts (../repos/repository.js) as a cross-module reach-in violation",
+        "Recommends exposing the cross-cutting repo via the Container instead"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "domain-core-infra-leak",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/05-domain-core-infra-leak/modules/notifications/` as if it lived at `server/src/modules/notifications/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that ports.ts (the module's port/contract interface) imports drizzle-orm and the DB schema (`InferSelectModel<typeof t.notifications>`) directly, contaminating a supposedly pure interface with an infrastructure dependency.",
+      "files": [
+        "evals/fixtures/05-domain-core-infra-leak/modules/notifications/ports.ts",
+        "evals/fixtures/05-domain-core-infra-leak/modules/notifications/routes.ts",
+        "evals/fixtures/05-domain-core-infra-leak/modules/notifications/service.ts",
+        "evals/fixtures/05-domain-core-infra-leak/modules/notifications/repository.ts",
+        "evals/fixtures/05-domain-core-infra-leak/modules/notifications/helpers.ts",
+        "evals/fixtures/05-domain-core-infra-leak/modules/notifications/constants.ts"
+      ],
+      "expectations": [
+        "Identifies that ports.ts imports drizzle-orm / the db schema directly, violating the pure-interface rule",
+        "Recommends the port type be defined independently of the Drizzle row shape"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "process-env-secret",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/06-process-env-secret/modules/digest/` as if it lived at `server/src/modules/digest/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that DigestService reads `process.env.DIGEST_WEBHOOK_URL` directly instead of resolving the secret via SecretsProvider (or config via AppConfig).",
+      "files": [
+        "evals/fixtures/06-process-env-secret/modules/digest/routes.ts",
+        "evals/fixtures/06-process-env-secret/modules/digest/service.ts",
+        "evals/fixtures/06-process-env-secret/modules/digest/repository.ts",
+        "evals/fixtures/06-process-env-secret/modules/digest/helpers.ts",
+        "evals/fixtures/06-process-env-secret/modules/digest/constants.ts"
+      ],
+      "expectations": [
+        "Identifies the direct `process.env` read in service.ts as a violation",
+        "Recommends routing it through SecretsProvider instead"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "missing-tenancy-guard",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/07-missing-tenancy-guard/modules/teams/` as if it lived at `server/src/modules/teams/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "Flags that `TeamRepository.getById` filters only by `id` with no `workspaceId` scope (unlike `list` and `rename` in the same file), an IDOR / missing-tenancy-guard violation, and that TeamService.get calls it without ever passing workspaceId into the query.",
+      "files": [
+        "evals/fixtures/07-missing-tenancy-guard/modules/teams/routes.ts",
+        "evals/fixtures/07-missing-tenancy-guard/modules/teams/service.ts",
+        "evals/fixtures/07-missing-tenancy-guard/modules/teams/repository.ts",
+        "evals/fixtures/07-missing-tenancy-guard/modules/teams/helpers.ts",
+        "evals/fixtures/07-missing-tenancy-guard/modules/teams/constants.ts"
+      ],
+      "expectations": [
+        "Identifies that TeamRepository.getById is not scoped by workspaceId while sibling methods (list, rename) are",
+        "Names the security/tenancy (IDOR) implication, not just a style nitpick"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "clean-type-only-import",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/08-clean-type-only-import/modules/reviewers-queue/` as if it lived at `server/src/modules/reviewers-queue/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "The module is compliant. service.ts imports only a TYPE (`PrSummary`) from another module's contracts file, not its repository, which is a legitimate DTO-sharing pattern, not a cross-module reach-in. All persistence goes through the Container-resolved repository and jobs port correctly.",
+      "files": [
+        "evals/fixtures/08-clean-type-only-import/modules/reviewers-queue/routes.ts",
+        "evals/fixtures/08-clean-type-only-import/modules/reviewers-queue/service.ts",
+        "evals/fixtures/08-clean-type-only-import/modules/reviewers-queue/repository.ts",
+        "evals/fixtures/08-clean-type-only-import/modules/reviewers-queue/helpers.ts",
+        "evals/fixtures/08-clean-type-only-import/modules/reviewers-queue/constants.ts"
+      ],
+      "expectations": [
+        "Does NOT flag the `import type { PrSummary } from '../pulls/contracts.js'` line as a cross-module reach-in violation",
+        "Overall verdict is compliant / no architecture violations found"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "clean-row-to-dto-helper",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/09-clean-row-to-dto-helper/modules/attachments/` as if it lived at `server/src/modules/attachments/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "The module is compliant. helpers.ts's `toAttachmentDto` takes the Drizzle row type only as an input parameter to immediately map it to a DTO — the canonical row->DTO pattern, not a leak. Adapter access goes through `this.container.storage`.",
+      "files": [
+        "evals/fixtures/09-clean-row-to-dto-helper/modules/attachments/routes.ts",
+        "evals/fixtures/09-clean-row-to-dto-helper/modules/attachments/service.ts",
+        "evals/fixtures/09-clean-row-to-dto-helper/modules/attachments/repository.ts",
+        "evals/fixtures/09-clean-row-to-dto-helper/modules/attachments/helpers.ts",
+        "evals/fixtures/09-clean-row-to-dto-helper/modules/attachments/constants.ts"
+      ],
+      "expectations": [
+        "Does NOT flag AttachmentRow being used as a parameter type in helpers.ts as a repository-row leak",
+        "Overall verdict is compliant / no architecture violations found"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "clean-orchestration-loop",
+      "prompt": "Review the DevDigest server feature module at `evals/fixtures/10-clean-orchestration-loop/modules/schedules/` as if it lived at `server/src/modules/schedules/`. Check it for onion-architecture / dependency-rule compliance. List any violations you find with file:line evidence and say which layer the code should actually live in. If the module is fully compliant, say so explicitly and don't invent problems.",
+      "expected_output": "The module is compliant. ScheduleService.runDue's loop/branching over due schedules is orchestration logic correctly placed in service.ts (not routes.ts), and it falls back to `this.container.config.timezoneDefault` (AppConfig) rather than reading process.env.",
+      "files": [
+        "evals/fixtures/10-clean-orchestration-loop/modules/schedules/routes.ts",
+        "evals/fixtures/10-clean-orchestration-loop/modules/schedules/service.ts",
+        "evals/fixtures/10-clean-orchestration-loop/modules/schedules/repository.ts",
+        "evals/fixtures/10-clean-orchestration-loop/modules/schedules/helpers.ts",
+        "evals/fixtures/10-clean-orchestration-loop/modules/schedules/constants.ts"
+      ],
+      "expectations": [
+        "Does NOT flag the for-loop/branching in ScheduleService.runDue as misplaced business logic (it is correctly in service.ts)",
+        "Overall verdict is compliant / no architecture violations found"
+      ]
+    }
+  ]
+}
