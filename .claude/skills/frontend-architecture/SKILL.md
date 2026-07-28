@@ -139,3 +139,6 @@ Who calls this endpoint?
 ## Sources
 
 All 51 research URLs → [README.md](README.md)
+
+<!-- ci trigger test: confirms eval-skills SKIPs this skill (no evals written) -->
+

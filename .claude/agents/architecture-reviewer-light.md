@@ -264,3 +264,6 @@ The `Verdict:` line is mandatory on every review, always the last line, and alwa
 ## Based on
 
 Same sourcing as `architecture-reviewer` (see that agent's file for the full citation table) — this variant only changes preload composition and the severity cap described above.
+
+<!-- ci trigger test: confirms eval-agents runs for this agent -->
+
