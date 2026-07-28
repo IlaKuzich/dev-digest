@@ -1,6 +1,6 @@
 ---
 name: react-best-practices
-description: "Modern React best practices and anti-pattern catalog (2025-26). Use when writing, reviewing, or refactoring React components, hooks, and state management. Covers component design, state patterns, hooks misuse, performance, data fetching, and code organization."
+description: "Modern React best practices and anti-pattern catalog (2025-26). Use when writing, reviewing, or refactoring React components and hooks — component design, hooks misuse, performance, data fetching, and state HYGIENE (derived state, useReducer vs useState, URL state). Does NOT cover WHICH state mechanism to pick (local vs lifted vs Context vs Zustand vs TanStack Query) or WHERE files/folders/logic live — see frontend-architecture for state placement and code organization decisions."
 ---
 
 # React Best Practices & Anti-Patterns
@@ -43,19 +43,13 @@ The #1 React anti-pattern. Look for it in every review.
 - Use `useMemo` ONLY if the computation is expensive (measured, not assumed)
 - If a value can be calculated from existing props/state, calculate it inline
 
-## State Management (HIGH)
+## State Hygiene (HIGH)
 
-### State Location
-- Colocate state with the components that use it
-- Don't lift state higher than necessary — it causes unnecessary re-renders
+For WHICH mechanism to use (local state / lifted props / Context / Zustand / TanStack Query),
+see the `frontend-architecture` skill's state-placement decision ladder — that's a placement
+decision, not hygiene. Once a mechanism is picked, these rules apply:
+
 - Don't duplicate state across components
-
-### Context API
-- Context is for dependency injection (auth, theme), NOT global state management
-- Context changes re-render ALL consumers — split contexts by concern
-- Prefer hook return values over Context when only one subtree needs the data
-
-### State Hygiene
 - Not everything needs to be in `useState` — only values that change over time and affect the UI
 - Combine related state with `useReducer` instead of multiple `useState` calls
 - URL-dependent state (filters, pagination, search) belongs in URL search params, not component state
@@ -164,12 +158,10 @@ New arrays, objects, and functions created inline in JSX props break `React.memo
 - Accept `ref` as a regular prop instead of using `forwardRef` (React 19+)
 - With React Compiler enabled, avoid adding `memo`/`useMemo`/`useCallback` unless measured
 
-## Code Organization (MEDIUM)
+## File Quality (MEDIUM)
 
-### Feature-Based Structure
-- Colocate component + hook + helpers + tests per feature
-- Shared utilities go in `utils/` or `components/ui/`
+For WHERE a file/folder/utility belongs, see `frontend-architecture` — this is about a single
+file's internal quality, not its location:
 
-### File Quality
 - Order: imports, constants, helpers, component, exports
 - Reuse existing types and constants over creating new ones

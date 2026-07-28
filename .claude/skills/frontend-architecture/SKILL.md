@@ -4,13 +4,17 @@ description: >
   Code organization and architecture decisions for React 19 + Next.js 15 App Router (TypeScript).
   WHERE code lives, not HOW to write it. Covers: project folder structure, feature-based organization,
   component splitting rules, constants/utils/helpers/services placement, business logic separation,
-  naming conventions, state colocation, and Next.js Server/Client Component boundary decisions.
+  naming conventions, state PLACEMENT (local vs lifted vs Context vs Zustand vs TanStack Query —
+  WHICH mechanism, not its API), and Next.js Server/Client Component boundary decisions.
   TRIGGER when: "where to put", "folder structure", "project structure", "how to organize",
   "where does X live", "code organization", "feature folder", "colocation", "business logic",
   "utils vs helpers", "constants", "component splitting", "Server Component or Client Component",
-  "Server Action or Route Handler", "where do I place".
+  "Server Action or Route Handler", "where do I place", "where should this state live",
+  "Context vs Zustand", "shared state between components", "lift state or not".
   Does NOT cover: React hooks API, component implementation style, Next.js caching/metadata features,
-  state management APIs (use react-best-practices, next-best-practices, or typescript-expert for those).
+  HOW to use a specific state library once chosen — its APIs, selectors, middleware (use
+  react-best-practices for hook/state-usage patterns, next-best-practices for Next.js features,
+  typescript-expert for type-level state typing).
 ---
 
 # Frontend Architecture
@@ -33,7 +37,7 @@ This skill covers structural and organizational decisions for React 19 + Next.js
 
 | Skill | What it covers (NOT this skill) |
 |---|---|
-| `react-best-practices` | Component APIs, hooks patterns, performance, anti-patterns |
+| `react-best-practices` | Component APIs, hooks patterns, performance, anti-patterns, state HYGIENE (not placement) |
 | `next-best-practices` | RSC data fetching, caching, metadata, image optimization |
 | `typescript-expert` | Type-level programming, generic patterns, type utilities |
 

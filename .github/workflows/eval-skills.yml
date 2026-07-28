@@ -3,8 +3,10 @@
 # that skill has a written evals/skills/<name>/*.eval.ts. Content tier talks to OpenRouter
 # directly — no proxy needed — so this is cheap, fast, and BLOCKING. See evals/README.md.
 #
-# Model: OpenRouter, default openai/gpt-4o-mini — override via workflow_dispatch inputs
-# (Actions tab → Run workflow), no code change needed.
+# Model: OpenRouter, default deepseek/deepseek-chat (no tool-dispatch needed on this tier, so
+# DeepSeek's dispatch limitation — see eval-agents.yml — doesn't apply here). Switch the default
+# without touching this file via the repo variable EVAL_SKILLS_MODEL (Settings → Actions →
+# Variables); a workflow_dispatch input (Actions tab → Run workflow) overrides both.
 name: eval-skills
 
 on:
@@ -41,8 +43,8 @@ concurrency:
 
 env:
   EVAL_BACKEND: openrouter
-  EVAL_MODEL: ${{ inputs.model || 'openai/gpt-4o-mini' }}
-  EVAL_JUDGE_MODEL: ${{ inputs.judge_model || 'openai/gpt-4o-mini' }}
+  EVAL_MODEL: ${{ inputs.model || vars.EVAL_SKILLS_MODEL || 'deepseek/deepseek-chat' }}
+  EVAL_JUDGE_MODEL: ${{ inputs.judge_model || vars.EVAL_SKILLS_MODEL || 'deepseek/deepseek-chat' }}
   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
 jobs:

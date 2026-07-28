@@ -86,3 +86,24 @@ console.error(`agents → run  : ${agents.join(", ") || "(none)"}`);
 console.error(`workflow tier : ${runWorkflow ? "run" : "skip"}`);
 if (skippedSkills.length) console.error(`SKIP skills (no evals): ${skippedSkills.join(", ")}`);
 if (skippedAgents.length) console.error(`SKIP agents (no evals): ${skippedAgents.join(", ")}`);
+
+// Same summary, written to the job's GitHub Step Summary so it's visible on the run's overview
+// page without opening this step's raw log — the SKIP lines are the ones a reviewer needs to
+// notice without digging.
+const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+if (summaryFile) {
+  const lines = [
+    "### Eval change detection",
+    "",
+    `- Skills → run: ${skills.join(", ") || "_none_"}`,
+    `- Agents → run: ${agents.join(", ") || "_none_"}`,
+    `- Workflow tier: ${runWorkflow ? "run" : "skip"}`,
+  ];
+  if (skippedSkills.length) {
+    lines.push(`- ⚠️ SKIP skills (touched, no evals written): ${skippedSkills.join(", ")}`);
+  }
+  if (skippedAgents.length) {
+    lines.push(`- ⚠️ SKIP agents (touched, no evals written): ${skippedAgents.join(", ")}`);
+  }
+  appendFileSync(summaryFile, lines.join("\n") + "\n");
+}
