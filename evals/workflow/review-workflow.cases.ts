@@ -202,12 +202,22 @@ export const cases: WorkflowCase[] = [
   // this go" question activates the SKILL (in-conversation guidance), while an explicit full-audit
   // request does not — it should route to the heavier subagent dispatch instead (already covered by
   // the dispatch case above, reusing the same CHECKOUT_DIFF fixture).
+  // v2: measured 0/4 across two models (Haiku + Sonnet). Root cause had two parts:
+  // (1) a since-removed duplicate `onion-architecture-v2` skill competed for the same routing —
+  //     the model sometimes invoked `v2`, which this eval's strict activated(result, "onion-architecture")
+  //     check doesn't credit; (2) even after removing v2, the model still skipped Skill entirely and
+  //     answered via Read/Glob/Bash — "перевірка ліміту ревʼю по репозиторію" reads like a real ticket,
+  //     inviting it to go look at actual server/ modules for precedent instead of reasoning from the
+  //     skill's rules. Same failure shape as the frontend-architecture case above (v1→v3 fix). v3 drops
+  //     the concrete feature name and goes hypothetical, same technique.
   {
     kind: "activation",
     name: "onion-architecture activates on a routine layering placement question",
     prompt:
-      "Я додаю нову бізнес-логіку для перевірки ліміту ревʼю по репозиторію — куди в структурі server/ " +
-      "її класти: у service.ts, у repository.ts, чи окремий домен-обʼєкт?",
+      "Уявімо (без прив'язки до конкретної існуючої фічі чи модуля): я додаю нове бізнес-правило, яке " +
+      "спершу читає дані з БД, а потім на їх основі приймає рішення (дозволити/відхилити дію). За " +
+      "конвенціями цього проєкту (Fastify + Drizzle backend), в якому файлі шару — routes.ts, " +
+      "service.ts чи repository.ts — має жити саме це рішення, і чому?",
     skill: "onion-architecture",
     shouldActivate: true,
     maxTurns: 6,

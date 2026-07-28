@@ -5,10 +5,14 @@ description: >
   Defines the four concentric layers (Domain, Application, Infrastructure, Presentation), the inward-only
   dependency rule, and how each tool maps to a layer.
   TRIGGER when: adding a new backend module, touching routes.ts / service.ts / repository.ts,
-  "where does X go", "what layer", "can I import", adding new adapter, touching container.ts,
-  service directly queries DB, route handler contains business logic, Drizzle schema imported in service.
-  Does NOT cover: Fastify plugin API details (use fastify-best-practices), Drizzle query syntax
-  (use drizzle-orm-patterns), Zod schema syntax (use zod), PostgreSQL schema design (use postgresql-table-design).
+  "where does X go", "what layer", "can I import", a new business rule/validation/decision — does it
+  belong in service.ts (orchestration, decisions) or repository.ts (persistence, no decisions)?,
+  adding new adapter, touching container.ts, service directly queries DB, route handler contains
+  business logic, Drizzle schema imported in service.
+  Does NOT cover (narrower, separate concern): wiring an adapter through the DI container or reading
+  request/SSE flow end-to-end — that's server/docs/architecture.md, not this skill. Also not: Fastify
+  plugin API details (use fastify-best-practices), Drizzle query syntax (use drizzle-orm-patterns),
+  Zod schema syntax (use zod), PostgreSQL schema design (use postgresql-table-design).
 ---
 
 # Onion Architecture

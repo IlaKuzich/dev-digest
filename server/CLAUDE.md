@@ -40,7 +40,8 @@ src/
 
 ## Read When
 
-- **Understanding DI flow or adding an adapter** → `server/docs/architecture.md`
+- **Deciding which layer a new business rule/validation/decision belongs in (service.ts vs repository.ts)** → invoke the `onion-architecture` skill
+- **Understanding DI flow or adding an adapter (container wiring specifically)** → `server/docs/architecture.md`
 - **Adding/changing a route or SSE stream** → `server/docs/api-contracts.md`
 - **Tracing the full review lifecycle** → `server/specs/review-flow.md`
 - **Hit unexpected behavior** → `server/insights/gotchas.md`
