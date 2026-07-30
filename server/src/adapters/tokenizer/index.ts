@@ -8,8 +8,12 @@
  * lazy-initialised (loading the BPE ranks is the heavy part) and any failure
  * falls back to the `ceil(chars / 4)` heuristic — the renderer must never throw.
  *
- * Scope: in-process, ONLY under modules/repo-intel. Swappable in tests via a
- * mock counter (ContainerOverrides.tokenizer).
+ * Scope: in-process, under modules/repo-intel AND modules/context (T3 of
+ * `docs/plans/2026-07-17-project-context.md` — per-document token estimates
+ * for discovery/attach, spec §Non-functional "Module boundary"). Widened
+ * deliberately rather than duplicated: both consumers need an offline,
+ * zero-network token estimate and this port already provides exactly that.
+ * Swappable in tests via a mock counter (ContainerOverrides.tokenizer).
  */
 import { getEncoding, type Tiktoken } from 'js-tiktoken';
 

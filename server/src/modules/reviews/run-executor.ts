@@ -10,6 +10,9 @@ import { taskLine, formatSkillsForPrompt } from './helpers.js';
 import { loadDiff } from './diff-loader.js';
 import { IntentService } from '../intent/service.js';
 import { formatIntentForPrompt } from '../intent/helpers.js';
+import { ContextService, ContextDocTooLargeError } from '../context/service.js';
+import { CONTEXT_MAX_DOC_BYTES, MODEL_CONTEXT_WINDOWS, OVERFLOW_MARGIN } from '../context/constants.js';
+import { estimateTokensBounded } from '../context/helpers.js';
 
 /** Thrown by a run when the user cancels it mid-flight (between map files). */
 export class RunCancelledError extends Error {
@@ -208,6 +211,77 @@ export class ReviewRunExecutor {
       const enabledSkills = await this.agents.enabledSkillsForAgent(agent.id);
       const skills = formatSkillsForPrompt(enabledSkills);
 
+      // T4 (project context) — resolve this agent's skill-inherited + own
+      // attached docs from the LAST-SYNCED clone, guarded (path traversal,
+      // symlinks, size). `resolveForAgent` degrades to `{ injected: [],
+      // skipped: [] }` when there's no clone at all (AC-2's run-time
+      // analogue).
+      const contextService = new ContextService(this.container);
+      let contextResolution: Awaited<ReturnType<ContextService['resolveForAgent']>>;
+      try {
+        contextResolution = await contextService.resolveForAgent(workspaceId, agent.id, repo.clonePath ?? null);
+      } catch (err) {
+        // AC-29 — an oversized attached document is a crash guard firing, not
+        // a generic failure: FAIL the run explicitly here (rather than let it
+        // fall through to whatever the next unrelated throw would say) with a
+        // message naming the document + its size. `ContextDocTooLargeError`
+        // already composes that message; do not swallow or downgrade it —
+        // rethrow so the outer catch persists it as this run's failure.
+        if (err instanceof ContextDocTooLargeError) {
+          throw new Error(
+            `Project context document too large to inject: ${err.path} (${err.size} bytes, bound ${CONTEXT_MAX_DOC_BYTES} bytes).`,
+          );
+        }
+        throw err;
+      }
+      // AC-16/AC-17 — a guard-rejected or missing/renamed attached doc is
+      // skipped, not fatal: log each one (Live Log + persisted trace log via
+      // runLog) and keep going; `specs_read` below only lists what actually
+      // got injected.
+      for (const skipped of contextResolution.skipped) {
+        runLog.info('context: skipped attached document', { path: skipped.path, reason: skipped.reason });
+      }
+      if (contextResolution.injected.length > 0) {
+        runLog.info(`context: ${contextResolution.injected.length} document(s) attached for injection`);
+      }
+
+      // AC-18 — pre-flight overflow check (NOT a caught provider error): a
+      // rough `cl100k_base`-style estimate of the whole assembled prompt
+      // (system + skills + diff + injected project context — the pieces
+      // reviewer-core's assemblePrompt itself renders), compared against a
+      // small model→window map. Unknown model → skip the check ENTIRELY —
+      // including the encode itself (architecture-review W1: the encode, not
+      // just the comparison, is the CPU cost that must be gated; there's no
+      // window to compare against for an unmapped model anyway). Known model
+      // → only fail past `window * OVERFLOW_MARGIN` (never an exact
+      // `>= window`), because the estimate is inexact (AC-13). On fail, name
+      // the `## Project context` block specifically, since that's the piece
+      // this feature adds and the one a user can act on by detaching a doc.
+      //
+      // Both calls go through `estimateTokensBounded` (W1), NOT
+      // `tokenizer.count` directly: the injected text is read from a repo
+      // clone any PR author can influence, and real BPE is pathologically
+      // slow on adversarial input (a long run of one repeated character can
+      // peg a worker for minutes) — bounding the slice fed to the real
+      // encoder caps that cost regardless of how the attacker shapes the doc.
+      const contextWindow = MODEL_CONTEXT_WINDOWS[agent.model];
+      if (contextWindow !== undefined) {
+        const projectContextText = contextResolution.injected.map((d) => d.text).join('\n\n');
+        const projectContextTokens = estimateTokensBounded(this.container.tokenizer, projectContextText);
+        const estimatedPromptTokens = estimateTokensBounded(
+          this.container.tokenizer,
+          [agent.systemPrompt, skills, diff.raw, projectContextText, task].join('\n\n'),
+        );
+        if (estimatedPromptTokens > contextWindow * OVERFLOW_MARGIN) {
+          throw new Error(
+            `Assembled prompt exceeds ${agent.model}'s context window: the ` +
+              `\`## Project context\` block alone contributes ~${projectContextTokens} ` +
+              `estimated token(s) toward an assembled prompt of ~${estimatedPromptTokens} ` +
+              `token(s) (model window ~${contextWindow}).`,
+          );
+        }
+      }
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -232,6 +306,10 @@ export class ReviewRunExecutor {
         // Derived (or previously stored) intent + scope — same omit-when-empty
         // contract; null when derivation failed above.
         ...(intent ? { intent: formatIntentForPrompt(intent) } : {}),
+        // Project context (T4) — the EXISTING reviewer-core `specs` seam. When
+        // nothing was injected the key is OMITTED (not `specs: []`) so the
+        // assembled prompt is byte-identical to the pre-feature prompt (AC-20).
+        ...(contextResolution.injected.length ? { specs: contextResolution.injected.map((d) => d.text) } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),
@@ -308,7 +386,9 @@ export class ReviewRunExecutor {
         })),
         raw_output: outcome.raw,
         memory_pulled: [],
-        specs_read: [],
+        // AC-22 — the repo-relative paths actually injected this run (never
+        // the skipped ones); empty when nothing was attached/inherited.
+        specs_read: contextResolution.injected.map((d) => d.path),
         // Persisted log = the run's FULL event buffer (incl. shared pre-work:
         // diff load + intent), not just events recorded inside this method.
         log: runLog.logFor(runId),

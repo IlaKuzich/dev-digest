@@ -120,3 +120,33 @@ export const PrBrief = z.object({
   history: PrHistory,
 });
 export type PrBrief = z.infer<typeof PrBrief>;
+
+// ---- Why+Risk Brief output (2026-07-17-why-risk-brief) ----
+// A "read these first" row: a grounded file reference (+ optional line) and why.
+export const ReviewFocus = z.object({
+  file_ref: z.string(),
+  reason: z.string(),
+  line: z.number().int().nullish(),
+});
+export type ReviewFocus = z.infer<typeof ReviewFocus>;
+
+// The composed output brief produced by ONE structured LLM call (AC-3). Distinct
+// from the assembled input bundle `PrBrief` above — do not conflate the two.
+export const Brief = z.object({
+  what: z.string(),
+  why: z.string(),
+  risk_level: RiskSeverity,
+  risks: z.array(Risk),
+  review_focus: z.array(ReviewFocus),
+});
+export type Brief = z.infer<typeof Brief>;
+
+// Transport wrapper returned by GET/POST /pulls/:prId/brief. Server-computed
+// staleness (head_sha comparison) and cache timestamp — not part of the model
+// output itself.
+export const BriefEnvelope = z.object({
+  brief: Brief,
+  generated_at: z.string(),
+  stale: z.boolean(),
+});
+export type BriefEnvelope = z.infer<typeof BriefEnvelope>;

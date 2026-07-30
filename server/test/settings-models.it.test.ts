@@ -50,10 +50,12 @@ d('Settings: feature models + secrets status (Testcontainers pg)', () => {
       provider: 'openrouter',
       model: 'z-ai/glm-4.7-flash',
     });
-    // An unset feature still resolves to its own registry default.
+    // An unset feature resolves to its registry default, then the generation
+    // guard redirects the OpenAI default onto OpenRouter (openai → openrouter,
+    // gpt-4.1 → openai/gpt-4.1) — generation never calls OpenAI directly.
     expect(await resolveFeatureModel(app.container, workspaceId, 'risk_brief')).toEqual({
-      provider: 'openai',
-      model: 'gpt-4.1',
+      provider: 'openrouter',
+      model: 'openai/gpt-4.1',
     });
 
     await app.close();

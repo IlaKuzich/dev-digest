@@ -28,6 +28,29 @@ export function defaultFeatureModel(id: FeatureModelId): FeatureModelChoice {
 }
 
 /**
+ * Project policy — generation NEVER calls OpenAI directly; it always routes
+ * through OpenRouter. Any resolved generation choice on the `openai` provider —
+ * whether the registry default OR a workspace override — is redirected to
+ * `openrouter`, translating a bare OpenAI model id to its OpenRouter slug
+ * (`gpt-4.1` -> `openai/gpt-4.1`; an already-namespaced slug passes through).
+ *
+ * This is the generation-provider chokepoint: every feature that generates text
+ * resolves its model through `resolveFeatureModel`, so guarding here catches
+ * defaults AND overrides for all of them in one place. It is deliberately NOT in
+ * `container.llm('openai')` — that path also builds the OpenAI *embedder*
+ * (`container.embedder()`), which legitimately uses OpenAI and is out of scope,
+ * and `llm()` has no model to translate. Embeddings are unaffected.
+ *
+ * NOTE: OpenRouter slugs (`openai/gpt-4.1`) must be confirmed against
+ * openrouter.ai/models — see the caveat in `adapters/llm/pricing.ts`.
+ */
+export function enforceOpenRouterForGeneration(choice: FeatureModelChoice): FeatureModelChoice {
+  if (choice.provider !== 'openai') return choice;
+  const model = choice.model.includes('/') ? choice.model : `openai/${choice.model}`;
+  return { provider: 'openrouter', model };
+}
+
+/**
  * The workspace's override for `id`, or `undefined` when unset/invalid. Callers
  * that keep their own dynamic default (e.g. conventions) use this directly so
  * that default is preserved; callers with a static default use
@@ -53,5 +76,6 @@ export async function resolveFeatureModel(
   workspaceId: string,
   id: FeatureModelId,
 ): Promise<FeatureModelChoice> {
-  return (await getFeatureModelOverride(container, workspaceId, id)) ?? DEFAULTS[id];
+  const choice = (await getFeatureModelOverride(container, workspaceId, id)) ?? DEFAULTS[id];
+  return enforceOpenRouterForGeneration(choice);
 }

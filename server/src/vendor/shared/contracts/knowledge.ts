@@ -313,6 +313,10 @@ export const AgentVersionConfig = z.object({
   ci_fail_on: CiFailOn,
   repo_intel: z.boolean(),
   skills: z.array(z.string()),
+  // Repo-relative paths of attached Project Context docs, captured at snapshot
+  // time alongside `skills` (AC-27). Defaulted so pre-existing `agent_versions`
+  // rows written before this field existed still parse (AC-20 / replay).
+  context: z.array(z.string()).default([]),
 });
 export type AgentVersionConfig = z.infer<typeof AgentVersionConfig>;
 
