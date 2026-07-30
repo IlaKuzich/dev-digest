@@ -9,7 +9,6 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { Brief, BriefEnvelope } from "@devdigest/shared";
-import type { PrReviewSummary } from "./helpers";
 import messages from "../../../../../../../../../../messages/en/brief.json";
 
 const BRIEF: Brief = {
@@ -54,21 +53,6 @@ const EMPTY_ENVELOPE: BriefEnvelope = {
   stale: false,
 };
 
-const NO_REVIEW: PrReviewSummary = {
-  verdict: null,
-  score: null,
-  costUsd: null,
-  findingsCount: 0,
-  blockers: 0,
-};
-const REVIEW: PrReviewSummary = {
-  verdict: "request_changes",
-  score: 61,
-  costUsd: 0.014,
-  findingsCount: 6,
-  blockers: 2,
-};
-
 let mockResult: {
   data: BriefEnvelope | null | undefined;
   isLoading: boolean;
@@ -97,7 +81,6 @@ afterEach(cleanup);
 function cardEl(props?: {
   prId?: string | null;
   repoFullName?: string | null;
-  reviewSummary?: PrReviewSummary;
 }) {
   return (
     <NextIntlClientProvider locale="en" messages={{ brief: messages }}>
@@ -105,14 +88,13 @@ function cardEl(props?: {
         prId={props?.prId === undefined ? "pr1" : props.prId}
         repoFullName={props?.repoFullName === undefined ? "acme/payments-api" : props.repoFullName}
         headSha="abc123"
-        reviewSummary={props?.reviewSummary ?? NO_REVIEW}
         onFocusDiffLine={focusDiffLine}
       />
     </NextIntlClientProvider>
   );
 }
 
-function renderCard(props?: { prId?: string | null; repoFullName?: string | null; reviewSummary?: PrReviewSummary }) {
+function renderCard(props?: { prId?: string | null; repoFullName?: string | null }) {
   return render(cardEl(props));
 }
 
@@ -170,33 +152,6 @@ describe("PrBriefCard", () => {
 
     expect(screen.queryByRole("button", { name: "GET /api/public/items" })).not.toBeInTheDocument();
     expect(screen.getByText("GET /api/public/items")).toBeInTheDocument();
-  });
-
-  it("renders the review header band — aggregate verdict, PR score, cost, and findings·blockers — when a review exists", () => {
-    mockResult = { data: ENVELOPE, isLoading: false };
-    renderCard({ reviewSummary: REVIEW });
-
-    expect(screen.getByText("Request changes")).toBeInTheDocument();
-    expect(screen.getByText(/6 findings/)).toBeInTheDocument();
-    expect(screen.getByText(/· 2 blockers/)).toBeInTheDocument();
-    expect(screen.getByText("PR score")).toBeInTheDocument();
-    expect(screen.getByText("$0.014")).toBeInTheDocument();
-  });
-
-  it("renders an 'Approve' verdict when the review has no blockers", () => {
-    mockResult = { data: ENVELOPE, isLoading: false };
-    renderCard({ reviewSummary: { verdict: "approve", score: 95, costUsd: 0.002, findingsCount: 0, blockers: 0 } });
-
-    expect(screen.getByText("Approve")).toBeInTheDocument();
-    expect(screen.queryByText("Request changes")).not.toBeInTheDocument();
-  });
-
-  it("omits the review band when there is no review yet (no score, no findings)", () => {
-    mockResult = { data: ENVELOPE, isLoading: false };
-    renderCard({ reviewSummary: NO_REVIEW });
-
-    expect(screen.queryByText("PR score")).not.toBeInTheDocument();
-    expect(screen.queryByText(/findings/)).not.toBeInTheDocument();
   });
 
   it("shows explicit 'none flagged' copy for empty risks and review_focus, never a blank region", () => {

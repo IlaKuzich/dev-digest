@@ -1,18 +1,9 @@
 /* PrBriefCard/helpers.ts — pure helpers: the "should auto-generate once"
    predicate and file_ref → link-target derivation. No React import —
    business logic only (react-best-practices). */
-import type { BriefEnvelope, RiskSeverity, Verdict } from "@devdigest/shared";
-import type { Severity, IconName } from "@devdigest/ui";
+import type { BriefEnvelope, RiskSeverity } from "@devdigest/shared";
+import type { Severity } from "@devdigest/ui";
 import { githubBlobUrl } from "@/lib/github-urls";
-
-/** Per-verdict icon + color for the brief header band. Kept local so PrBriefCard
-    stays self-contained; mirrors VerdictBanner's `VERDICT_META`. The label text
-    lives in the `brief` i18n namespace under `verdict.<labelKey>`. */
-export const VERDICT_META: Record<Verdict, { icon: IconName; c: string; bg: string; labelKey: string }> = {
-  request_changes: { icon: "XCircle", c: "var(--crit)", bg: "var(--crit-bg)", labelKey: "requestChanges" },
-  approve: { icon: "CheckCircle", c: "var(--ok)", bg: "var(--ok-bg)", labelKey: "approve" },
-  comment: { icon: "MessageSquare", c: "var(--info)", bg: "var(--info-bg)", labelKey: "comment" },
-};
 
 /** Maps the brief's high/medium/low risk_level onto the app's existing
     severity color tokens (SEV) so risk_level is color-coded with the SAME
@@ -40,21 +31,6 @@ export function shouldAutoGenerate(
   alreadyFired: boolean,
 ): boolean {
   return data === null && !isRegeneratePending && !isRegenerateError && !alreadyFired;
-}
-
-/** The latest review run's headline numbers, surfaced in the PR Brief header
-    band (score gauge + cost + findings·blockers) — mirrors the design's top
-    panel. Sourced from the review run, NOT the brief itself; null score/cost
-    mean "not reviewed yet" and the band collapses accordingly. */
-export interface PrReviewSummary {
-  /** Aggregate verdict compressed from ALL agent runs — derived from the most
-      severe finding (blocker → request_changes, warning → comment, none →
-      approve); null when the PR has not been reviewed yet. */
-  verdict: Verdict | null;
-  score: number | null;
-  costUsd: number | null;
-  findingsCount: number;
-  blockers: number;
 }
 
 export interface ParsedFileRef {

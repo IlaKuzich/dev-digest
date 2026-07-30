@@ -77,29 +77,6 @@ export function PrDetailView() {
   const lethalTrifecta = allFindings.filter((f) => f.kind === "lethal_trifecta");
   const findingsCount = allFindings.length;
 
-  // Latest review-run headline numbers for the PR Brief header band (score/cost
-  // come off the pulls-list row; findings/blockers are counted from live runs,
-  // excluding dismissed — mirrors ReviewRunAccordion's blocker count).
-  const prMeta = pulls?.find((p) => p.number === Number(number)) ?? null;
-  const activeFindings = allFindings.filter((f) => !f.dismissed_at);
-  // Aggregate verdict "compressed" from ALL agent runs: derived from the most
-  // severe finding across every run (blocker → request_changes, warning →
-  // comment, otherwise approve); null until the PR has been reviewed at all.
-  const reviewSummary = {
-    verdict:
-      runs.length === 0
-        ? null
-        : activeFindings.some((f) => f.severity === "CRITICAL")
-          ? ("request_changes" as const)
-          : activeFindings.some((f) => f.severity === "WARNING")
-            ? ("comment" as const)
-            : ("approve" as const),
-    score: prMeta?.score ?? null,
-    costUsd: prMeta?.latest_run_cost_usd ?? null,
-    findingsCount: activeFindings.length,
-    blockers: activeFindings.filter((f) => f.severity === "CRITICAL").length,
-  };
-
   // ── Deep-link focus (clicking a finding in any FindingsTooltip) ──────────────
   // Two intents share one nonce so the latest click always wins:
   //   • focus a finding → open its run accordion + scroll/highlight the card
@@ -229,7 +206,6 @@ export function PrDetailView() {
             prId={prId}
             repoFullName={repoFullName}
             headSha={pr.head_sha}
-            reviewSummary={reviewSummary}
             onFocusDiffLine={handleFocusDiffLine}
           />
         )}
