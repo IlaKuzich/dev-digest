@@ -28,6 +28,7 @@ export function FindingCard({
   focused,
   defaultExpanded,
   onAction,
+  onCapture,
   pending,
   repoFullName,
   headSha,
@@ -38,6 +39,9 @@ export function FindingCard({
   focused?: boolean;
   defaultExpanded?: boolean;
   onAction?: (action: FindingActionKind, reply?: string) => void;
+  /** "Turn into eval case" — separate from onAction; server derives the case
+     type from this finding's accept/dismiss state (AC-1..AC-4). */
+  onCapture?: () => void;
   pending?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
@@ -47,6 +51,7 @@ export function FindingCard({
   expandSignal?: number;
 }) {
   const t = useTranslations("prReview");
+  const tEval = useTranslations("eval");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
   // Deep-link focus opens this card so its rationale is visible on arrival.
   React.useEffect(() => {
@@ -123,6 +128,19 @@ export function FindingCard({
               onClick={() => onAction?.("dismiss")}
             >
               {t("finding.dismiss")}
+            </Button>
+            {/* "Turn into eval case" — AC-7: inert until the finding has been
+               accepted or dismissed (the case type must be unambiguous). */}
+            <Button
+              kind="ghost"
+              size="sm"
+              icon="FlaskConical"
+              disabled={pending || !muted}
+              title={muted ? undefined : tEval("capture.needsDecision")}
+              aria-label={tEval("capture.button")}
+              onClick={() => onCapture?.()}
+            >
+              {tEval("capture.button")}
             </Button>
           </div>
         </div>

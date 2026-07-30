@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, doublePrecision } from 'drizzle-orm/pg-core';
 import { workspaces } from './core';
 import { pullRequests } from './pulls';
+import { evalBatches } from './eval-batches';
 
 // ============================================================ Eval / Conformance / Compose
 
@@ -24,6 +25,10 @@ export const evalRuns = pgTable('eval_runs', {
   caseId: uuid('case_id')
     .notNull()
     .references(() => evalCases.id, { onDelete: 'cascade' }),
+  // Nullable: a case run outside a batch (e.g. per-case "Run" / on-save run,
+  // AC-12/AC-16) has no batch. Links the per-case row back to its batch
+  // aggregate (AC-41) when run via "Run all evals" / "Run all agents".
+  batchId: uuid('batch_id').references(() => evalBatches.id, { onDelete: 'cascade' }),
   ranAt: timestamp('ran_at', { withTimezone: true }).defaultNow().notNull(),
   actualOutput: jsonb('actual_output'),
   pass: boolean('pass'),

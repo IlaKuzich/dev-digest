@@ -8,6 +8,7 @@ import { Toggle, EmptyState } from "@devdigest/ui";
 import type { FindingRecord } from "@devdigest/shared";
 import { FindingCard } from "../FindingCard";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
+import { useCaptureEvalCase } from "../../../../../../../lib/hooks/eval-capture";
 import { KEY_TO_ACTION } from "./constants";
 import { visibleFindings } from "./helpers";
 import { s } from "./styles";
@@ -34,6 +35,7 @@ export function FindingsPanel({
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
+  const capture = useCaptureEvalCase();
   const [hideLow, setHideLow] = React.useState(false);
   const [activeSev, setActiveSev] = React.useState<SevKey | null>(null);
   const [focusIdx, setFocusIdx] = React.useState(0);
@@ -129,6 +131,7 @@ export function FindingsPanel({
               onFileClick={onFileClick}
               expandSignal={f.id === focusFindingId ? focusNonce : undefined}
               onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
+              onCapture={() => capture.mutate(f.id)}
             />
           ))
         )}
