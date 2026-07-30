@@ -183,7 +183,7 @@ export async function runFullIndex(
         }
         // Per-file facts (endpoints/crons) so blast reads from file_facts
         // instead of re-parsing the clone (T3 blast migration).
-        const endpoints = extractEndpoints(source);
+        const endpoints = extractEndpoints(source, relPath);
         const crons = extractCrons(source);
         if (endpoints.length > 0 || crons.length > 0) {
           factsBuf.push({ filePath: relPath, endpoints, crons });
@@ -260,7 +260,11 @@ export async function runFullIndex(
     ranked: rankCount,
     factsWritten: factsBuf.length,
     hotnessAvailable: false, // Option B — rank = pagerank only
-    ...(graphFailed ? { graphFailed } : {}),
+    // `reason` (not just `graphFailed`) must land in `stats` — repository.ts's
+    // `tryGetIndexState` projects `IndexState.reason` off `stats.reason` (T7
+    // fix (c)); without this key the persisted/observed IndexState never
+    // surfaces 'graph_failed' even though `status` correctly goes 'partial'.
+    ...(graphFailed ? { graphFailed, reason: 'graph_failed' } : {}),
     softBudgetReached,
     parseDegraded,
     durationMs: Date.now() - startedAt,

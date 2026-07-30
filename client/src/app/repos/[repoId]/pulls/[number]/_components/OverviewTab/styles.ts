@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
 
 export const s = {
-  // Responsive card grid: single column on narrow viewports, auto-fits
-  // additional cards (e.g. a future Blast Radius card) beside Intent once
-  // there's room — no placeholder slot is reserved for the unbuilt card.
+  // Responsive card grid: single column on narrow viewports, Intent beside
+  // Blast once there's room. `alignItems: start` matters — BlastCard carries
+  // the whole impact tree and is much taller than IntentCard; without it the
+  // shorter card would stretch to match.
   cardGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",

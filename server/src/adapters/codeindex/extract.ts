@@ -174,12 +174,57 @@ export function extractReferences(content: string, symbol: string): ExtractedRef
   return out;
 }
 
+// Basenames Next.js recognises as App Router route handler files.
+const APP_ROUTER_ROUTE_BASENAMES = new Set(['route.ts', 'route.tsx', 'route.js', 'route.jsx', 'route.mjs', 'route.cjs']);
+
+// Exported HTTP-verb handlers Next.js App Router route files may declare.
+// Static pattern (fixed verb alternation, not built from dynamic/untrusted
+// input) — distinct from the path-building below, which uses plain string
+// ops only (root INSIGHTS.md:29; precedent: smart-diff/classifier.ts:33).
+const APP_ROUTER_VERB_RE =
+  /^\s*export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*\(/;
+
+/** True if `segment` is a Next.js route group like `(dashboard)` — never appears in the URL. */
+function isRouteGroup(segment: string): boolean {
+  return segment.startsWith('(') && segment.endsWith(')');
+}
+
+/** Finds the index of the `app` segment in a `.../src/app/...` path, or -1. */
+function findSrcAppIndex(segments: string[]): number {
+  for (let i = 0; i < segments.length - 1; i++) {
+    if (segments[i] === 'src' && segments[i + 1] === 'app') return i + 1;
+  }
+  return -1;
+}
+
+/**
+ * Map a Next.js App Router file path to its URL route path, or `null` if
+ * `filePath` is not a `src/app/**\/route.ts`-shaped file. No RegExp — plain
+ * `split('/')`/`startsWith`/`endsWith` only, per root INSIGHTS.md:29.
+ */
+function extractAppRouterPath(filePath: string): string | null {
+  const segments = filePath.split('/').filter((s) => s.length > 0);
+  if (segments.length === 0) return null;
+  const basename = segments[segments.length - 1]!;
+  if (!APP_ROUTER_ROUTE_BASENAMES.has(basename)) return null;
+
+  const appIndex = findSrcAppIndex(segments);
+  if (appIndex === -1) return null;
+
+  const routeSegments = segments.slice(appIndex + 1, segments.length - 1).filter((seg) => !isRouteGroup(seg));
+  return routeSegments.length > 0 ? `/${routeSegments.join('/')}` : '/';
+}
+
 /**
  * Heuristic endpoint detector: HTTP route registrations in a file.
  * Catches Fastify/Express style `app.get('/path', ...)`, `router.post(...)`,
- * `app.get<...>('/path')`, and `route({ method, url })`. Returns "METHOD /path".
+ * `app.get<...>('/path')`, and `route({ method, url })`. Also recognises
+ * Next.js App Router `src/app/**\/route.ts` files (`filePath`, optional):
+ * `export async function GET(...)` etc. → one "METHOD /path" per exported
+ * verb, using the file's location as the path (the source has no path
+ * string to match). Returns "METHOD /path".
  */
-export function extractEndpoints(content: string): string[] {
+export function extractEndpoints(content: string, filePath?: string): string[] {
   const out = new Set<string>();
   const lines = content.split('\n');
   const verbRe =
@@ -191,6 +236,15 @@ export function extractEndpoints(content: string): string[] {
     const r = raw.match(routeObjRe);
     if (r) out.add(`${r[1]!.toUpperCase()} ${r[2]}`);
   }
+
+  const appRoutePath = filePath ? extractAppRouterPath(filePath) : null;
+  if (appRoutePath) {
+    for (const raw of lines) {
+      const v = raw.match(APP_ROUTER_VERB_RE);
+      if (v) out.add(`${v[1]} ${appRoutePath}`);
+    }
+  }
+
   return [...out];
 }
 

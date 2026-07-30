@@ -10,7 +10,7 @@ import {
 } from './constants.js';
 import {
   INDEX_JOB_KIND,
-  REFRESH_JOB_KIND,
+  RESYNC_JOB_KIND,
 } from '../repo-intel/constants.js';
 
 /**
@@ -120,13 +120,19 @@ export class RepoService {
       name: repo.name,
       url: `https://github.com/${repo.fullName}.git`,
     } satisfies CloneJobPayload);
-    // T2.2 — also enqueue an incremental refresh. The two queue positions are
-    // independent (p-queue doesn't FIFO across kinds), but `runIncremental` is
-    // a no-op when `currentHead === lastIndexedSha`, so ordering is safe: if
-    // refresh fires before the new clone settles, it cheaply exits; if after,
-    // it picks up the new HEAD.
+    // Also advance the index. This must be RESYNC, not REFRESH: the clone job
+    // above only does a bare `fetch` on an existing clone (`simple-git.ts`
+    // `clone()`), which moves `origin/<branch>` but leaves HEAD and the worktree
+    // on the old sha — so a REFRESH's `runIncremental` would see
+    // `currentHead === lastIndexedSha` and no-op forever, and Refresh could
+    // never pick up new commits. `resyncRepo` does its own
+    // `sync()` (fetch + `reset --hard origin/<branch>`) before reindexing, so it
+    // advances regardless of the clone job's queue position and needs no
+    // ordering guarantee between the two kinds (p-queue doesn't FIFO across
+    // kinds). When the repo has no clone yet it degrades to `no_clone` and the
+    // clone job's own INDEX follow-up covers that path.
     try {
-      await this.container.jobs.enqueue(workspaceId, REFRESH_JOB_KIND, {
+      await this.container.jobs.enqueue(workspaceId, RESYNC_JOB_KIND, {
         repoId: repo.id,
         owner: repo.owner,
         name: repo.name,

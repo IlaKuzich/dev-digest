@@ -17,6 +17,7 @@ export const FeatureModelId = z.enum([
   'risk_brief',
   'conformance',
   'conventions',
+  'blast_explain',
 ]);
 export type FeatureModelId = z.infer<typeof FeatureModelId>;
 
@@ -73,6 +74,13 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     id: 'conventions',
     label: 'Conventions',
     description: 'Extracts coding conventions from the repo.',
+    defaultProvider: 'openrouter',
+    defaultModel: 'deepseek/deepseek-v4-flash',
+  },
+  {
+    id: 'blast_explain',
+    label: 'Blast Radius · Explain',
+    description: 'Summarises a PR’s blast radius map in one paragraph.',
     defaultProvider: 'openrouter',
     defaultModel: 'deepseek/deepseek-v4-flash',
   },

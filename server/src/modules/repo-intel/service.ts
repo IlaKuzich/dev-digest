@@ -290,7 +290,7 @@ export class RepoIntelService implements RepoIntel {
       for (const file of callerFiles) {
         const content = await readClone(repo.clonePath, file);
         if (!content) continue;
-        for (const e of extractEndpoints(content)) endpoints.add(e);
+        for (const e of extractEndpoints(content, file)) endpoints.add(e);
       }
     }
 

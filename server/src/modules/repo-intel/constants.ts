@@ -35,8 +35,26 @@ export const MAX_CALLERS_PER_SYMBOL = 20;
  *
  * v2 (T3): graph + decl_file resolution + file_rank + repo-map landed, so every
  * T2 `partial` index must be rebuilt to gain the rank-driven data.
+ *
+ * v3 (T7): the depgraph adapter was broken, so EVERY v2 index holds a graph
+ * that is silently empty — `file_edges` = 0 and therefore `references.decl_file`
+ * = 0 resolved, which starves blast radius of every caller. Two independent
+ * bugs (win32 path separators in `toRel`; cruise resolving tsconfig `paths`
+ * against `process.cwd()` rather than the clone root) are fixed in
+ * `adapters/depgraph/index.ts`. A v2 row's data is not merely incomplete — it is
+ * wrong, and `resync` alone will NOT repair it: `pipeline/incremental.ts:120`
+ * short-circuits when no files changed, so a repo already at the latest SHA
+ * would keep its empty graph forever. Bumping the version is what forces the
+ * full reindex that rebuilds it (`pipeline/incremental.ts:78`).
+ *
+ * v4 (T8): `extractEndpoints` (`adapters/codeindex/extract.ts`) now also
+ * recognises Next.js App Router `src/app/**\/route.ts` handlers, so
+ * `file_facts.endpoints` gains entries it never had before for any App
+ * Router repo. Same trap as v3: `resync` alone won't rebuild an already
+ * up-to-date repo (`pipeline/incremental.ts:120`), so the version bump is
+ * what forces the full reindex that repopulates `file_facts`.
  */
-export const INDEXER_VERSION = 2;
+export const INDEXER_VERSION = 4;
 
 // --- [T2] Full-index limits (documented now, enforced in the pipeline) ------
 export const MAX_INDEXED_FILES = 5000;
