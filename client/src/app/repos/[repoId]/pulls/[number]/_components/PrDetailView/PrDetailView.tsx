@@ -206,6 +206,7 @@ export function PrDetailView() {
             prId={prId}
             repoFullName={repoFullName}
             headSha={pr.head_sha}
+            onFocusDiffLine={handleFocusDiffLine}
           />
         )}
 
