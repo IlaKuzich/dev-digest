@@ -1,4 +1,4 @@
-# Spec: PR Brief card & Review Focus card  |  Spec ID: 2026-08-08-pr-brief-card  |  Status: approved
+# Spec: PR Brief card & Review Focus card  |  Spec ID: 2026-08-08-pr-brief-card  |  Status: implemented
 Supersedes: None
 
 ## Problem & why
