@@ -1,6 +1,6 @@
 ---
 name: design-assets
-description: Preserve a spec's DESIGN REFERENCE files (mockups, screenshots, wireframe exports, design PDFs) by copying them into the spec's dedicated `assets/<spec-id>/` folder, so `implementation-planner` and `implementer` can open the real pixels from their cold contexts. Run this in the ORCHESTRATOR session — NOT inside `spec-creator`, which by design cannot write binaries. Invoke via `/design-assets` with a spec path/ID and the reference files, or when the user says to "save/attach/stash the design/mockup/screenshots for a spec". Design references only — it refuses source code, config, and arbitrary files.
+description: Preserve a spec's DESIGN REFERENCE files (mockups, screenshots, wireframe exports, design PDFs) — including images pasted directly into chat, extracted from the current session's transcript — by copying them into the spec's dedicated `assets/<spec-id>/` folder, so `implementation-planner` and `implementer` can open the real pixels from their cold contexts. Run this in the ORCHESTRATOR session — NOT inside `spec-creator`, which by design cannot write binaries. Invoke via `/design-assets` with a spec path/ID and the reference files (or "the pasted images" for chat-pasted ones), or when the user says to "save/attach/stash the design/mockup/screenshots for a spec". Design references only — it refuses source code, config, and arbitrary files.
 ---
 
 # /design-assets — put design references where every agent can see them
@@ -44,11 +44,66 @@ request. You need two things — find them, don't guess:
 | You need | How to get it |
 |---|---|
 | **The spec** | A path (`specs/2026-07-17-foo.md`) or a Spec ID (`2026-07-17-foo`). `Glob` the four specs dirs if given only an ID. |
-| **The reference file(s)** | Paths on disk the user names. A folder is fine — take the design-reference files inside it, per the one rule. |
+| **The reference file(s)** | Paths on disk the user names, OR "the pasted images" / "from this session" — see **Chat-pasted images** below, no path needed for those. A folder is fine — take the design-reference files inside it, per the one rule. |
 
-**A chat-pasted image is not a file** and this skill cannot place it — there is nothing on
-disk to copy. Say so: the design detail must instead be transcribed into the spec's
-`## Design sources` section (that is `spec-creator`'s job, from what it can see).
+## Chat-pasted images (no file on disk — extract from the session transcript)
+
+A chat-pasted image looks like it has nothing to copy, but it does: Claude Code embeds every
+pasted image as base64 inside the **current session's own transcript** —
+`~/.claude/projects/<project-slug>/$CLAUDE_CODE_SESSION_ID.jsonl`, one JSON line per turn,
+image blocks at `message.content[].type == "image"` with `source.type == "base64"`. You hold
+`Bash`, so you can decode those bytes back into real files. `spec-creator` cannot — no `Bash`,
+and `Write` emits text only — which is exactly why this stays the orchestrator's job, same as
+file-based sources.
+
+**Steps:**
+1. **Locate the transcript by session ID, never by guessing the project-slug encoding:**
+   ```bash
+   transcript=$(find "$HOME/.claude/projects" -mindepth 2 -maxdepth 2 \
+     -name "${CLAUDE_CODE_SESSION_ID}.jsonl" | head -1)
+   ```
+2. **Extract every image block from `user` turns, in order**, to a scratch folder (the
+   session scratchpad, not the repo):
+   ```bash
+   python3 - "$transcript" <<'PY'
+   import json, sys, base64, pathlib
+   out = pathlib.Path(sys.argv[2]); out.mkdir(parents=True, exist_ok=True)
+   ext = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
+   i = 0
+   with open(sys.argv[1]) as f:
+       for line in f:
+           obj = json.loads(line)
+           if obj.get("message", {}).get("role") != "user":
+               continue
+           content = obj["message"].get("content")
+           if not isinstance(content, list):
+               continue
+           for block in content:
+               src = block.get("source", {}) if block.get("type") == "image" else None
+               if src and src.get("type") == "base64":
+                   i += 1
+                   data = base64.b64decode(src["data"])
+                   fn = out / f"pasted-{i}.{ext.get(src.get('media_type'), 'png')}"
+                   fn.write_bytes(data)
+                   print(fn)
+   PY
+   ```
+   (Pass the scratch folder as a second argument, or hardcode it above.)
+3. **List what you found before copying anything** — index, file, rough size — and confirm
+   with the human which ones are genuine design references for *this* spec. The user asked
+   this skill to pull in **every image pasted during the session**, which is deliberately
+   over-inclusive: a long session also pastes debug screenshots, terminal output, unrelated
+   crops. "Extracted" is not "confirmed relevant" — copying all of it into `assets/<spec-id>/`
+   unfiltered pollutes the spec with noise a cold-context implementer will mistake for
+   intended UI. Drop anything the human doesn't confirm.
+4. **Copy the confirmed ones** into `assets/<spec-id>/` via the normal Steps below, naming
+   them for what they show (`dashboard-empty-state.png`), never `pasted-1.png`.
+5. Delete the scratch extraction folder once copied — it was a working copy, not the record.
+
+This reaches into Claude Code's own transcript storage format, which is internal and can
+change between CLI versions. If the `find`/parse comes back empty on a session you know
+pasted images in, don't conclude there are none — say the extraction failed and fall back to
+asking the user to save the image to a file on disk and re-run this skill with the path.
 
 ## Where the assets go — mirror the spec's own location
 
