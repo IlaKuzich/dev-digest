@@ -65,7 +65,8 @@ file-based sources.
 2. **Extract every image block from `user` turns, in order**, to a scratch folder (the
    session scratchpad, not the repo):
    ```bash
-   python3 - "$transcript" <<'PY'
+   scratch_dir="/path/to/session/scratchpad"   # use this session's actual scratchpad dir
+   python3 - "$transcript" "$scratch_dir" <<'PY'
    import json, sys, base64, pathlib
    out = pathlib.Path(sys.argv[2]); out.mkdir(parents=True, exist_ok=True)
    ext = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
@@ -88,7 +89,6 @@ file-based sources.
                    print(fn)
    PY
    ```
-   (Pass the scratch folder as a second argument, or hardcode it above.)
 3. **List what you found before copying anything** — index, file, rough size — and confirm
    with the human which ones are genuine design references for *this* spec. The user asked
    this skill to pull in **every image pasted during the session**, which is deliberately
