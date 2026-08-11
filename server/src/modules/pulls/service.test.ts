@@ -43,8 +43,12 @@ function fakePulls(rows: PullRow[]) {
 }
 
 const fakeReviews = {
-  reviewScoresForPrs: async () => [{ prId: 'pr-1', score: 77 }],
-  doneRunCostsForPrs: async () => [{ prId: 'pr-1', costUsd: 0.5 }],
+  doneRunsForRollup: async () => [
+    {
+      prId: 'pr-1', runId: 'run-1', agentId: 'agent-1', ranAt: '2026-06-01T00:00:00.000Z',
+      score: 77, costUsd: 0.5, tokensIn: 100, tokensOut: 50,
+    },
+  ],
   activeFindingsForPrs: async () => [
     { prId: 'pr-1', id: 'f1', severity: 'CRITICAL', category: 'sec', title: 't',
       file: 'a.ts', startLine: 1, endLine: 2, confidence: 0.9, rationale: 'r' },

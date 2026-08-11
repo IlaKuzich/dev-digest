@@ -6,18 +6,15 @@ import { PullsRepository } from './repository.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import { BACKFILL_LIMIT } from './constants.js';
 import {
-  latestByPr,
   buildFindingsBuckets,
   toPrMetaDto,
   prDetailFromGitHub,
   prDetailFromPersisted,
   type PrListRollups,
 } from './helpers.js';
+import { rollupRunsByPr } from '../reviews/rollup.js';
 
-type PrListReadModel = Pick<
-  ReviewRepository,
-  'reviewScoresForPrs' | 'doneRunCostsForPrs' | 'activeFindingsForPrs'
->;
+type PrListReadModel = Pick<ReviewRepository, 'doneRunsForRollup' | 'activeFindingsForPrs'>;
 
 /**
  * F1 — pulls use case. GitHub PR import (list + per-PR detail) and inline
@@ -87,14 +84,12 @@ export class PullsService {
     }
 
     const prIds = rows.map((r) => r.id);
-    const [scores, costs, findings] = await Promise.all([
-      this.reviews.reviewScoresForPrs(prIds),
-      this.reviews.doneRunCostsForPrs(prIds),
+    const [runRows, findings] = await Promise.all([
+      this.reviews.doneRunsForRollup(prIds),
       this.reviews.activeFindingsForPrs(prIds),
     ]);
     const rollups: PrListRollups = {
-      review: latestByPr(scores),
-      cost: latestByPr(costs),
+      metrics: rollupRunsByPr(runRows),
       findings: buildFindingsBuckets(findings),
     };
 

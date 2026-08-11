@@ -12,6 +12,7 @@ import {
 } from './helpers.js';
 import type { PullRow } from '../../db/rows.js';
 import type { PrDetail } from '@devdigest/shared';
+import type { PrRunAgg } from '../reviews/rollup.js';
 
 const basePull: PullRow = {
   id: 'pr-1',
@@ -33,7 +34,7 @@ const basePull: PullRow = {
   updatedAt: new Date('2026-06-01T00:00:00Z'),
 };
 
-const emptyRollups: PrListRollups = { review: new Map(), cost: new Map(), findings: new Map() };
+const emptyRollups: PrListRollups = { metrics: new Map(), findings: new Map() };
 
 describe('snippetOf', () => {
   it('returns short rationales unchanged', () => {
@@ -91,10 +92,10 @@ describe('buildFindingsBuckets', () => {
 });
 
 describe('toPrMetaDto', () => {
-  it('maps a row to PrMeta with rollups and derived status', () => {
+  it('maps a row to PrMeta with the rollup MIN score / SUM cost and derived status', () => {
+    const agg: PrRunAgg = { runIds: ['r1'], score: 88, costUsd: 0.42, tokensIn: 100, tokensOut: 50 };
     const rollups: PrListRollups = {
-      review: new Map([['pr-1', { prId: 'pr-1', score: 88 }]]),
-      cost: new Map([['pr-1', { prId: 'pr-1', costUsd: 0.42 }]]),
+      metrics: new Map([['pr-1', agg]]),
       findings: new Map([['pr-1', { bySeverity: { CRITICAL: 1, WARNING: 0, SUGGESTION: 0 }, top: [] }]]),
     };
     const dto = toPrMetaDto(basePull, rollups, Date.parse('2026-06-02T00:00:00Z'));

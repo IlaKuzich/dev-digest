@@ -1,8 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { Brief } from "@devdigest/shared";
-import type { RunSummary } from "@devdigest/shared";
+import type { Brief, PrMetricsRollup } from "@devdigest/shared";
 import briefMessages from "../../../../../../../../../../messages/en/brief.json";
 import prReviewMessages from "../../../../../../../../../../messages/en/prReview.json";
 
@@ -14,23 +13,13 @@ const HIGH_RISK_BRIEF: Brief = {
   review_focus: [{ file: "src/config.ts", line: 12, reason: "live Stripe key committed in plaintext" }],
 };
 
-const DONE_RUN: RunSummary = {
-  run_id: "run1",
-  agent_id: "agent1",
-  agent_name: "Reviewer",
-  provider: "openai",
-  model: "gpt-4.1",
-  status: "done",
-  error: null,
-  duration_ms: 4200,
-  tokens_in: 8200,
-  tokens_out: 1300,
-  findings_count: 6,
-  grounding: null,
-  ran_at: "2026-08-08T00:00:00.000Z",
+const ROLLUP: PrMetricsRollup = {
   score: 61,
+  findings_count: 6,
   blockers: 2,
   cost_usd: 0.014,
+  tokens_in: 8200,
+  tokens_out: 1300,
 };
 
 let mockBriefResult: {
@@ -40,7 +29,7 @@ let mockBriefResult: {
   error?: unknown;
 };
 let mockGenResult: { mutate: ReturnType<typeof vi.fn>; isPending: boolean };
-let mockRunsResult: { data: RunSummary[] | undefined };
+let mockRollupResult: { data: PrMetricsRollup | null | undefined };
 
 vi.mock("@/lib/hooks/brief", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/hooks/brief")>();
@@ -55,7 +44,7 @@ vi.mock("@/lib/hooks/reviews", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/hooks/reviews")>();
   return {
     ...actual,
-    usePrRuns: () => mockRunsResult,
+    usePrMetricsRollup: () => mockRollupResult,
   };
 });
 
@@ -75,7 +64,7 @@ describe("PrBriefCard", () => {
   it("shows an explicit Generate prompt when no Brief has been generated yet, and Generate triggers the mutation", () => {
     mockBriefResult = { data: null, isLoading: false, isError: false };
     mockGenResult = { mutate: vi.fn(), isPending: false };
-    mockRunsResult = { data: [] };
+    mockRollupResult = { data: null };
     renderCard();
 
     expect(screen.getByText("No brief generated yet")).toBeInTheDocument();
@@ -83,10 +72,10 @@ describe("PrBriefCard", () => {
     expect(mockGenResult.mutate).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the risk headline, findings/blockers, score, and cost/tokens when a completed run exists", () => {
+  it("renders the risk headline, findings/blockers badge, score, cost, and tokens from the server-computed rollup", () => {
     mockBriefResult = { data: HIGH_RISK_BRIEF, isLoading: false, isError: false };
     mockGenResult = { mutate: vi.fn(), isPending: false };
-    mockRunsResult = { data: [DONE_RUN] };
+    mockRollupResult = { data: ROLLUP };
     renderCard();
 
     expect(screen.getByText("High risk")).toBeInTheDocument();
@@ -100,14 +89,15 @@ describe("PrBriefCard", () => {
     expect(screen.getByText(HIGH_RISK_BRIEF.why)).toBeInTheDocument();
   });
 
-  it("omits findings/blockers/score/cost when no completed run exists, without erroring", () => {
+  it("omits region 3 (score/cost/blockers badge) when the rollup is null, keeping headline+summary intact (AC-10/AC-16)", () => {
     mockBriefResult = { data: HIGH_RISK_BRIEF, isLoading: false, isError: false };
     mockGenResult = { mutate: vi.fn(), isPending: false };
-    mockRunsResult = { data: [] };
+    mockRollupResult = { data: null };
     renderCard();
 
     expect(screen.getByText("High risk")).toBeInTheDocument();
     expect(screen.getByText(HIGH_RISK_BRIEF.what)).toBeInTheDocument();
+    expect(screen.getByText(HIGH_RISK_BRIEF.why)).toBeInTheDocument();
     expect(screen.queryByText("PR score")).not.toBeInTheDocument();
     expect(screen.queryByText(/findings/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
@@ -116,7 +106,7 @@ describe("PrBriefCard", () => {
   it("renders a degraded error state with a Regenerate action instead of crashing or going blank", () => {
     mockBriefResult = { data: undefined, isLoading: false, isError: true, error: new Error("boom") };
     mockGenResult = { mutate: vi.fn(), isPending: false };
-    mockRunsResult = { data: [] };
+    mockRollupResult = { data: null };
     renderCard();
 
     expect(screen.getByText("Couldn't generate the brief")).toBeInTheDocument();

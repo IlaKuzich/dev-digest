@@ -2,6 +2,7 @@ import type { PrMeta, PrDetail } from '@devdigest/shared';
 import type { PullRow } from '../../db/rows.js';
 import { deriveReviewStatus } from './status.js';
 import { SEV_ORDER, TOP_FINDINGS_LIMIT, type SevKey } from './constants.js';
+import type { PrRunAgg } from '../reviews/rollup.js';
 
 /**
  * pulls PR-list transforms (pure — no DB / `this`, so they unit-test cleanly).
@@ -98,14 +99,17 @@ export function buildFindingsBuckets(rows: FindingRollupRow[]): Map<string, Find
 }
 
 export interface PrListRollups {
-  review: Map<string, ReviewScoreRow>;
-  cost: Map<string, RunCostRow>;
+  /** PR-wide metrics rollup (latest done run per agent — MIN score, SUM
+   *  cost) computed by `rollupRunsByPr` (reviews/rollup.ts). Replaces the
+   *  single-latest-review-score / single-latest-done-run-cost sources
+   *  (spec `2026-08-11-pr-brief-rollup-layout` AC-9). */
+  metrics: Map<string, PrRunAgg>;
   findings: Map<string, FindingsBucket>;
 }
 
 /** Map a persisted PR row + rollups → the PrMeta list DTO. */
 export function toPrMetaDto(row: PullRow, rollups: PrListRollups, now: number): PrMeta {
-  const review = rollups.review.get(row.id);
+  const agg = rollups.metrics.get(row.id);
   const bucket = rollups.findings.get(row.id);
   return {
     id: row.id,
@@ -127,8 +131,8 @@ export function toPrMetaDto(row: PullRow, rollups: PrListRollups, now: number): 
     }),
     opened_at: row.openedAt?.toISOString() ?? null,
     updated_at: row.updatedAt?.toISOString() ?? null,
-    score: review ? review.score : null,
-    latest_run_cost_usd: rollups.cost.get(row.id)?.costUsd ?? null,
+    score: agg?.score ?? null,
+    latest_run_cost_usd: agg?.costUsd ?? null,
     findings_by_severity: bucket?.bySeverity ?? null,
     top_findings: bucket?.top ?? null,
   };

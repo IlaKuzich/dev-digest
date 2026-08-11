@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import type { FindingActionKind, RunEventKind, RunTrace } from '@devdigest/shared';
+import type { FindingActionKind, PrMetricsRollup, RunEventKind, RunTrace } from '@devdigest/shared';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import type { AgentRow } from '../../db/rows.js';
 import { ReviewRepository } from './repository.js';
@@ -7,6 +7,7 @@ import { type ReviewDto, type ReviewDtoFinding } from './helpers.js';
 import { ReviewRunExecutor, type Logger } from './run-executor.js';
 import { actOnFinding as actOnFindingImpl } from './findings.js';
 import { reviewToDto } from './helpers.js';
+import { rollupRunsByPr, countFindings, toMetricsRollup } from './rollup.js';
 
 // Re-export DTO types + converters for backward-compatible imports from
 // './service.js' (these previously lived here; logic now in ./helpers.ts).
@@ -175,5 +176,23 @@ export class ReviewService {
 
   async getRunTrace(runId: string): Promise<RunTrace | undefined> {
     return this.repo.getRunTrace(runId);
+  }
+
+  /**
+   * The PR-wide metrics rollup (spec `2026-08-11-pr-brief-rollup-layout`):
+   * group the PR's agent runs by agent_id, keep the newest `status='done'`
+   * run per agent, SUM cost/tokens, MIN score, and pool the retained runs'
+   * non-dismissed findings for the findings/blockers count. `null` when the
+   * PR has no completed run at all (AC-10).
+   */
+  async metricsRollup(workspaceId: string, prId: string): Promise<PrMetricsRollup | null> {
+    const pull = await this.repo.getPull(workspaceId, prId);
+    if (!pull) throw new NotFoundError('Pull request not found');
+
+    const agg = rollupRunsByPr(await this.repo.doneRunsForRollup([prId])).get(prId);
+    if (!agg) return null;
+
+    const findings = await this.repo.nonDismissedFindingsForRuns(agg.runIds);
+    return toMetricsRollup(agg, countFindings(findings));
   }
 }
