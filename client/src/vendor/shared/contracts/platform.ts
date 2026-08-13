@@ -18,6 +18,7 @@ export const FeatureModelId = z.enum([
   'conformance',
   'conventions',
   'blast_explain',
+  'memory_distill',
 ]);
 export type FeatureModelId = z.infer<typeof FeatureModelId>;
 
@@ -81,6 +82,13 @@ export const FEATURE_MODELS: FeatureModelDef[] = [
     id: 'blast_explain',
     label: 'Blast Radius · Explain',
     description: 'Summarises a PR’s blast radius map in one paragraph.',
+    defaultProvider: 'openrouter',
+    defaultModel: 'deepseek/deepseek-v4-flash',
+  },
+  {
+    id: 'memory_distill',
+    label: 'Memory · Learning',
+    description: 'Distills dismissed findings into memory rules.',
     defaultProvider: 'openrouter',
     defaultModel: 'deepseek/deepseek-v4-flash',
   },

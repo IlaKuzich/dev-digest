@@ -17,6 +17,9 @@ import type {
   OpenPrPayload,
   CommitFilesPayload,
   IssueMeta,
+  WorkflowRun,
+  ListWorkflowRunsOptions,
+  ListWorkflowRunsResult,
   GitClient,
   CloneOptions,
   UnifiedDiff,
@@ -125,6 +128,12 @@ export interface MockGitHubOptions {
   login?: string;
   /** Existing inline review comments returned by listReviewComments. */
   comments?: PrReviewComment[];
+  /** Workflow runs returned by listWorkflowRuns (defaults to empty). */
+  workflowRuns?: WorkflowRun[];
+  /** Artifact id → raw zip Buffer returned by downloadArtifact. */
+  artifacts?: Record<string, Buffer>;
+  /** ETag the mock returns on a 200; a matching request etag yields a 304 no-op. */
+  etag?: string | null;
 }
 
 export class MockGitHubClient implements GitHubClient {
@@ -236,6 +245,26 @@ export class MockGitHubClient implements GitHubClient {
 
   async currentLogin(): Promise<string> {
     return this.opts.login ?? 'mock-user';
+  }
+
+  async listWorkflowRuns(
+    _repo: RepoRef,
+    opts: ListWorkflowRunsOptions = {},
+  ): Promise<ListWorkflowRunsResult> {
+    const etag = this.opts.etag ?? null;
+    // Simulate a 304 Not Modified when the request etag matches the stored etag.
+    if (opts.etag && etag && opts.etag === etag) {
+      return { notModified: true, etag, runs: [] };
+    }
+    return { notModified: false, etag, runs: this.opts.workflowRuns ?? [] };
+  }
+
+  async downloadArtifact(_repo: RepoRef, artifactId: number | string): Promise<Buffer> {
+    const buf = this.opts.artifacts?.[String(artifactId)];
+    if (!buf) {
+      throw new Error(`MockGitHubClient: no artifact registered for id=${artifactId}`);
+    }
+    return buf;
   }
 }
 

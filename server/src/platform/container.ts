@@ -28,6 +28,8 @@ import { ReviewRepository } from '../modules/reviews/repository.js';
 import { RepoRepository } from '../modules/repos/repository.js';
 import { PullsRepository } from '../modules/pulls/repository.js';
 import { ContextRepository } from '../modules/context/repository.js';
+import { CiRepository } from '../modules/ci/repository.js';
+import { MemoryRepository } from '../modules/memory/repository.js';
 import type { RepoIntel } from '../modules/repo-intel/types.js';
 import { RepoIntelService } from '../modules/repo-intel/service.js';
 import { type DepGraph, DepCruiseGraph } from '../adapters/depgraph/index.js';
@@ -78,6 +80,8 @@ export class Container {
   private _reposRepo?: RepoRepository;
   private _pullsRepo?: PullsRepository;
   private _contextRepo?: ContextRepository;
+  private _ciRepo?: CiRepository;
+  private _memoryRepo?: MemoryRepository;
   private _repoIntel?: RepoIntel;
   private _depgraph?: DepGraph;
   private _tokenizer?: Tokenizer;
@@ -120,6 +124,14 @@ export class Container {
    *  version-snapshot (AC-27) rather than re-querying the table itself. */
   get contextRepo(): ContextRepository {
     return (this._contextRepo ??= new ContextRepository(this.db));
+  }
+
+  get ciRepo(): CiRepository {
+    return (this._ciRepo ??= new CiRepository(this.db));
+  }
+
+  get memoryRepo(): MemoryRepository {
+    return (this._memoryRepo ??= new MemoryRepository(this.db));
   }
 
   get codeIndex(): CodeIndex {

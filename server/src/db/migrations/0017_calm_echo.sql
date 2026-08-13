@@ -1,0 +1,1 @@
+ALTER TABLE "ci_runs" ALTER COLUMN "cost_usd" SET DATA TYPE numeric(12, 6);

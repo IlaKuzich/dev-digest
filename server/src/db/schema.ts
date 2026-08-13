@@ -34,12 +34,12 @@ import { pullRequests, prFiles, prCommits } from './schema/pulls';
 import { reviews, findings, prIntent, prBrief } from './schema/reviews';
 import { skills, skillVersions } from './schema/skills';
 import { agents, agentVersions, agentSkills } from './schema/agents';
-import { memory, conventions } from './schema/knowledge';
+import { memory, memoryLearningState, conventions } from './schema/knowledge';
 import { conventionScans } from './schema/conventions';
 import { codeChunks, symbols, references, onboarding } from './schema/context';
 import { agentContext, skillContext } from './schema/project-context';
 import { evalCases, evalRuns, conformanceChecks, composedReviews } from './schema/eval';
-import { ciInstallations, ciRuns } from './schema/ci';
+import { ciInstallations, ciRuns, ciRunFindings } from './schema/ci';
 import { agentRuns, runTraces, multiAgentRuns } from './schema/runs';
 import { jobs, installedPlugins, digests } from './schema/ops';
 import {
@@ -72,6 +72,7 @@ export const schema = {
   conventions,
   conventionScans,
   memory,
+  memoryLearningState,
   codeChunks,
   symbols,
   references,
@@ -84,6 +85,7 @@ export const schema = {
   composedReviews,
   ciInstallations,
   ciRuns,
+  ciRunFindings,
   agentRuns,
   runTraces,
   multiAgentRuns,
