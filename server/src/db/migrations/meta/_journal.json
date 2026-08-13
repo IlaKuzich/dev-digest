@@ -127,6 +127,13 @@
       "when": 1786603425280,
       "tag": "0017_calm_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786618814490,
+      "tag": "0018_panoramic_speed",
+      "breakpoints": true
     }
   ]
 }
