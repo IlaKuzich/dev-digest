@@ -3,9 +3,14 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/prReview.json";
+import evalMessages from "../../../../../../../../messages/en/eval.json";
 
 vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("../../../../../../../lib/hooks/eval-capture", () => ({
+  useCaptureEvalCase: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 import { FindingsPanel } from "./FindingsPanel";
@@ -39,7 +44,7 @@ const FINDINGS: FindingRecord[] = [
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+    <NextIntlClientProvider locale="en" messages={{ prReview: messages, eval: evalMessages }}>
       {ui}
     </NextIntlClientProvider>,
   );
@@ -131,7 +136,7 @@ describe("FindingsPanel — deep-link focus", () => {
 
     // Deep-linking to that finding resets filters so it is visible again.
     rerender(
-      <NextIntlClientProvider locale="en" messages={{ prReview: messages }}>
+      <NextIntlClientProvider locale="en" messages={{ prReview: messages, eval: evalMessages }}>
         <FindingsPanel findings={findings} prId="pr1" focusFindingId="f2" focusNonce={1} />
       </NextIntlClientProvider>,
     );

@@ -126,6 +126,7 @@ export function FindingsPanel({
               focused={i === focusIdx}
               defaultExpanded={i === 0}
               pending={action.isPending}
+              capturePending={capture.isPending}
               repoFullName={repoFullName}
               headSha={headSha}
               onFileClick={onFileClick}

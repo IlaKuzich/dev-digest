@@ -149,8 +149,22 @@ export class EvalRepository {
   // ---- eval_runs (no workspace_id column — join eval_cases for tenancy) ---
 
   async insertRun(values: InsertEvalRun): Promise<EvalRunRow> {
-    const [row] = await this.db.insert(t.evalRuns).values(values).returning();
+    const [row] = await this.db
+      .insert(t.evalRuns)
+      .values({ ...values, costUsd: values.costUsd != null ? String(values.costUsd) : null })
+      .returning();
     return row!;
+  }
+
+  /** Batched variant of `insertRun` — one round trip for every case in a
+   *  batch instead of N sequential inserts (`runBatch`). Preserves each
+   *  input's array position in the returned rows. */
+  async insertRuns(values: InsertEvalRun[]): Promise<EvalRunRow[]> {
+    if (values.length === 0) return [];
+    return this.db
+      .insert(t.evalRuns)
+      .values(values.map((v) => ({ ...v, costUsd: v.costUsd != null ? String(v.costUsd) : null })))
+      .returning();
   }
 
   /** Latest `eval_runs` row per case, for cases owned by this agent
@@ -178,7 +192,10 @@ export class EvalRepository {
   // ---- eval_batches (workspace_id column present — scope directly) --------
 
   async insertBatch(values: InsertEvalBatch): Promise<EvalBatchRow> {
-    const [row] = await this.db.insert(t.evalBatches).values(values).returning();
+    const [row] = await this.db
+      .insert(t.evalBatches)
+      .values({ ...values, costUsd: values.costUsd != null ? String(values.costUsd) : null })
+      .returning();
     return row!;
   }
 

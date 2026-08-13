@@ -39,8 +39,8 @@ export interface RecentRunsTableProps {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   emptyMessage: string;
-  /** Column header labels — i18n-driven; `agent`/`version` fall back to plain
-      English because no `dashboard.table.*` key exists for them yet. */
+  /** Column header labels — i18n-driven (`agent`/`version` come from
+      `dashboard.table.agent`/`dashboard.table.version`). */
   labels: {
     agent?: string;
     version?: string;

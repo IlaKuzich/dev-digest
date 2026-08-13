@@ -1,4 +1,4 @@
-import { pgTable, uuid, integer, timestamp, doublePrecision, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, integer, timestamp, doublePrecision, numeric, index } from 'drizzle-orm/pg-core';
 import { workspaces } from './core';
 import { agents } from './agents';
 
@@ -30,7 +30,9 @@ export const evalBatches = pgTable(
     citationAccuracy: doublePrecision('citation_accuracy'),
     tracesPassed: integer('traces_passed').notNull().default(0),
     tracesTotal: integer('traces_total').notNull().default(0),
-    costUsd: doublePrecision('cost_usd'),
+    // NUMERIC not doublePrecision — financial column (server/INSIGHTS.md 2026-06-25);
+    // this value is a SUM across every case in a batch, so float drift would compound.
+    costUsd: numeric('cost_usd', { precision: 12, scale: 6 }),
   },
   (t) => ({
     // Postgres does not auto-index FK columns; this table is read scoped by

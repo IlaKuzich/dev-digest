@@ -30,6 +30,7 @@ export function FindingCard({
   onAction,
   onCapture,
   pending,
+  capturePending,
   repoFullName,
   headSha,
   onFileClick,
@@ -43,6 +44,10 @@ export function FindingCard({
      type from this finding's accept/dismiss state (AC-1..AC-4). */
   onCapture?: () => void;
   pending?: boolean;
+  /** True while THIS finding's own capture-to-eval-case mutation is in
+     flight — guards the "Turn into eval case" button independently of
+     `pending` (which only reflects the accept/dismiss mutation). */
+  capturePending?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
   /** Navigate to this finding's file:line inside the Files-changed diff (internal). */
@@ -135,7 +140,7 @@ export function FindingCard({
               kind="ghost"
               size="sm"
               icon="FlaskConical"
-              disabled={pending || !muted}
+              disabled={pending || capturePending || !muted}
               title={muted ? undefined : tEval("capture.needsDecision")}
               aria-label={tEval("capture.button")}
               onClick={() => onCapture?.()}

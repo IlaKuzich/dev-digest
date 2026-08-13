@@ -345,9 +345,8 @@ export class EvalService {
       costUsd: costSum,
     });
 
-    const results: EvalRunResult[] = [];
-    for (const p of perCase) {
-      const runRow = await this.repo.insertRun({
+    const runRows = await this.repo.insertRuns(
+      perCase.map((p) => ({
         caseId: p.caseRow.id,
         batchId: batchRow.id,
         actualOutput: p.exec ? p.exec.actualOutput : { error: p.error },
@@ -357,9 +356,11 @@ export class EvalService {
         citationAccuracy: p.exec ? p.exec.citation : null,
         durationMs: p.exec ? p.exec.durationMs : null,
         costUsd: p.exec ? p.exec.costUsd : null,
-      });
-      results.push(this.toRunResult(runRow.id, p.caseRow, p.exec, p.error));
-    }
+      })),
+    );
+    const results: EvalRunResult[] = perCase.map((p, i) =>
+      this.toRunResult(runRows[i]!.id, p.caseRow, p.exec, p.error),
+    );
 
     return { batch: toEvalBatchRunDto(batchRow, agent.name), results };
   }

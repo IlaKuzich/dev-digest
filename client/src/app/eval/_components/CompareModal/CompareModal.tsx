@@ -73,7 +73,6 @@ export function CompareModal({ agentId, batchA, batchB, onClose }: CompareModalP
           toast.success(t("promote.success", { version }));
           onClose();
         },
-        onError: () => toast.error(t("promote.error")),
       },
     );
   };

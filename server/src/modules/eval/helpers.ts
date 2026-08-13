@@ -54,7 +54,7 @@ export function toLastRunSummary(row: EvalRunRow): EvalCaseLastRun {
     actual_output: row.actualOutput,
     ran_at: row.ranAt.toISOString(),
     duration_ms: row.durationMs,
-    cost_usd: row.costUsd,
+    cost_usd: row.costUsd != null ? Number(row.costUsd) : null,
   };
 }
 
@@ -89,7 +89,7 @@ export function toEvalBatchRunDto(row: EvalBatchRow, agentName?: string | null):
     citation_accuracy: row.citationAccuracy,
     traces_passed: row.tracesPassed,
     traces_total: row.tracesTotal,
-    cost_usd: row.costUsd,
+    cost_usd: row.costUsd != null ? Number(row.costUsd) : null,
   };
 }
 
@@ -100,7 +100,7 @@ function toEvalTrendPointDto(row: EvalBatchRow): EvalTrendPoint {
     precision: row.precision ?? 0,
     citation_accuracy: row.citationAccuracy ?? 0,
     pass_rate: row.tracesTotal > 0 ? row.tracesPassed / row.tracesTotal : 0,
-    cost_usd: row.costUsd,
+    cost_usd: row.costUsd != null ? Number(row.costUsd) : null,
   };
 }
 
@@ -114,7 +114,7 @@ export function toAgentEvalDashboard(agent: AgentRow, batches: EvalBatchRow[]): 
     citation_accuracy: latest?.citationAccuracy ?? 1,
     traces_passed: latest?.tracesPassed ?? 0,
     traces_total: latest?.tracesTotal ?? 0,
-    cost_usd: latest?.costUsd ?? null,
+    cost_usd: latest?.costUsd != null ? Number(latest.costUsd) : null,
   };
 
   const delta = {
@@ -209,7 +209,10 @@ export function toEvalCompare(
     recall: toCompareMetric(a.recall, b.recall),
     precision: toCompareMetric(a.precision, b.precision),
     citation_accuracy: toCompareMetric(a.citationAccuracy, b.citationAccuracy),
-    cost: toCompareMetric(a.costUsd, b.costUsd),
+    cost: toCompareMetric(
+      a.costUsd != null ? Number(a.costUsd) : null,
+      b.costUsd != null ? Number(b.costUsd) : null,
+    ),
     old_config: oldConfig,
     new_config: newConfig,
   };
