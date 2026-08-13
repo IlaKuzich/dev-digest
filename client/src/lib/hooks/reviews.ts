@@ -8,6 +8,7 @@ import { api, API_BASE } from "../api";
 import { notify } from "../toast";
 import type {
   FindingActionKind,
+  PrMetricsRollup,
   PrReviewComment,
   ReviewRecord,
   ReviewRunResponse,
@@ -44,6 +45,19 @@ export function usePrRuns(prId: string | null | undefined) {
     enabled: !!prId,
     refetchInterval: (query) =>
       (query.state.data ?? []).some((r) => r.status === "running") ? 4000 : false,
+  });
+}
+
+// ---- PR-wide metrics rollup (latest done run per agent — server-computed) ----
+/** The single source of truth for a PR's rolled-up score (MIN)/cost (SUM)/
+   tokens/findings/blockers across every agent's latest completed run — the
+   PR Brief card reads this instead of recomputing from `usePrRuns` (spec
+   `2026-08-11-pr-brief-rollup-layout` AC-7). `null` = no completed run yet. */
+export function usePrMetricsRollup(prId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pr-metrics-rollup", prId],
+    queryFn: () => api.get<PrMetricsRollup | null>(`/pulls/${prId}/metrics-rollup`),
+    enabled: prId != null,
   });
 }
 

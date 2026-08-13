@@ -1,0 +1,16 @@
+{
+  "tabLabel": "Context",
+  "title": "Context",
+  "attachedCount": "{attached} of {total} attached",
+  "orderHint": "Order matters — earlier documents appear earlier in the assembled prompt. Toggle to attach.",
+  "untrustedNotice": "Attached documents are injected as an untrusted block into every run of this agent, under the {heading} heading — the model reads them as data, never as instructions.",
+  "filterPlaceholder": "Filter documents…",
+  "dragHandleLabel": "Drag {name} to reorder",
+  "previewLabel": "Preview {name}",
+  "moveUpLabel": "Move {name} up",
+  "moveDownLabel": "Move {name} down",
+  "tokensApprox": "≈ {count, plural, one {# token} other {# tokens}} attached",
+  "save": "Save",
+  "saving": "Saving…",
+  "savedToast": "Context saved"
+}

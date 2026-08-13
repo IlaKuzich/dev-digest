@@ -2,6 +2,7 @@ import type { Db } from '../../db/client.js';
 import * as t from '../../db/schema.js';
 import type { Finding, RunSummary, RunTrace } from '@devdigest/shared';
 import type { ReviewScoreRow, RunCostRow, FindingRollupRow } from '../pulls/helpers.js';
+import type { RollupRunRow } from './rollup.js';
 
 /**
  * A2 — review data-access. The ONLY layer touching the DB for the review
@@ -78,6 +79,18 @@ export class ReviewRepository {
 
   doneRunCostsForPrs(prIds: string[]): Promise<RunCostRow[]> {
     return runRepo.doneRunCostsForPrs(this.db, prIds);
+  }
+
+  /** Every `status='done'` run for the given PRs, batched (AC-20). Feeds the
+   *  PR metrics rollup (`reviews/rollup.ts`). */
+  doneRunsForRollup(prIds: string[]): Promise<RollupRunRow[]> {
+    return runRepo.doneRunsForRollup(this.db, prIds);
+  }
+
+  /** Non-dismissed findings for a set of runs (joined via review). Feeds the
+   *  PR metrics rollup's findings/blockers count. */
+  nonDismissedFindingsForRuns(runIds: string[]): Promise<{ severity: string }[]> {
+    return runRepo.nonDismissedFindingsForRuns(this.db, runIds);
   }
 
   getReview(reviewId: string): Promise<ReviewRow | undefined> {

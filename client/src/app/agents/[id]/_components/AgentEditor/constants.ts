@@ -11,4 +11,9 @@ export interface EditorTab {
 export const TABS: readonly EditorTab[] = [
   { key: "config", labelKey: "editor.tabs.config", icon: "Settings" },
   { key: "skills", labelKey: "editor.tabs.skills", icon: "Sparkles" },
+  { key: "context", labelKey: "editor.tabs.context", icon: "FileText" },
 ];
+
+/** Tab keys accepted from `?tab=`; anything else falls back to Config.
+    Derived from TABS so a new tab can never drift out of the allowlist. */
+export const VALID_TABS: readonly string[] = TABS.map((t) => t.key);

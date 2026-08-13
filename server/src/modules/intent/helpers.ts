@@ -1,4 +1,3 @@
-import { isAbsolute, relative, resolve } from 'node:path';
 import { wrapUntrusted } from '@devdigest/reviewer-core';
 import type { ChatMessage, Intent, IssueMeta, UnifiedDiff } from '@devdigest/shared';
 import { parseUnifiedDiff } from '../../adapters/git/diff-parser.js';
@@ -94,35 +93,13 @@ export function extractRepoDocRefs(body: string | null): string[] {
 }
 
 // ---- path-traversal guard ----------------------------------------------------
-
-/**
- * Resolve `candidate` against `root` and return the absolute path only if it
- * stays within `root` — rejects `..`-escapes, absolute inputs, and anything
- * resolving outside the clone. Returns null otherwise.
- */
-export function safeRepoPath(root: string, candidate: string): string | null {
-  if (!candidate || isAbsolute(candidate)) return null;
-  const resolvedRoot = resolve(root);
-  const target = resolve(resolvedRoot, candidate);
-  const rel = relative(resolvedRoot, target);
-  if (rel === '' ) return null; // root itself is not a file
-  if (rel.startsWith('..') || isAbsolute(rel)) return null;
-  return target;
-}
-
-/**
- * Pure containment check for two ALREADY-RESOLVED (realpath'd) absolute
- * paths. `safeRepoPath` above is a purely lexical pre-filter and cannot see
- * through symlinks; `service.ts` calls this AFTER `realpath`-ing both the
- * clone root and the candidate, to confirm the real (symlink-followed)
- * target still lives inside the real root. Same `relative()` logic as
- * `safeRepoPath`, kept separate because the inputs here are real paths, not
- * lexical ones.
- */
-export function isRealPathContained(realRoot: string, realTarget: string): boolean {
-  const rel = relative(realRoot, realTarget);
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-}
+//
+// Lifted to `_shared/path-guard.ts` (T3 of `docs/plans/2026-07-17-project-context.md`)
+// so the `context` module shares the exact same containment logic instead of a
+// second copy drifting apart. Re-exported here so every existing import of
+// `safeRepoPath`/`isRealPathContained` from `intent/helpers.js` keeps working
+// unchanged (same names, same signatures).
+export { safeRepoPath, isRealPathContained } from '../_shared/path-guard.js';
 
 // ---- token estimate ----------------------------------------------------------
 

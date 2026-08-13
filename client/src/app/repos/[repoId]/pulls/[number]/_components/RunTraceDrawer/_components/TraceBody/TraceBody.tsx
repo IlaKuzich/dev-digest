@@ -16,6 +16,21 @@ import { PromptBlock } from "../PromptBlock";
 import { FindingsSection } from "../FindingsSection";
 import { Row, Stat } from "../atoms";
 
+/** Rough chars-per-token ratio for an offline, client-side estimate — never
+ *  exact (AC-13); no tokenizer call, no network round-trip (AC-24). */
+const SPECS_CHARS_PER_TOKEN = 4;
+
+/** Approximate token volume of the injected `## Project context` block. */
+function estimateSpecsTokens(text: string): number {
+  return Math.ceil(text.length / SPECS_CHARS_PER_TOKEN);
+}
+
+const specsTokenNoteStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "var(--text-muted)",
+  margin: "-4px 0 8px 4px",
+};
+
 export function TraceBody({ trace, findings }: { trace: RunTrace; findings: FindingRecord[] }) {
   const t = useTranslations("runs");
   const stats = trace.stats;
@@ -83,7 +98,12 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
           <PromptBlock label={t("trace.prompt.repoMap")} text={trace.prompt_assembly.repo_map} color={PROMPT_COLORS.repoMap} />
         )}
         {trace.prompt_assembly.specs != null && (
-          <PromptBlock label={t("trace.prompt.specs")} text={trace.prompt_assembly.specs} color={PROMPT_COLORS.specs} />
+          <>
+            <PromptBlock label={t("trace.prompt.specs")} text={trace.prompt_assembly.specs} color={PROMPT_COLORS.specs} />
+            <div style={specsTokenNoteStyle}>
+              {t("trace.prompt.specsTokens", { count: estimateSpecsTokens(trace.prompt_assembly.specs) })}
+            </div>
+          </>
         )}
         {trace.prompt_assembly.callers != null && (
           <PromptBlock label={t("trace.prompt.callers")} text={trace.prompt_assembly.callers} color={PROMPT_COLORS.callers} />

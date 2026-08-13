@@ -1,19 +1,22 @@
 {
-  "block": {
-    "intent": "Intent",
-    "blast": "Blast radius",
-    "risks": "Risks",
-    "history": "PR history"
+  "riskLevel": {
+    "high": "High risk",
+    "medium": "Medium risk",
+    "low": "Low risk"
   },
-  "noRisks": "No notable risks flagged.",
-  "noHistory": "No prior PRs overlap these files.",
-  "overlap": "{count} overlap",
-  "unavailable": "Brief not available yet.",
-  "unavailableHint": "Run a review or open the PR to compute it.",
-  "why": {
-    "title": "git-why",
-    "blame": "blame",
-    "noHistory": "No history available for this line.",
-    "noCommits": "No commits found for this line."
+  "prScore": "PR score",
+  "generate": "Generate brief",
+  "regenerate": "Regenerate",
+  "empty": {
+    "title": "No brief generated yet",
+    "body": "Generate a one-glance summary of this PR's risk level, findings, and where to start reviewing."
+  },
+  "error": {
+    "title": "Couldn't generate the brief",
+    "retry": "Regenerate"
+  },
+  "reviewFocus": {
+    "title": "Review focus — read these first",
+    "empty": "Nothing flagged to read first."
   }
 }

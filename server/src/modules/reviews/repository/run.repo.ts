@@ -1,8 +1,9 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../../../db/client.js';
 import * as t from '../../../db/schema.js';
 import type { RunSummary, RunTrace } from '@devdigest/shared';
 import type { RunCostRow } from '../../pulls/helpers.js';
+import type { RollupRunRow } from '../rollup.js';
 
 // ---- in-flight / history --------------------------------------------------
 
@@ -204,4 +205,62 @@ export async function doneRunCostsForPrs(db: Db, prIds: string[]): Promise<RunCo
   return rows.flatMap((r) =>
     r.prId ? [{ prId: r.prId, costUsd: r.costUsd != null ? Number(r.costUsd) : null }] : [],
   );
+}
+
+/**
+ * Every `status='done'` run for the given PRs, batched over the PR-id set
+ * (AC-20 — no per-PR round trip). Feeds `rollupRunsByPr` (reviews/rollup.ts),
+ * which does the per-agent latest-done grouping. `cost_usd` is NUMERIC →
+ * returned as a string by the driver, so cast with Number (INSIGHTS
+ * 2026-06-25 / AC-19).
+ */
+export async function doneRunsForRollup(db: Db, prIds: string[]): Promise<RollupRunRow[]> {
+  if (prIds.length === 0) return [];
+  const rows = await db
+    .select({
+      prId: t.agentRuns.prId,
+      runId: t.agentRuns.id,
+      agentId: t.agentRuns.agentId,
+      ranAt: t.agentRuns.ranAt,
+      score: t.agentRuns.score,
+      costUsd: t.agentRuns.costUsd,
+      tokensIn: t.agentRuns.tokensIn,
+      tokensOut: t.agentRuns.tokensOut,
+    })
+    .from(t.agentRuns)
+    .where(and(inArray(t.agentRuns.prId, prIds), eq(t.agentRuns.status, 'done')));
+  return rows.flatMap((r) =>
+    r.prId
+      ? [
+          {
+            prId: r.prId,
+            runId: r.runId,
+            agentId: r.agentId,
+            ranAt: r.ranAt,
+            score: r.score,
+            costUsd: r.costUsd != null ? Number(r.costUsd) : null,
+            tokensIn: r.tokensIn,
+            tokensOut: r.tokensOut,
+          },
+        ]
+      : [],
+  );
+}
+
+/**
+ * Non-dismissed findings for a set of runs (joined via findings.review_id →
+ * reviews.id, filtered to reviews.run_id IN runIds). Feeds `countFindings`
+ * (reviews/rollup.ts) for the pooled findings/blockers count (AC-5/AC-6).
+ */
+export async function nonDismissedFindingsForRuns(
+  db: Db,
+  runIds: string[],
+): Promise<{ severity: string }[]> {
+  if (runIds.length === 0) return [];
+  const rows = await db
+    .select({ severity: t.findings.severity })
+    .from(t.findings)
+    .innerJoin(t.reviews, eq(t.findings.reviewId, t.reviews.id))
+    .where(and(inArray(t.reviews.runId, runIds), isNull(t.findings.dismissedAt)));
+  return rows;
 }

@@ -113,3 +113,20 @@ export const RunSummary = z.object({
   cost_usd: z.number().nullable(),
 });
 export type RunSummary = z.infer<typeof RunSummary>;
+
+/**
+ * A PR-wide metrics rollup across every agent's latest completed run
+ * (group by agent_id, keep newest status='done' per agent). `null` on the
+ * endpoint response means the latest-done-run-per-agent set is empty (no
+ * completed run yet) — both consumers (PR Brief card, PR list) omit their
+ * run-derived metrics in that case.
+ */
+export const PrMetricsRollup = z.object({
+  score: z.number().int().nullable(), // MIN of non-null run scores; null if all null
+  findings_count: z.number().int(), // pooled non-dismissed count
+  blockers: z.number().int(), // pooled non-dismissed CRITICAL
+  cost_usd: z.number().nullable(), // SUM; null if all null
+  tokens_in: z.number().int(), // SUM
+  tokens_out: z.number().int(), // SUM
+});
+export type PrMetricsRollup = z.infer<typeof PrMetricsRollup>;

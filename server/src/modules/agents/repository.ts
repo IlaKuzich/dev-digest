@@ -88,7 +88,10 @@ export class AgentsRepository {
     return rows.length > 0;
   }
 
-  /** Insert an agent AND record version 1 in agent_versions (immutable snapshot). */
+  /** Insert an agent AND record version 1 in agent_versions (immutable
+   *  snapshot). A brand-new agent can never have any context attached yet
+   *  (attach only happens after the agent exists), so its v1 snapshot's
+   *  `context` is always `[]` — no read needed. */
   async insert(values: InsertAgent): Promise<AgentRow> {
     const [row] = await this.db
       .insert(t.agents)
@@ -108,18 +111,27 @@ export class AgentsRepository {
         createdBy: values.createdBy ?? null,
       })
       .returning();
-    await this.snapshotVersion(row!, INITIAL_AGENT_VERSION);
+    await this.snapshotVersion(row!, INITIAL_AGENT_VERSION, []);
     return row!;
   }
 
   /**
    * Update an agent. Any config change bumps the version and snapshots the new
    * config into agent_versions (reproducibility for eval).
+   *
+   * `contextPaths` (AC-27) is the agent's currently-attached context doc
+   * paths, ALREADY READ by the caller (`AgentsService`, which holds the
+   * `Container` and reads it via `container.contextRepo.pathsForAgent` —
+   * architecture-review W2 fix: `agent_context` has exactly one owning
+   * repository, this repository never queries it directly). Passed in
+   * unconditionally so the signature doesn't imply it's optional; only
+   * actually used when `configChanged` triggers a snapshot.
    */
   async update(
     workspaceId: string,
     id: string,
     patch: UpdateAgent,
+    contextPaths: string[],
   ): Promise<AgentRow | undefined> {
     const existing = await this.getById(workspaceId, id);
     if (!existing) return undefined;
@@ -148,11 +160,16 @@ export class AgentsRepository {
       .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.id, id)))
       .returning();
 
-    if (configChanged && row) await this.snapshotVersion(row, nextVersion);
+    if (configChanged && row) await this.snapshotVersion(row, nextVersion, contextPaths);
     return row;
   }
 
-  private async snapshotVersion(row: AgentRow, version: number): Promise<void> {
+  /** `context` (AC-27) mirrors `skills` exactly: recorded alongside it at
+   *  whichever config-change snapshot happens next — there is no separate
+   *  version bump for a Context-tab-only save. Callers supply `contextPaths`
+   *  (see `update()`'s doc comment for why this repository doesn't read
+   *  `agent_context` itself). */
+  private async snapshotVersion(row: AgentRow, version: number, contextPaths: string[]): Promise<void> {
     const skills = await this.skillIdsForAgent(row.id);
     await this.db
       .insert(t.agentVersions)
@@ -168,6 +185,7 @@ export class AgentsRepository {
           ci_fail_on: row.ciFailOn,
           repo_intel: row.repoIntel,
           skills,
+          context: contextPaths,
         },
       })
       .onConflictDoNothing();

@@ -103,6 +103,12 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     return service.listRuns(workspaceId, req.params.id);
   });
 
+  // ---- PR-wide metrics rollup (latest done run per agent) ------------------
+  app.get('/pulls/:id/metrics-rollup', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return service.metricsRollup(workspaceId, req.params.id);
+  });
+
   // ---- Delete one run from the history (+ its trace) ----------------------
   app.delete('/runs/:id', { schema: { params: IdParams } }, async (req) => {
     const { workspaceId } = await getContext(container, req);
