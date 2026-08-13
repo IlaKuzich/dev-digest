@@ -22,6 +22,10 @@ export const memory = pgTable(
     content: text('content').notNull(),
     embedding: vector('embedding', { dimensions: 1536 }),
     confidence: doublePrecision('confidence'),
+    /** 'explicit' = user-added; 'auto' = distilled from dismissed findings. */
+    source: text('source', { enum: ['explicit', 'auto'] })
+      .notNull()
+      .default('explicit'),
     sources: jsonb('sources'),
     createdAt: now(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -29,6 +33,18 @@ export const memory = pgTable(
   },
   (t) => ({ wsIdx: index('memory_ws_idx').on(t.workspaceId) }),
 );
+
+/**
+ * Memory learning watermark — one row per workspace.
+ * Tracks `last_processed_at` so the learning loop processes only NEW dismissals.
+ */
+export const memoryLearningState = pgTable('memory_learning_state', {
+  workspaceId: uuid('workspace_id')
+    .primaryKey()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  lastProcessedAt: timestamp('last_processed_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
 
 export const conventions = pgTable('conventions', {
   id: uuid('id').primaryKey().defaultRandom(),

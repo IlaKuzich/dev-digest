@@ -7,6 +7,7 @@ import {
 import type { Container } from '../../platform/container.js';
 import * as t from '../../db/schema.js';
 import { rowsToSettings } from './helpers.js';
+import { ValidationError } from '../../platform/errors.js';
 
 /**
  * Per-feature model configuration.
@@ -54,4 +55,26 @@ export async function resolveFeatureModel(
   id: FeatureModelId,
 ): Promise<FeatureModelChoice> {
   return (await getFeatureModelOverride(container, workspaceId, id)) ?? DEFAULTS[id];
+}
+
+/**
+ * Resolve `id` to a concrete provider+model from the workspace's Settings ONLY
+ * — no silent fallback to the registry default. Throws `ValidationError` (422)
+ * when no override is configured; callers must direct the user to Settings →
+ * Feature Models to configure a model. Used by features (e.g. memory distill)
+ * that would rather fail loudly than silently run on an unreviewed default
+ * model. Most callers want the softer `resolveFeatureModel` above instead.
+ */
+export async function resolveFeatureModelStrict(
+  container: Container,
+  workspaceId: string,
+  id: FeatureModelId,
+): Promise<FeatureModelChoice> {
+  const override = await getFeatureModelOverride(container, workspaceId, id);
+  if (override) return override;
+  const def = FEATURE_MODELS.find((f) => f.id === id);
+  const label = def?.label ?? id;
+  throw new ValidationError(
+    `No model selected for ${label} — choose one in Settings → Feature Models`,
+  );
 }

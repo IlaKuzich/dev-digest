@@ -11,6 +11,9 @@ import type {
   OpenPrPayload,
   CommitFilesPayload,
   IssueMeta,
+  WorkflowRun,
+  ListWorkflowRunsOptions,
+  ListWorkflowRunsResult,
 } from '@devdigest/shared';
 import { withRetry, withTimeout } from '../../platform/resilience.js';
 
@@ -368,5 +371,89 @@ export class OctokitGitHubClient implements GitHubClient {
       withTimeout(this.octokit.rest.users.getAuthenticated(), TIMEOUT),
     );
     return res.data.login;
+  }
+
+  async listWorkflowRuns(
+    repo: RepoRef,
+    opts: ListWorkflowRunsOptions = {},
+  ): Promise<ListWorkflowRunsResult> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          try {
+            const res = opts.workflowFile
+              ? await this.octokit.rest.actions.listWorkflowRuns({
+                  owner: repo.owner,
+                  repo: repo.name,
+                  workflow_id: opts.workflowFile,
+                  per_page: 30,
+                  ...(opts.etag ? { headers: { 'if-none-match': opts.etag } } : {}),
+                })
+              : await this.octokit.rest.actions.listWorkflowRunsForRepo({
+                  owner: repo.owner,
+                  repo: repo.name,
+                  per_page: 30,
+                  ...(opts.etag ? { headers: { 'if-none-match': opts.etag } } : {}),
+                });
+            const etag = (res.headers.etag as string | undefined) ?? opts.etag ?? null;
+            const runs = await Promise.all(
+              res.data.workflow_runs.map(async (run): Promise<WorkflowRun> => {
+                let artifacts: { id: number; name: string }[] = [];
+                try {
+                  const art = await this.octokit.rest.actions.listWorkflowRunArtifacts({
+                    owner: repo.owner,
+                    repo: repo.name,
+                    run_id: run.id,
+                    per_page: 20,
+                  });
+                  artifacts = art.data.artifacts.map((a) => ({ id: a.id, name: a.name }));
+                } catch {
+                  artifacts = [];
+                }
+                return {
+                  id: run.id,
+                  status: run.status ?? null,
+                  conclusion: run.conclusion ?? null,
+                  prNumber: run.pull_requests?.[0]?.number ?? null,
+                  headSha: run.head_sha ?? null,
+                  htmlUrl: run.html_url ?? null,
+                  artifacts,
+                };
+              }),
+            );
+            return { notModified: false, etag, runs };
+          } catch (err: unknown) {
+            // Octokit surfaces a conditional-request 304 as a RequestError.
+            if (
+              err &&
+              typeof err === 'object' &&
+              'status' in err &&
+              (err as { status: number }).status === 304
+            ) {
+              return { notModified: true, etag: opts.etag ?? null, runs: [] };
+            }
+            throw err;
+          }
+        })(),
+        TIMEOUT,
+      ),
+    );
+  }
+
+  async downloadArtifact(repo: RepoRef, artifactId: number | string): Promise<Buffer> {
+    return withRetry(() =>
+      withTimeout(
+        (async () => {
+          const res = await this.octokit.rest.actions.downloadArtifact({
+            owner: repo.owner,
+            repo: repo.name,
+            artifact_id: Number(artifactId),
+            archive_format: 'zip',
+          });
+          return Buffer.from(res.data as ArrayBuffer);
+        })(),
+        TIMEOUT,
+      ),
+    );
   }
 }

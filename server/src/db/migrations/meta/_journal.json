@@ -113,6 +113,20 @@
       "when": 1784302537607,
       "tag": "0015_magenta_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786602181775,
+      "tag": "0016_tan_the_hunter",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786603425280,
+      "tag": "0017_calm_echo",
+      "breakpoints": true
     }
   ]
 }
