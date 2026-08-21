@@ -1,4 +1,4 @@
-import { pgTable, uuid, integer, timestamp, doublePrecision, numeric, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, integer, timestamp, doublePrecision, numeric, text, index } from 'drizzle-orm/pg-core';
 import { workspaces } from './core';
 import { agents } from './agents';
 
@@ -25,6 +25,12 @@ export const evalBatches = pgTable(
       .references(() => agents.id, { onDelete: 'cascade' }),
     agentVersion: integer('agent_version').notNull(),
     ranAt: timestamp('ran_at', { withTimezone: true }).defaultNow().notNull(),
+    // Row is inserted BEFORE the batch executes (status='running') and
+    // updated in place once it finishes — lets "is a run in progress"
+    // survive a client reload instead of living only in mutation state.
+    // Default 'done' backfills pre-existing rows, which were only ever
+    // inserted after completion.
+    status: text('status', { enum: ['running', 'done', 'error'] }).notNull().default('done'),
     recall: doublePrecision('recall'),
     precision: doublePrecision('precision'),
     citationAccuracy: doublePrecision('citation_accuracy'),

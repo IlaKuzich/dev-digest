@@ -109,6 +109,7 @@ export const EvalBatchRun = z.object({
   agent_id: z.string(),
   agent_name: z.string().nullish(),
   agent_version: z.number().int(),
+  status: z.enum(['running', 'done', 'error']),
   ran_at: z.string(),
   recall: z.number().nullable(),
   precision: z.number().nullable(),
@@ -174,6 +175,9 @@ export const AgentEvalDashboard = z.object({
   }),
   trend: z.array(EvalTrendPoint),
   recent_runs: z.array(EvalBatchRun),
+  /** True while a "Run all evals" batch is genuinely in flight for this
+   *  agent (server-tracked — survives a client reload; see EvalBatchRun.status). */
+  running: z.boolean(),
   alert: z.string().nullable(),
 });
 export type AgentEvalDashboard = z.infer<typeof AgentEvalDashboard>;

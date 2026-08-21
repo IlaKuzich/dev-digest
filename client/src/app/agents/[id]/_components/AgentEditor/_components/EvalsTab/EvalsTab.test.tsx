@@ -50,6 +50,7 @@ const DASHBOARD: AgentEvalDashboard = {
   delta: { recall: 0.04, precision: -0.02, citation_accuracy: 0.01 },
   trend: [],
   recent_runs: [],
+  running: false,
   alert: null,
 };
 

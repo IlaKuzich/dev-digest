@@ -134,6 +134,13 @@
       "when": 1786618814490,
       "tag": "0018_panoramic_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787123142294,
+      "tag": "0019_chemical_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

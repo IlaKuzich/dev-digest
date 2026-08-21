@@ -47,6 +47,7 @@ beforeEach(() => {
         id: "b7",
         agent_id: "a1",
         agent_version: 7,
+        status: "done",
         ran_at: "2026-05-29T09:14:00Z",
         recall: 0.82,
         precision: 0.91,
@@ -59,6 +60,7 @@ beforeEach(() => {
         id: "b6",
         agent_id: "a1",
         agent_version: 6,
+        status: "done",
         ran_at: "2026-05-27T16:40:00Z",
         recall: 0.78,
         precision: 0.93,
@@ -71,6 +73,7 @@ beforeEach(() => {
         id: "b5",
         agent_id: "a1",
         agent_version: 5,
+        status: "done",
         ran_at: "2026-05-25T11:02:00Z",
         recall: 0.8,
         precision: 0.92,
@@ -80,6 +83,7 @@ beforeEach(() => {
         cost_usd: 0.24,
       },
     ],
+    running: false,
     alert: null,
   };
 });

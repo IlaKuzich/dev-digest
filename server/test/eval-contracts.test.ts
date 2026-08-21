@@ -32,6 +32,7 @@ describe('EvalBatchRun', () => {
     agent_id: 'agent-1',
     agent_name: 'Security Reviewer',
     agent_version: 7,
+    status: 'done',
     ran_at: '2026-07-28T00:00:00.000Z',
     recall: 0.82,
     precision: 0.91,
@@ -60,6 +61,7 @@ describe('EvalBatchResult', () => {
           agent_id: 'agent-1',
           agent_name: null,
           agent_version: 1,
+          status: 'done',
           ran_at: '2026-07-28T00:00:00.000Z',
           recall: null,
           precision: null,
@@ -130,6 +132,7 @@ describe('AgentEvalDashboard', () => {
     delta: { recall: 0.04, precision: -0.02, citation_accuracy: 0.01 },
     trend: [],
     recent_runs: [],
+    running: false,
     alert: 'Precision dipped 2pts on v7 — a new false positive slipped in.',
   };
 
@@ -160,6 +163,7 @@ describe('EvalCompare', () => {
     agent_id: 'agent-1',
     agent_name: 'Security Reviewer',
     agent_version: 6,
+    status: 'done',
     ran_at: '2026-07-28T00:00:00.000Z',
     recall: 0.78,
     precision: 0.93,

@@ -6,7 +6,7 @@
    toast (lib/providers.tsx); only the success toast is bespoke. */
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "../api";
 import { notify } from "../toast";
@@ -14,9 +14,18 @@ import type { EvalCase } from "@devdigest/shared";
 
 export function useCaptureEvalCase() {
   const t = useTranslations("eval");
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (findingId: string) =>
       api.post<EvalCase>(`/findings/${findingId}/eval-case`),
-    onSuccess: () => notify.success(t("capture.success")),
+    // The created case is owned by an agent (owner_kind is always 'agent'
+    // here — AC-6 rejects agent-less reviews before this resolves), so
+    // invalidate that agent's Evals tab + dashboard or the new case sits
+    // invisible in the DB until an unrelated refetch/staleTime expiry.
+    onSuccess: (evalCase) => {
+      qc.invalidateQueries({ queryKey: ["eval-cases", evalCase.owner_id] });
+      qc.invalidateQueries({ queryKey: ["agent-eval-dashboard", evalCase.owner_id] });
+      notify.success(t("capture.success"));
+    },
   });
 }

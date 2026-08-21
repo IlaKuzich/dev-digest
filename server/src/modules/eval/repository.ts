@@ -55,6 +55,18 @@ export interface InsertEvalBatch {
   workspaceId: string;
   agentId: string;
   agentVersion: number;
+  status: 'running' | 'done' | 'error';
+  recall: number | null;
+  precision: number | null;
+  citationAccuracy: number | null;
+  tracesPassed: number;
+  tracesTotal: number;
+  costUsd: number | null;
+}
+
+/** Patch applied once a batch started via `insertBatch({ status: 'running' })` finishes. */
+export interface CompleteEvalBatch {
+  status: 'done' | 'error';
   recall: number | null;
   precision: number | null;
   citationAccuracy: number | null;
@@ -195,6 +207,16 @@ export class EvalRepository {
     const [row] = await this.db
       .insert(t.evalBatches)
       .values({ ...values, costUsd: values.costUsd != null ? String(values.costUsd) : null })
+      .returning();
+    return row!;
+  }
+
+  /** Finalize a batch previously opened via `insertBatch({ status: 'running' })`. */
+  async completeBatch(id: string, patch: CompleteEvalBatch): Promise<EvalBatchRow> {
+    const [row] = await this.db
+      .update(t.evalBatches)
+      .set({ ...patch, costUsd: patch.costUsd != null ? String(patch.costUsd) : null })
+      .where(eq(t.evalBatches.id, id))
       .returning();
     return row!;
   }

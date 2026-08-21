@@ -17,6 +17,7 @@ import { SeverityFilter, type SevKey } from "./SeverityFilter";
 export function FindingsPanel({
   findings,
   prId,
+  hasAgentOwner = true,
   repoFullName,
   headSha,
   focusFindingId = null,
@@ -25,6 +26,9 @@ export function FindingsPanel({
 }: {
   findings: FindingRecord[];
   prId: string;
+  /** False when the owning review has no agent (AC-6) — passed straight
+     through to every FindingCard's "Turn into eval case" guard. */
+  hasAgentOwner?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
   /** Deep-link target finding to scroll to + highlight (clicking a tooltip row). */
@@ -127,6 +131,7 @@ export function FindingsPanel({
               defaultExpanded={i === 0}
               pending={action.isPending}
               capturePending={capture.isPending}
+              hasAgentOwner={hasAgentOwner}
               repoFullName={repoFullName}
               headSha={headSha}
               onFileClick={onFileClick}

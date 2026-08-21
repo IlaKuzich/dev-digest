@@ -1,0 +1,1 @@
+ALTER TABLE "eval_batches" ADD COLUMN "status" text DEFAULT 'done' NOT NULL;

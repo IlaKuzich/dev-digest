@@ -23,6 +23,7 @@ const RUNS: EvalBatchRun[] = [
     agent_id: "a1",
     agent_name: "Security Reviewer",
     agent_version: 7,
+    status: "done",
     ran_at: "2026-05-29T09:14:00Z",
     recall: 0.82,
     precision: 0.91,

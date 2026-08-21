@@ -106,4 +106,21 @@ describe("FindingCard (smoke, both themes)", () => {
     fireEvent.click(button);
     expect(onCapture).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps 'Turn into eval case' disabled when the review has no owning agent (AC-6), even once accepted", () => {
+    const onCapture = vi.fn();
+    renderWithIntl(
+      <FindingCard
+        f={{ ...FINDING, accepted_at: "2026-01-01T00:00:00Z" }}
+        defaultExpanded
+        onCapture={onCapture}
+        hasAgentOwner={false}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /turn into eval case/i });
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+    expect(onCapture).not.toHaveBeenCalled();
+  });
 });

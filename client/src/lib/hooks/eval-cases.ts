@@ -97,11 +97,15 @@ export function useRunAllEvals(agentId: string | null | undefined) {
   });
 }
 
-/** Feeds the Evals tab's four metric tiles (AC-8). */
+/** Feeds the Evals tab's four metric tiles (AC-8), plus `.running` (server-
+ *  tracked "Run all evals" in-flight state — survives a page reload). Polls
+ *  every 3s while a batch is in flight so the button clears itself once the
+ *  run finishes, even if this tab didn't fire the mutation that started it. */
 export function useAgentEvalDashboard(agentId: string | null | undefined) {
   return useQuery({
     queryKey: ["agent-eval-dashboard", agentId],
     queryFn: () => api.get<AgentEvalDashboard>(`/agents/${agentId}/eval-dashboard`),
     enabled: !!agentId,
+    refetchInterval: (query) => (query.state.data?.running ? 3000 : false),
   });
 }

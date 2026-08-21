@@ -302,67 +302,98 @@ export class EvalService {
     const enabledSkills = await this.container.agentsRepo.enabledSkillsForAgent(agentId);
     const skills = formatSkillsForPrompt(enabledSkills);
 
-    const perCase: { caseRow: EvalCaseRow; exec: CaseExecution | null; error: string | null }[] = [];
-    for (const caseRow of caseRows) {
-      try {
-        const exec = await this.executeCase(agent, skills, caseRow);
-        perCase.push({ caseRow, exec, error: null });
-      } catch (err) {
-        // AC-42 — isolate this case's failure and keep running the rest.
-        perCase.push({ caseRow, exec: null, error: (err as Error).message });
-      }
-    }
-
-    const scoredCases = perCase.filter(
-      (p): p is { caseRow: EvalCaseRow; exec: CaseExecution; error: null } => p.exec !== null,
-    );
-    const agg = microAggregate(
-      scoredCases.map((p) => ({
-        tp: p.exec.score.tp,
-        fp: p.exec.score.fp,
-        fn: p.exec.score.fn,
-        caseType: p.exec.score.caseType as CaseType,
-        pass: p.exec.score.pass,
-      })),
-    );
-    const sumKept = scoredCases.reduce((n, p) => n + p.exec.keptCount, 0);
-    const sumDropped = scoredCases.reduce((n, p) => n + p.exec.droppedCount, 0);
-    const batchCitation = scoredCases.length > 0 ? citationAccuracy(sumKept, sumDropped) : null;
-    let costSum: number | null = null;
-    for (const p of scoredCases) {
-      if (p.exec.costUsd != null) costSum = (costSum ?? 0) + p.exec.costUsd;
-    }
-
+    // Opened BEFORE any case runs (status='running') so "is a batch in
+    // progress" is a server-side fact the client can re-read after a
+    // reload, instead of living only in the request's in-flight mutation
+    // state. Finalized in the try/catch below regardless of outcome.
     const batchRow = await this.repo.insertBatch({
       workspaceId,
       agentId,
       agentVersion: agent.version,
-      recall: agg.recall,
-      precision: agg.precision,
-      citationAccuracy: batchCitation,
-      tracesPassed: agg.tracesPassed,
-      tracesTotal: perCase.length,
-      costUsd: costSum,
+      status: 'running',
+      recall: null,
+      precision: null,
+      citationAccuracy: null,
+      tracesPassed: 0,
+      tracesTotal: caseRows.length,
+      costUsd: null,
     });
 
-    const runRows = await this.repo.insertRuns(
-      perCase.map((p) => ({
-        caseId: p.caseRow.id,
-        batchId: batchRow.id,
-        actualOutput: p.exec ? p.exec.actualOutput : { error: p.error },
-        pass: p.exec ? p.exec.score.pass : false,
-        recall: p.exec ? p.exec.score.recall : null,
-        precision: p.exec ? p.exec.score.precision : null,
-        citationAccuracy: p.exec ? p.exec.citation : null,
-        durationMs: p.exec ? p.exec.durationMs : null,
-        costUsd: p.exec ? p.exec.costUsd : null,
-      })),
-    );
-    const results: EvalRunResult[] = perCase.map((p, i) =>
-      this.toRunResult(runRows[i]!.id, p.caseRow, p.exec, p.error),
-    );
+    try {
+      const perCase: { caseRow: EvalCaseRow; exec: CaseExecution | null; error: string | null }[] = [];
+      for (const caseRow of caseRows) {
+        try {
+          const exec = await this.executeCase(agent, skills, caseRow);
+          perCase.push({ caseRow, exec, error: null });
+        } catch (err) {
+          // AC-42 — isolate this case's failure and keep running the rest.
+          perCase.push({ caseRow, exec: null, error: (err as Error).message });
+        }
+      }
 
-    return { batch: toEvalBatchRunDto(batchRow, agent.name), results };
+      const scoredCases = perCase.filter(
+        (p): p is { caseRow: EvalCaseRow; exec: CaseExecution; error: null } => p.exec !== null,
+      );
+      const agg = microAggregate(
+        scoredCases.map((p) => ({
+          tp: p.exec.score.tp,
+          fp: p.exec.score.fp,
+          fn: p.exec.score.fn,
+          caseType: p.exec.score.caseType as CaseType,
+          pass: p.exec.score.pass,
+        })),
+      );
+      const sumKept = scoredCases.reduce((n, p) => n + p.exec.keptCount, 0);
+      const sumDropped = scoredCases.reduce((n, p) => n + p.exec.droppedCount, 0);
+      const batchCitation = scoredCases.length > 0 ? citationAccuracy(sumKept, sumDropped) : null;
+      let costSum: number | null = null;
+      for (const p of scoredCases) {
+        if (p.exec.costUsd != null) costSum = (costSum ?? 0) + p.exec.costUsd;
+      }
+
+      const finishedBatch = await this.repo.completeBatch(batchRow.id, {
+        status: 'done',
+        recall: agg.recall,
+        precision: agg.precision,
+        citationAccuracy: batchCitation,
+        tracesPassed: agg.tracesPassed,
+        tracesTotal: perCase.length,
+        costUsd: costSum,
+      });
+
+      const runRows = await this.repo.insertRuns(
+        perCase.map((p) => ({
+          caseId: p.caseRow.id,
+          batchId: batchRow.id,
+          actualOutput: p.exec ? p.exec.actualOutput : { error: p.error },
+          pass: p.exec ? p.exec.score.pass : false,
+          recall: p.exec ? p.exec.score.recall : null,
+          precision: p.exec ? p.exec.score.precision : null,
+          citationAccuracy: p.exec ? p.exec.citation : null,
+          durationMs: p.exec ? p.exec.durationMs : null,
+          costUsd: p.exec ? p.exec.costUsd : null,
+        })),
+      );
+      const results: EvalRunResult[] = perCase.map((p, i) =>
+        this.toRunResult(runRows[i]!.id, p.caseRow, p.exec, p.error),
+      );
+
+      return { batch: toEvalBatchRunDto(finishedBatch, agent.name), results };
+    } catch (err) {
+      // A per-case failure is already isolated above — this only catches a
+      // catastrophic failure (aggregation/DB) that would otherwise leave the
+      // row stuck at status='running' forever.
+      await this.repo.completeBatch(batchRow.id, {
+        status: 'error',
+        recall: null,
+        precision: null,
+        citationAccuracy: null,
+        tracesPassed: 0,
+        tracesTotal: caseRows.length,
+        costUsd: null,
+      });
+      throw err;
+    }
   }
 
   /** One batch per agent in the workspace, sequentially (AC-20). */

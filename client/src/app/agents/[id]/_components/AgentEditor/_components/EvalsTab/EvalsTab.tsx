@@ -36,6 +36,9 @@ export function EvalsTab({ agent }: { agent: Agent }) {
 
   const { passed, total } = casesPassing(cases ?? []);
   const current = dashboard?.current;
+  // `dashboard.running` is server-tracked (survives reload); `runAll.isPending`
+  // covers the gap before this tab's own mutation response lands.
+  const running = runAll.isPending || !!dashboard?.running;
 
   const runOne = (caseId: string) => {
     setRunningId(caseId);
@@ -89,8 +92,8 @@ export function EvalsTab({ agent }: { agent: Agent }) {
           {t("evalsTab.passingPill", { passing: passed, total })}
         </span>
         <div style={s.headerActions}>
-          <Button kind="secondary" icon="Play" onClick={() => runAll.mutate()} disabled={runAll.isPending}>
-            {runAll.isPending ? t("evalsTab.running") : t("evalsTab.runAllEvals")}
+          <Button kind="secondary" icon="Play" onClick={() => runAll.mutate()} disabled={running}>
+            {running ? t("evalsTab.running") : t("evalsTab.runAllEvals")}
           </Button>
           <Button kind="primary" icon="Plus" onClick={() => setEditing("new")}>
             {t("caseEditor.newCase")}

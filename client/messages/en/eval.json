@@ -2,7 +2,8 @@
   "capture": {
     "button": "Turn into eval case",
     "success": "Turned into eval case",
-    "needsDecision": "Accept or dismiss this finding first"
+    "needsDecision": "Accept or dismiss this finding first",
+    "noAgentOwner": "This review has no owning agent, so it can't become an eval case"
   },
   "dashboard": {
     "defaultTitle": "Eval Dashboard",

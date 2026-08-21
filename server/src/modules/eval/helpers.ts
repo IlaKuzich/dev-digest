@@ -14,7 +14,14 @@ import { AgentVersionConfig } from '@devdigest/shared';
 import { degradationAlert, type Located } from './scoring.js';
 import type { AgentVersionRow } from '../../db/rows.js';
 import type { AgentBatchGroup, AgentRow, EvalBatchRow, EvalCaseRow, EvalRunRow } from './repository.js';
-import { SPARKLINE_LENGTH } from './constants.js';
+import { EVAL_BATCH_RUNNING_STALE_MS, SPARKLINE_LENGTH } from './constants.js';
+
+/** Whether `batch` is a genuinely in-flight run — 'running' status AND still
+ *  within the staleness window (see EVAL_BATCH_RUNNING_STALE_MS). */
+export function isBatchActivelyRunning(batch: EvalBatchRow | undefined): boolean {
+  if (!batch || batch.status !== 'running') return false;
+  return Date.now() - batch.ranAt.getTime() < EVAL_BATCH_RUNNING_STALE_MS;
+}
 
 /**
  * Pure helpers for the eval module — DB row ⇄ DTO mapping, safe JSON
@@ -83,6 +90,7 @@ export function toEvalBatchRunDto(row: EvalBatchRow, agentName?: string | null):
     agent_id: row.agentId,
     agent_name: agentName ?? null,
     agent_version: row.agentVersion,
+    status: row.status,
     ran_at: row.ranAt.toISOString(),
     recall: row.recall,
     precision: row.precision,
@@ -106,7 +114,11 @@ function toEvalTrendPointDto(row: EvalBatchRow): EvalTrendPoint {
 
 /** Per-agent dashboard (AC-8/23/24/25). `batches` is newest-first. */
 export function toAgentEvalDashboard(agent: AgentRow, batches: EvalBatchRow[]): AgentEvalDashboard {
-  const [latest, prior] = batches;
+  // Metrics/trend are computed from COMPLETED batches only — a 'running' (no
+  // scores yet) or 'error' (aggregation never finished) row would otherwise
+  // read as a false "recall dropped to 0" while a run is in flight.
+  const doneBatches = batches.filter((b) => b.status === 'done');
+  const [latest, prior] = doneBatches;
 
   const current = {
     recall: latest?.recall ?? 0,
@@ -140,8 +152,12 @@ export function toAgentEvalDashboard(agent: AgentRow, batches: EvalBatchRow[]): 
     model: agent.model,
     current,
     delta,
-    trend: [...batches].reverse().map(toEvalTrendPointDto),
+    trend: [...doneBatches].reverse().map(toEvalTrendPointDto),
     recent_runs: batches.map((b) => toEvalBatchRunDto(b, agent.name)),
+    // `batches` is newest-first, so index 0 is the only row that could still
+    // be in flight — a stuck/orphaned 'running' row further back in history
+    // must never re-block the button.
+    running: isBatchActivelyRunning(batches[0]),
     alert,
   };
 }
