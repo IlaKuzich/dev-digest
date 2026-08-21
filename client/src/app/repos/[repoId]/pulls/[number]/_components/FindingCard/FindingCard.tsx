@@ -28,7 +28,10 @@ export function FindingCard({
   focused,
   defaultExpanded,
   onAction,
+  onCapture,
   pending,
+  capturePending,
+  hasAgentOwner = true,
   repoFullName,
   headSha,
   onFileClick,
@@ -38,7 +41,18 @@ export function FindingCard({
   focused?: boolean;
   defaultExpanded?: boolean;
   onAction?: (action: FindingActionKind, reply?: string) => void;
+  /** "Turn into eval case" — separate from onAction; server derives the case
+     type from this finding's accept/dismiss state (AC-1..AC-4). */
+  onCapture?: () => void;
   pending?: boolean;
+  /** True while THIS finding's own capture-to-eval-case mutation is in
+     flight — guards the "Turn into eval case" button independently of
+     `pending` (which only reflects the accept/dismiss mutation). */
+  capturePending?: boolean;
+  /** False when this finding's review has no owning agent (AC-6) — the
+     server rejects the capture outright, so the button stays disabled with
+     an explanatory tooltip instead of letting the click fail. */
+  hasAgentOwner?: boolean;
   repoFullName?: string | null;
   headSha?: string | null;
   /** Navigate to this finding's file:line inside the Files-changed diff (internal). */
@@ -47,6 +61,7 @@ export function FindingCard({
   expandSignal?: number;
 }) {
   const t = useTranslations("prReview");
+  const tEval = useTranslations("eval");
   const [expanded, setExpanded] = React.useState(defaultExpanded ?? false);
   // Deep-link focus opens this card so its rationale is visible on arrival.
   React.useEffect(() => {
@@ -123,6 +138,28 @@ export function FindingCard({
               onClick={() => onAction?.("dismiss")}
             >
               {t("finding.dismiss")}
+            </Button>
+            {/* "Turn into eval case" — AC-7: inert until the finding has been
+               accepted or dismissed (the case type must be unambiguous), and
+               AC-6: inert when the owning review has no agent. `kind` flips
+               to "secondary" (filled) once enabled — the "ghost" style alone
+               made enabled vs. disabled nearly indistinguishable. */}
+            <Button
+              kind={muted && hasAgentOwner ? "secondary" : "ghost"}
+              size="sm"
+              icon="FlaskConical"
+              disabled={pending || capturePending || !muted || !hasAgentOwner}
+              title={
+                !muted
+                  ? tEval("capture.needsDecision")
+                  : !hasAgentOwner
+                    ? tEval("capture.noAgentOwner")
+                    : undefined
+              }
+              aria-label={tEval("capture.button")}
+              onClick={() => onCapture?.()}
+            >
+              {tEval("capture.button")}
             </Button>
           </div>
         </div>

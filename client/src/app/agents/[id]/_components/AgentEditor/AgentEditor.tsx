@@ -9,6 +9,7 @@ import { Tabs } from "@devdigest/ui";
 import type { Agent } from "@devdigest/shared";
 import { ContextAttachTab } from "@/components/context-attach";
 import { ConfigTab } from "./_components/ConfigTab";
+import { EvalsTab } from "./_components/EvalsTab";
 import { SkillsTab } from "./_components/SkillsTab";
 import { TABS } from "./constants";
 import { s } from "./styles";
@@ -26,6 +27,8 @@ export function AgentEditor({ agent, tab, onTab }: { agent: Agent; tab: string; 
           <SkillsTab agent={agent} />
         ) : tab === "context" ? (
           <ContextAttachTab owner={{ kind: "agent", id: agent.id }} />
+        ) : tab === "evals" ? (
+          <EvalsTab agent={agent} />
         ) : (
           <ConfigTab agent={agent} />
         )}

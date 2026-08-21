@@ -28,3 +28,6 @@ test-results/
 .emdash.json
 .omc
 .gstack/
+
+# generated onion-architecture skill eval runs (scripts/run_evals.py output)
+.claude/skills/onion-architecture/evals/ci-runs/*
