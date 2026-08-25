@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { Verdict, Finding } from './findings.js';
-import { EvalRun, EvalOwnerKind, Conformance, Provider, CiFailOn } from './knowledge.js';
+import {
+  EvalRun,
+  EvalOwnerKind,
+  Conformance,
+  Provider,
+  CiFailOn,
+  AgentVersionConfig,
+} from './knowledge.js';
 
 /**
  * A4 — Eval / CI / Compose / Conformance API contracts (L06).
@@ -28,6 +35,19 @@ export const EvalCaseInput = z.object({
   notes: z.string().nullish(),
 });
 export type EvalCaseInput = z.infer<typeof EvalCaseInput>;
+
+/** Preview of what "Turn into eval case" would produce for a finding — NOT
+ *  persisted (`GET /findings/:id/eval-case-draft`). The client shows this in
+ *  the case editor modal so the user can review/edit before Save actually
+ *  creates it via `POST /agents/:id/eval-cases` (AC-2/3/4/6 still apply). */
+export const EvalCaseDraft = z.object({
+  owner_kind: EvalOwnerKind,
+  owner_id: z.string(),
+  name: z.string(),
+  input_diff: z.string(),
+  expected_output: z.unknown(),
+});
+export type EvalCaseDraft = z.infer<typeof EvalCaseDraft>;
 
 /** A persisted eval run row (one execution of a case), returned by the API. */
 export const EvalRunRecord = z.object({
@@ -87,6 +107,131 @@ export const EvalDashboard = z.object({
   alert: z.string().nullable(),
 });
 export type EvalDashboard = z.infer<typeof EvalDashboard>;
+
+// ===========================================================================
+// Eval — batch runs (run-groups) + cross-agent dashboard + compare + promote
+// ===========================================================================
+
+/**
+ * One `eval_batches` row: a single execution of the whole case set at a given
+ * agent version (AC-24, AC-41). Aggregates are null when the batch produced no
+ * scored cases (e.g. every case errored).
+ */
+export const EvalBatchRun = z.object({
+  id: z.string(),
+  agent_id: z.string(),
+  agent_name: z.string().nullish(),
+  agent_version: z.number().int(),
+  status: z.enum(['running', 'done', 'error']),
+  ran_at: z.string(),
+  recall: z.number().nullable(),
+  precision: z.number().nullable(),
+  citation_accuracy: z.number().nullable(),
+  traces_passed: z.number().int(),
+  traces_total: z.number().int(),
+  cost_usd: z.number().nullable(),
+});
+export type EvalBatchRun = z.infer<typeof EvalBatchRun>;
+
+/** Response of `POST /agents/:id/eval-runs` (Run all evals). */
+export const EvalBatchResult = z.object({
+  batch: EvalBatchRun,
+  results: z.array(EvalRunResult),
+});
+export type EvalBatchResult = z.infer<typeof EvalBatchResult>;
+
+/** Dashboard-home per-agent row (AC-18). */
+export const AgentEvalSummary = z.object({
+  agent_id: z.string(),
+  agent_name: z.string(),
+  provider: Provider,
+  model: z.string(),
+  last_version: z.number().int().nullable(),
+  last_ran_at: z.string().nullable(),
+  traces_passed: z.number().int(),
+  traces_total: z.number().int(),
+  recall: z.number().nullable(),
+  precision: z.number().nullable(),
+  citation_accuracy: z.number().nullable(),
+  sparkline: z.array(z.number()),
+});
+export type AgentEvalSummary = z.infer<typeof AgentEvalSummary>;
+
+/** `GET /eval-dashboard` — cross-agent dashboard home (AC-18/19). */
+export const EvalDashboardHome = z.object({
+  agents: z.array(AgentEvalSummary),
+  recent_runs: z.array(EvalBatchRun),
+});
+export type EvalDashboardHome = z.infer<typeof EvalDashboardHome>;
+
+/**
+ * `GET /agents/:id/eval-dashboard` — per-agent detail; feeds BOTH the Evals
+ * tab tiles (AC-8) and the eval detail page (AC-23/24/25).
+ */
+export const AgentEvalDashboard = z.object({
+  agent_id: z.string(),
+  agent_name: z.string(),
+  provider: Provider,
+  model: z.string(),
+  current: z.object({
+    recall: z.number(),
+    precision: z.number(),
+    citation_accuracy: z.number(),
+    traces_passed: z.number().int(),
+    traces_total: z.number().int(),
+    cost_usd: z.number().nullable(),
+  }),
+  delta: z.object({
+    recall: z.number(),
+    precision: z.number(),
+    citation_accuracy: z.number(),
+  }),
+  trend: z.array(EvalTrendPoint),
+  recent_runs: z.array(EvalBatchRun),
+  /** True while a "Run all evals" batch is genuinely in flight for this
+   *  agent (server-tracked — survives a client reload; see EvalBatchRun.status). */
+  running: z.boolean(),
+  alert: z.string().nullable(),
+});
+export type AgentEvalDashboard = z.infer<typeof AgentEvalDashboard>;
+
+/** A single metric's old→new comparison (AC-27). */
+export const EvalCompareMetric = z.object({
+  old: z.number().nullable(),
+  new: z.number().nullable(),
+  delta: z.number().nullable(),
+});
+export type EvalCompareMetric = z.infer<typeof EvalCompareMetric>;
+
+/**
+ * `GET /agents/:id/eval-runs/compare?a=<batchId>&b=<batchId>` — two batch
+ * runs, their metric deltas, and the recorded system-prompt configs for the
+ * prompt diff (AC-27/28). `old_config`/`new_config` are null when the
+ * corresponding `agent_versions` snapshot is missing/malformed — the compare
+ * degrades gracefully rather than 500ing (AC-28 edge case).
+ */
+export const EvalCompare = z.object({
+  a: EvalBatchRun,
+  b: EvalBatchRun,
+  recall: EvalCompareMetric,
+  precision: EvalCompareMetric,
+  citation_accuracy: EvalCompareMetric,
+  cost: EvalCompareMetric,
+  old_config: AgentVersionConfig.nullable(),
+  new_config: AgentVersionConfig.nullable(),
+});
+export type EvalCompare = z.infer<typeof EvalCompare>;
+
+/**
+ * Request body for `POST /agents/:id/promote` — forward-only re-apply of a
+ * past version's config as the new highest version (AC-29..31), mirroring
+ * the skills forward-only restore pattern. Response is the existing `Agent`
+ * shape (no new response contract needed).
+ */
+export const EvalPromoteInput = z.object({
+  version: z.number().int(),
+});
+export type EvalPromoteInput = z.infer<typeof EvalPromoteInput>;
 
 // ===========================================================================
 // Compose Review

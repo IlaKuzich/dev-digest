@@ -180,6 +180,8 @@ export function ReviewRunAccordion({
           <FindingsPanel
             findings={findings}
             prId={prId}
+            agentId={review.agent_id}
+            agentName={review.agent_name}
             repoFullName={repoFullName}
             headSha={headSha}
             focusFindingId={isTarget ? targetFindingId : null}

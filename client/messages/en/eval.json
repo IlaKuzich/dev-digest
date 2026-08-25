@@ -1,4 +1,10 @@
 {
+  "capture": {
+    "button": "Turn into eval case",
+    "success": "Turned into eval case",
+    "needsDecision": "Accept or dismiss this finding first",
+    "noAgentOwner": "This review has no owning agent, so it can't become an eval case"
+  },
   "dashboard": {
     "defaultTitle": "Eval Dashboard",
     "loading": "Loading eval metrics…",
@@ -12,7 +18,9 @@
     "metrics": {
       "recall": "RECALL",
       "precision": "PRECISION",
-      "citationAccuracy": "CITATION ACCURACY"
+      "citationAccuracy": "CITATION ACCURACY",
+      "precisionShort": "PREC",
+      "citationShort": "CITE"
     },
     "legend": {
       "recall": "Recall",
@@ -25,10 +33,41 @@
       "precision": "Precision",
       "citation": "Citation",
       "pass": "Pass",
-      "cost": "Cost"
+      "cost": "Cost",
+      "version": "Version",
+      "agent": "Agent"
     },
     "pass": "pass",
-    "fail": "fail"
+    "fail": "fail",
+    "title": "Eval Dashboard",
+    "subtitle": "Regression harness across all reviewer agents · pick an agent to see its runs",
+    "runAllAgents": "Run all agents",
+    "agentsHeading": "Agents",
+    "recentAllAgents": "Recent eval runs · all agents"
+  },
+  "compare": {
+    "title": "Compare runs · v{oldVersion} → v{newVersion}",
+    "subtitle": "Old prompt vs new — metric deltas and prompt diff on the {total}-trace gold set",
+    "recall": "Recall",
+    "precision": "Precision",
+    "citationAccuracy": "Citation",
+    "cost": "Cost",
+    "promptDiffHeading": "System prompt diff",
+    "oldLabel": "v{version} (old)",
+    "newLabel": "v{version} (new)",
+    "close": "Close",
+    "selectedCount": "{count} selected",
+    "compareButton": "Compare"
+  },
+  "promote": {
+    "button": "Promote v{version}",
+    "confirmTitle": "Promote v{version}?",
+    "success": "Promoted v{version} to active",
+    "error": "Could not promote — version not found"
+  },
+  "banner": {
+    "ariaLabel": "Eval regression warning",
+    "dismiss": "Dismiss"
   },
   "caseEditor": {
     "newCase": "New eval case",
@@ -42,6 +81,7 @@
     "inputLabel": "Input",
     "tabs": {
       "diff": "Diff",
+      "files": "Files",
       "prMeta": "PR meta"
     },
     "diffPlaceholder": "--- a/src/config.ts\n+++ b/src/config.ts\n@@ -10,6 +10,7 @@\n+  stripeKey: \"sk_live_...\"",
@@ -53,9 +93,12 @@
     "expectedOutput": "Expected output",
     "validJson": "valid JSON",
     "invalidJson": "invalid JSON",
+    "findingSkeleton": "+ Finding skeleton",
+    "runOnSave": "Run on save",
+    "cancel": "Cancel",
     "lastRunPassed": "Last run passed",
     "lastRunFailed": "Last run failed",
-    "resultSummary": "recall {recall}% · precision {precision}% · citation {citation}% · {duration}s"
+    "resultSummary": "expected {expected}, got {got} · {duration}s · ${cost}"
   },
   "evalsTab": {
     "metricsTitle": "Eval metrics",
@@ -71,7 +114,12 @@
     "run": "Run",
     "running": "Running…",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "passingPill": "{passing} / {total} passing",
+    "viewFullDashboard": "View full dashboard →",
+    "runAllEvals": "Run all evals",
+    "tracesPassed": "Traces passed",
+    "expectedGot": "expected {expected} finding(s), got {got}"
   },
   "page": {
     "crumbSkillsLab": "Skills Lab",

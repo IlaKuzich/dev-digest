@@ -14,6 +14,7 @@ You MUST identify which package(s) the user's prompt touches and search those pa
 - `client/`        Next.js 15 + React 19 · :3000
 - `reviewer-core/` Pure review engine (no DB/FS/network)
 - `e2e/`           agent-browser deterministic flows
+- `evals/`         Eval harness for skills/agents/workflow — vitest + Claude Agent SDK
 
 ## Boot from zero
 - `./scripts/dev.sh` — Postgres + API + web in one shot
@@ -25,6 +26,18 @@ You MUST identify which package(s) the user's prompt touches and search those pa
 - Cross-package code shared via tsconfig path aliases, NOT pnpm workspaces
 - `reviewer-core` is consumed as TypeScript SOURCE (never emits JS)
 - `@devdigest/shared` is VENDORED into each consumer under `src/vendor/shared`
+- No root `package.json` by design (would imply a workspace) — `pnpm` commands for a package
+  only work run from inside it, e.g. `cd evals && pnpm eval:quality`, never from repo root
+
+## Evals — run after changing the harness itself
+`evals/` (own `package.json`/lockfile — run everything via `cd evals`) is the only regression
+check on `.claude/skills/*`, `.claude/agents/*`, and `CLAUDE.md`. Nothing runs it for you yet, so
+run the matching command yourself before calling a harness change done:
+- Changed `.claude/skills/*` → `pnpm eval:skills`
+- Changed `.claude/agents/*` → `pnpm eval:agents`
+- Changed `CLAUDE.md` (or other on-disk project config) → `pnpm eval:workflow`
+- `pnpm eval:quality` — static gate, no model (SKILL.md structure/frontmatter/links)
+- `pnpm eval` — full suite
 
 ## Do-not-touch zones
 - Don't introduce a workspace tool (pnpm workspace / turbo / nx)
@@ -36,3 +49,4 @@ You MUST identify which package(s) the user's prompt touches and search those pa
 - Read [docs/agent-prompts/](./docs/agent-prompts/) **when** changing or authoring a reviewer system prompt.
 - Invoke a skill from `.claude/skills/` **when** working with Fastify, Drizzle, Next, React, Zod, etc. — don't re-derive framework patterns inline.
 - Invoke skill `engineering-insights` **when** wrapping up a session — capture any non-obvious lesson into the touched module's `INSIGHTS.md` (append-only). **Do not skip this step** — until the L06 Stop-hook automates it, capture only happens if you run it.
+- Read [evals/README.md](./evals/README.md) **when** changing `.claude/skills/*`, `.claude/agents/*`, or `CLAUDE.md` — then run the matching eval command from the "Evals" section above. **Do not skip this step** — nothing triggers it automatically yet, so regression protection only happens if you run it.

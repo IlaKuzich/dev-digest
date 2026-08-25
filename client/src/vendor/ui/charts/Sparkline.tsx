@@ -16,7 +16,13 @@ export function Sparkline({
   const min = Math.min(...data);
   const max = Math.max(...data);
   const span = max - min || 1;
-  const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - ((v - min) / span) * (h - 4) - 2]);
+  // `data.length - 1` is 0 for a single-point series — dividing by it gives
+  // NaN (invalid SVG `cx`/`d`, logged as a React warning and rendered at 0).
+  // Center the lone point instead of dividing by zero.
+  const pts = data.map((v, i) => [
+    data.length > 1 ? (i / (data.length - 1)) * w : w / 2,
+    h - ((v - min) / span) * (h - 4) - 2,
+  ]);
   const d = pts.map((p, i) => (i ? "L" : "M") + p[0]!.toFixed(1) + "," + p[1]!.toFixed(1)).join(" ");
   const last = pts[pts.length - 1]!;
   return (

@@ -5,9 +5,11 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Toggle, EmptyState } from "@devdigest/ui";
-import type { FindingRecord } from "@devdigest/shared";
+import type { EvalCaseDraft, FindingRecord } from "@devdigest/shared";
+import { EvalCaseEditorModal } from "@/components/eval-case-editor-modal";
 import { FindingCard } from "../FindingCard";
 import { useFindingAction } from "../../../../../../../lib/hooks/reviews";
+import { useEvalCaseDraft } from "../../../../../../../lib/hooks/eval-capture";
 import { KEY_TO_ACTION } from "./constants";
 import { visibleFindings } from "./helpers";
 import { s } from "./styles";
@@ -16,6 +18,8 @@ import { SeverityFilter, type SevKey } from "./SeverityFilter";
 export function FindingsPanel({
   findings,
   prId,
+  agentId = null,
+  agentName = null,
   repoFullName,
   headSha,
   focusFindingId = null,
@@ -24,6 +28,11 @@ export function FindingsPanel({
 }: {
   findings: FindingRecord[];
   prId: string;
+  /** Null when the owning review has no agent (AC-6) — gates every
+     FindingCard's "Turn into eval case" button, and feeds the draft-preview
+     modal opened from it. */
+  agentId?: string | null;
+  agentName?: string | null;
   repoFullName?: string | null;
   headSha?: string | null;
   /** Deep-link target finding to scroll to + highlight (clicking a tooltip row). */
@@ -34,9 +43,12 @@ export function FindingsPanel({
 }) {
   const t = useTranslations("prReview");
   const action = useFindingAction();
+  const draft = useEvalCaseDraft();
+  const [draftModal, setDraftModal] = React.useState<EvalCaseDraft | null>(null);
   const [hideLow, setHideLow] = React.useState(false);
   const [activeSev, setActiveSev] = React.useState<SevKey | null>(null);
   const [focusIdx, setFocusIdx] = React.useState(0);
+  const hasAgentOwner = !!agentId;
 
   // Counts exclude dismissed findings (see client INSIGHTS 2026-06-29).
   const bySeverity = React.useMemo(
@@ -124,15 +136,28 @@ export function FindingsPanel({
               focused={i === focusIdx}
               defaultExpanded={i === 0}
               pending={action.isPending}
+              capturePending={draft.isPending}
+              hasAgentOwner={hasAgentOwner}
               repoFullName={repoFullName}
               headSha={headSha}
               onFileClick={onFileClick}
               expandSignal={f.id === focusFindingId ? focusNonce : undefined}
               onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
+              onCapture={() => draft.mutate(f.id, { onSuccess: setDraftModal })}
             />
           ))
         )}
       </div>
+
+      {draftModal && agentId && (
+        <EvalCaseEditorModal
+          agentId={agentId}
+          agentName={agentName ?? "Agent"}
+          evalCase={null}
+          initialValues={draftModal}
+          onClose={() => setDraftModal(null)}
+        />
+      )}
     </div>
   );
 }
