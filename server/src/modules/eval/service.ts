@@ -4,6 +4,7 @@ import type {
   AgentEvalDashboard,
   EvalBatchRun,
   EvalBatchResult,
+  EvalCaseDraft,
   EvalCompare,
   EvalDashboardHome,
   EvalRunResult,
@@ -82,7 +83,13 @@ export class EvalService {
 
   // ---- Group A — capture (AC-1..6) ----------------------------------------
 
-  async captureFromFinding(workspaceId: string, findingId: string): Promise<EvalCaseDto> {
+  /** Shared by `captureFromFinding` (persists) and `previewCaptureFromFinding`
+   *  (read-only) — the AC-2/3/4/6 derivation is identical either way; only
+   *  what happens to the result differs. */
+  private async buildEvalCaseDraft(
+    workspaceId: string,
+    findingId: string,
+  ): Promise<{ ownerId: string; name: string; inputDiff: string; expectedOutput: unknown }> {
     const ctx = await this.container.reviewRepo.findingContext(findingId);
     if (!ctx || ctx.pull.workspaceId !== workspaceId) {
       throw new NotFoundError('Finding not found');
@@ -123,16 +130,35 @@ export class EvalService {
         ]
       : [];
 
+    return { ownerId: review.agentId, name: slugifyCaseName(finding.title), inputDiff, expectedOutput };
+  }
+
+  async captureFromFinding(workspaceId: string, findingId: string): Promise<EvalCaseDto> {
+    const draft = await this.buildEvalCaseDraft(workspaceId, findingId);
     const row = await this.repo.insertCase({
       workspaceId,
       ownerKind: 'agent',
-      ownerId: review.agentId,
-      name: slugifyCaseName(finding.title),
-      inputDiff,
-      expectedOutput,
+      ownerId: draft.ownerId,
+      name: draft.name,
+      inputDiff: draft.inputDiff,
+      expectedOutput: draft.expectedOutput,
     });
     return toEvalCaseDto(row);
     // AC-5 — nothing above touches `finding.accepted_at`/`dismissed_at`.
+  }
+
+  /** Read-only twin of `captureFromFinding` — same derivation, no `insertCase`.
+   *  Lets the client show a pre-filled case editor and defer the actual write
+   *  to the normal `POST /agents/:id/eval-cases` Save path. */
+  async previewCaptureFromFinding(workspaceId: string, findingId: string): Promise<EvalCaseDraft> {
+    const draft = await this.buildEvalCaseDraft(workspaceId, findingId);
+    return {
+      owner_kind: 'agent',
+      owner_id: draft.ownerId,
+      name: draft.name,
+      input_diff: draft.inputDiff,
+      expected_output: draft.expectedOutput,
+    };
   }
 
   // ---- Group B — case CRUD -------------------------------------------------

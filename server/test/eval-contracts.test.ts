@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import {
   EvalBatchRun,
   EvalBatchResult,
+  EvalCaseDraft,
   AgentEvalSummary,
   EvalDashboardHome,
   AgentEvalDashboard,
@@ -49,6 +50,25 @@ describe('EvalBatchRun', () => {
   it('rejects a row missing required agent_version', () => {
     const { agent_version: _omit, ...malformed } = valid;
     expect(() => EvalBatchRun.parse(malformed)).toThrow();
+  });
+});
+
+describe('EvalCaseDraft', () => {
+  const valid = {
+    owner_kind: 'agent',
+    owner_id: 'agent-1',
+    name: 'hardcoded-stripe-secret-key',
+    input_diff: '--- a/src/config.ts\n+++ b/src/config.ts',
+    expected_output: [{ severity: 'CRITICAL', category: 'security', title: 'x', file: 'src/config.ts', start_line: 12 }],
+  };
+
+  it('accepts a valid draft (no id — it is not persisted)', () => {
+    expect(() => EvalCaseDraft.parse(valid)).not.toThrow();
+  });
+
+  it('rejects a draft missing required owner_id', () => {
+    const { owner_id: _omit, ...malformed } = valid;
+    expect(() => EvalCaseDraft.parse(malformed)).toThrow();
   });
 });
 

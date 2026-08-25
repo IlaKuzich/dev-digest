@@ -4,7 +4,8 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, IconBtn } from "@devdigest/ui";
 import type { EvalCaseWithLastRun } from "@/lib/hooks/eval-cases";
-import { caseState, expectedCount, isEmptyExpectedCase, producedCount, severityCategoryTag } from "./helpers";
+import { expectedCount } from "@/lib/eval-case-helpers";
+import { caseState, isEmptyExpectedCase, producedCount, severityCategoryTag } from "./helpers";
 import { s } from "./styles";
 
 const STATE_ICON = {

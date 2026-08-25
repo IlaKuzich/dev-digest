@@ -204,6 +204,49 @@ d('Eval module (it)', () => {
     await app.close();
   });
 
+  it('previews the same derivation as capture WITHOUT persisting a row (Turn into eval case → editor modal draft)', async () => {
+    const app = await makeApp();
+    const agent = await createAgent(app);
+    const { finding } = await seedPrWithFinding({ agentId: agent.id });
+
+    const accept = await app.inject({ method: 'POST', url: `/findings/${finding.id}/accept` });
+    expect(accept.statusCode).toBe(200);
+
+    const before = await app.inject({ method: 'GET', url: `/agents/${agent.id}/eval-cases` });
+    expect(before.json()).toEqual([]);
+
+    const res = await app.inject({ method: 'GET', url: `/findings/${finding.id}/eval-case-draft` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.owner_kind).toBe('agent');
+    expect(body.owner_id).toBe(agent.id);
+    expect(body).not.toHaveProperty('id');
+    expect(body.expected_output).toEqual([
+      {
+        severity: 'CRITICAL',
+        category: 'security',
+        title: 'Hardcoded Stripe secret key',
+        file: 'src/config.ts',
+        start_line: 12,
+        end_line: 12,
+      },
+    ]);
+    expect(body.input_diff).toContain('src/config.ts');
+
+    const after = await app.inject({ method: 'GET', url: `/agents/${agent.id}/eval-cases` });
+    expect(after.json()).toEqual([]); // still nothing persisted
+    await app.close();
+  });
+
+  it('rejects the preview on an agent-less review, same as capture (AC-6)', async () => {
+    const app = await makeApp();
+    const { finding } = await seedPrWithFinding({ agentId: null });
+
+    const res = await app.inject({ method: 'GET', url: `/findings/${finding.id}/eval-case-draft` });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
   it('runs a case through the engine and persists grounded scoring (AC-32/33/34/37)', async () => {
     const app = await makeApp();
     const agent = await createAgent(app);

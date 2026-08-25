@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { FindingRecord } from "@devdigest/shared";
@@ -9,13 +9,27 @@ vi.mock("../../../../../../../lib/hooks/reviews", () => ({
   useFindingAction: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+const draftMutate = vi.fn();
+
 vi.mock("../../../../../../../lib/hooks/eval-capture", () => ({
-  useCaptureEvalCase: () => ({ mutate: vi.fn(), isPending: false }),
+  useEvalCaseDraft: () => ({ mutate: draftMutate, isPending: false }),
+}));
+
+const createMutateAsync = vi.fn();
+vi.mock("@/lib/hooks/eval-cases", () => ({
+  useCreateEvalCase: () => ({ mutateAsync: createMutateAsync, isPending: false }),
+  useUpdateEvalCase: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRunEvalCase: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { FindingsPanel } from "./FindingsPanel";
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  draftMutate.mockReset();
+  createMutateAsync.mockClear();
+});
 
 function makeF(overrides: Partial<FindingRecord> & Pick<FindingRecord, "id" | "severity" | "title">): FindingRecord {
   return {
@@ -158,5 +172,51 @@ describe("FindingsPanel — deep-link focus", () => {
     expect(fileLink.closest("a")).toBeNull(); // internal button, not an external link
     fireEvent.click(fileLink);
     expect(onFileClick).toHaveBeenCalledWith("src/db.ts", 42);
+  });
+});
+
+describe("FindingsPanel — Turn into eval case", () => {
+  const DRAFT = {
+    owner_kind: "agent" as const,
+    owner_id: "ag1",
+    name: "hardcoded-stripe-secret-key",
+    input_diff: "--- a/src/config.ts\n+++ b/src/config.ts\n@@ -10,0 +11 @@\n+  stripeKey: \"sk_live_x\",",
+    expected_output: [{ severity: "CRITICAL", category: "security", title: "x", file: "src/config.ts", start_line: 11 }],
+  };
+
+  it("fetches a draft (not a full create) and opens it pre-filled in the case editor modal — nothing persists until Save", () => {
+    draftMutate.mockImplementation((_findingId: string, opts?: { onSuccess?: (d: typeof DRAFT) => void }) => {
+      opts?.onSuccess?.(DRAFT);
+    });
+    renderWithIntl(
+      <FindingsPanel
+        findings={[makeF({ id: "f1", severity: "CRITICAL", title: "Hardcoded secret", accepted_at: "2026-01-01T00:00:00Z" })]}
+        prId="pr1"
+        agentId="ag1"
+        agentName="Security Reviewer"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /turn into eval case/i }));
+
+    expect(draftMutate).toHaveBeenCalledWith("f1", expect.anything());
+    // The SAME modal Edit uses opens, pre-filled from the draft — and nothing
+    // was created yet (only the preview endpoint was hit).
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("hardcoded-stripe-secret-key")).toBeInTheDocument();
+    expect(createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not open the modal when the review has no owning agent (button stays disabled, AC-6)", () => {
+    renderWithIntl(
+      <FindingsPanel
+        findings={[makeF({ id: "f1", severity: "CRITICAL", title: "Hardcoded secret", accepted_at: "2026-01-01T00:00:00Z" })]}
+        prId="pr1"
+        agentId={null}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /turn into eval case/i })).toBeDisabled();
+    expect(draftMutate).not.toHaveBeenCalled();
   });
 });

@@ -36,6 +36,19 @@ export const EvalCaseInput = z.object({
 });
 export type EvalCaseInput = z.infer<typeof EvalCaseInput>;
 
+/** Preview of what "Turn into eval case" would produce for a finding — NOT
+ *  persisted (`GET /findings/:id/eval-case-draft`). The client shows this in
+ *  the case editor modal so the user can review/edit before Save actually
+ *  creates it via `POST /agents/:id/eval-cases` (AC-2/3/4/6 still apply). */
+export const EvalCaseDraft = z.object({
+  owner_kind: EvalOwnerKind,
+  owner_id: z.string(),
+  name: z.string(),
+  input_diff: z.string(),
+  expected_output: z.unknown(),
+});
+export type EvalCaseDraft = z.infer<typeof EvalCaseDraft>;
+
 /** A persisted eval run row (one execution of a case), returned by the API. */
 export const EvalRunRecord = z.object({
   id: z.string(),

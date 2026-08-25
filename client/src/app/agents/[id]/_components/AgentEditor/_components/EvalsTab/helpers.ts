@@ -10,13 +10,6 @@ export function caseState(c: EvalCaseWithLastRun): CaseState {
   return c.last_run.pass ? "pass" : "fail";
 }
 
-/** `expected_output` is an untrusted/unknown-shaped JSON value (Zod
-    `z.unknown()`) — only its array length drives the "expected N" count
-    (AC-9); never interpreted further here. */
-export function expectedCount(c: EvalCaseWithLastRun): number {
-  return Array.isArray(c.expected_output) ? c.expected_output.length : 0;
-}
-
 /** The last run's `actual_output` is likewise untrusted JSON — only its
     array length drives the "got M" count. */
 export function producedCount(c: EvalCaseWithLastRun): number {
@@ -47,28 +40,3 @@ export function casesPassing(cases: EvalCaseWithLastRun[]): { passed: number; to
   return { passed, total: withRun.length };
 }
 
-/** Best-effort parse for the case editor's Expected-output JSON editor
-    (AC-14) — never `eval`, just `JSON.parse` in a try/catch. */
-export function tryParseJson(text: string): { valid: true; value: unknown } | { valid: false } {
-  try {
-    return { valid: true, value: JSON.parse(text) };
-  } catch {
-    return { valid: false };
-  }
-}
-
-/** "+ Finding skeleton" (AC-15): append a template finding to whatever is
-    already a valid JSON array in the editor, or start a fresh one-element
-    array when the current content isn't a valid array. */
-export function insertFindingSkeleton(currentText: string): string {
-  const parsed = tryParseJson(currentText);
-  const arr = parsed.valid && Array.isArray(parsed.value) ? [...parsed.value] : [];
-  arr.push({
-    severity: "CRITICAL",
-    category: "security",
-    title: "",
-    file: "",
-    start_line: 1,
-  });
-  return JSON.stringify(arr, null, 2);
-}

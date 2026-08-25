@@ -1,4 +1,4 @@
-/* CaseEditorModal.test.tsx — `fireEvent`, NOT `userEvent` (client
+/* EvalCaseEditorModal.test.tsx — `fireEvent`, NOT `userEvent` (client
    INSIGHTS.md:19,46). A multi-line controlled `Textarea` is grabbed via
    `container.querySelector`/`querySelectorAll` rather than
    `getByDisplayValue`, which is unreliable for multi-line bodies
@@ -6,8 +6,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { Agent } from "@devdigest/shared";
-import messages from "../../../../../../../../messages/en/eval.json";
+import messages from "../../../messages/en/eval.json";
 
 const createMutateAsync = vi.fn();
 const updateMutateAsync = vi.fn();
@@ -19,27 +18,12 @@ vi.mock("@/lib/hooks/eval-cases", () => ({
   useRunEvalCase: () => ({ mutateAsync: runMutateAsync, isPending: false }),
 }));
 
-import { CaseEditorModal } from "./CaseEditorModal";
+import { EvalCaseEditorModal } from "./EvalCaseEditorModal";
 
-const AGENT: Agent = {
-  id: "ag1",
-  name: "Security Reviewer",
-  description: "",
-  provider: "openai",
-  model: "gpt-4.1",
-  system_prompt: "x",
-  output_schema: null,
-  strategy: "single-pass",
-  ci_fail_on: "critical",
-  repo_intel: true,
-  enabled: true,
-  version: 7,
-};
-
-function renderModal(onClose = vi.fn()) {
+function renderModal(props: Partial<React.ComponentProps<typeof EvalCaseEditorModal>> = {}, onClose = vi.fn()) {
   return render(
     <NextIntlClientProvider locale="en" messages={{ eval: messages }}>
-      <CaseEditorModal agent={AGENT} evalCase={null} onClose={onClose} />
+      <EvalCaseEditorModal agentId="ag1" agentName="Security Reviewer" evalCase={null} onClose={onClose} {...props} />
     </NextIntlClientProvider>,
   );
 }
@@ -59,7 +43,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("CaseEditorModal", () => {
+describe("EvalCaseEditorModal", () => {
   it("shows 'valid JSON' by default and blocks Save once the Expected-output editor holds invalid JSON", () => {
     const { container } = renderModal();
 
@@ -87,5 +71,28 @@ describe("CaseEditorModal", () => {
     expect(parsed[0]).toHaveProperty("title");
     // Still valid JSON — Save is not blocked by the inserted template.
     expect(screen.getByText("valid JSON")).toBeInTheDocument();
+  });
+
+  it("pre-fills name/diff/expected-output from initialValues when opened as a draft, and doesn't persist until Save (Turn into eval case flow)", () => {
+    const { container } = renderModal({
+      initialValues: {
+        name: "hardcoded-stripe-secret-key",
+        input_diff: "--- a/src/config.ts\n+++ b/src/config.ts\n@@ -10,0 +11 @@\n+  stripeKey: \"sk_live_x\",",
+        expected_output: [{ severity: "CRITICAL", category: "security", title: "x", file: "src/config.ts", start_line: 11 }],
+      },
+    });
+
+    expect(screen.getByDisplayValue("hardcoded-stripe-secret-key")).toBeInTheDocument();
+    expect(screen.getByText(/stripeKey/)).toBeInTheDocument();
+    const parsed = JSON.parse(expectedOutputTextarea(container).value);
+    expect(parsed).toEqual([{ severity: "CRITICAL", category: "security", title: "x", file: "src/config.ts", start_line: 11 }]);
+
+    // Nothing is created just by opening the modal — only Save persists it.
+    expect(createMutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(createMutateAsync).toHaveBeenCalledTimes(1);
+    expect(createMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ owner_id: "ag1", name: "hardcoded-stripe-secret-key" }),
+    );
   });
 });

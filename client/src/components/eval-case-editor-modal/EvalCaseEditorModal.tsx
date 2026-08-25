@@ -3,10 +3,11 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, FormField, Modal, Tabs, TextInput, Textarea, Toggle } from "@devdigest/ui";
-import type { Agent, EvalCaseInput } from "@devdigest/shared";
+import type { EvalCaseDraft, EvalCaseInput } from "@devdigest/shared";
 import { formatCost } from "@/components/run-cost-badge";
+import { expectedCount } from "@/lib/eval-case-helpers";
 import { useCreateEvalCase, useRunEvalCase, useUpdateEvalCase, type EvalCaseWithLastRun } from "@/lib/hooks/eval-cases";
-import { expectedCount, insertFindingSkeleton, tryParseJson } from "./helpers";
+import { insertFindingSkeleton, tryParseJson } from "./helpers";
 
 type InputTab = "diff" | "files" | "prMeta";
 
@@ -64,31 +65,41 @@ function initialStrip(evalCase: EvalCaseWithLastRun | null): LastRunStrip | null
  * Eval case editor modal (AC-13..16, screenshot 05): Name, Input (Diff/Files/
  * PR meta tabs), Expected-output JSON editor with a blocking valid/invalid
  * indicator, "+ Finding skeleton", "Run on save", and the result strip.
+ *
+ * Shared across 2+ routes: the Agent editor's Evals tab (create/edit an
+ * existing case — `evalCase` set) and the PR review page's "Turn into eval
+ * case" flow (a not-yet-persisted draft — `evalCase` is `null`, `initialValues`
+ * pre-fills the form; nothing is written until Save).
  */
-export function CaseEditorModal({
-  agent,
+export function EvalCaseEditorModal({
+  agentId,
+  agentName,
   evalCase,
+  initialValues = null,
   onClose,
 }: {
-  agent: Agent;
+  agentId: string;
+  agentName: string;
   evalCase: EvalCaseWithLastRun | null;
+  /** Pre-fills a brand-new (not yet persisted) case — ignored once `evalCase` is set. */
+  initialValues?: Pick<EvalCaseDraft, "name" | "input_diff" | "expected_output"> | null;
   onClose: () => void;
 }) {
   const t = useTranslations("eval");
-  const createCase = useCreateEvalCase(agent.id);
+  const createCase = useCreateEvalCase(agentId);
   const updateCase = useUpdateEvalCase();
   const runCase = useRunEvalCase();
 
   const prMeta = readPrMeta(evalCase?.input_meta ?? null);
 
-  const [name, setName] = React.useState(evalCase?.name ?? "");
+  const [name, setName] = React.useState(evalCase?.name ?? initialValues?.name ?? "");
   const [inputTab, setInputTab] = React.useState<InputTab>("diff");
-  const [diffText, setDiffText] = React.useState(evalCase?.input_diff ?? "");
+  const [diffText, setDiffText] = React.useState(evalCase?.input_diff ?? initialValues?.input_diff ?? "");
   const [filesText, setFilesText] = React.useState(readInputFilesText(evalCase?.input_files));
   const [prTitle, setPrTitle] = React.useState(prMeta.title);
   const [prBody, setPrBody] = React.useState(prMeta.body);
   const [expectedText, setExpectedText] = React.useState(
-    evalCase ? JSON.stringify(evalCase.expected_output ?? [], null, 2) : "[]",
+    JSON.stringify((evalCase ? evalCase.expected_output : initialValues?.expected_output) ?? [], null, 2),
   );
   const [runOnSave, setRunOnSave] = React.useState(false);
   const [strip, setStrip] = React.useState<LastRunStrip | null>(initialStrip(evalCase));
@@ -114,7 +125,7 @@ export function CaseEditorModal({
     if (!parsedExpected.valid) return;
     const payload: EvalCaseInput = {
       owner_kind: "agent",
-      owner_id: agent.id,
+      owner_id: agentId,
       name: name.trim(),
       input_diff: diffText,
       input_files: buildInputFiles(filesText),
@@ -137,7 +148,7 @@ export function CaseEditorModal({
     <Modal
       width={880}
       title={evalCase ? t("caseEditor.caseTitle", { name: evalCase.name }) : t("caseEditor.newCase")}
-      subtitle={agent.name}
+      subtitle={agentName}
       onClose={onClose}
       footer={
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>

@@ -8,9 +8,10 @@ import { NotFoundError } from '../../platform/errors.js';
 import { EvalService } from './service.js';
 
 /**
- * T4 — eval module (Group A–E). 13 endpoints per the spec's Contracts & flows
+ * T4 — eval module (Group A–E). 14 endpoints per the spec's Contracts & flows
  * table (`specs/eval-pipeline.md`):
  *   POST   /findings/:id/eval-case          → capture (Surface A)
+ *   GET    /findings/:id/eval-case-draft    → capture preview, no persist (Surface A)
  *   POST   /agents/:id/eval-cases           → create case
  *   GET    /agents/:id/eval-cases           → list cases (Evals tab)
  *   PUT    /eval-cases/:id                  → update case
@@ -63,6 +64,11 @@ export default async function evalRoutes(appBase: FastifyInstance) {
     const evalCase = await service.captureFromFinding(workspaceId, req.params.id);
     reply.status(201);
     return evalCase;
+  });
+
+  app.get('/findings/:id/eval-case-draft', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(app.container, req);
+    return service.previewCaptureFromFinding(workspaceId, req.params.id);
   });
 
   // ---- Group B — case CRUD + single-case run -------------------------------

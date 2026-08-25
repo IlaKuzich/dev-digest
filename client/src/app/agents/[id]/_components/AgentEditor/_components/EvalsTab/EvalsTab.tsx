@@ -12,7 +12,7 @@ import {
   useRunEvalCase,
   type EvalCaseWithLastRun,
 } from "@/lib/hooks/eval-cases";
-import { CaseEditorModal } from "./CaseEditorModal";
+import { EvalCaseEditorModal } from "@/components/eval-case-editor-modal";
 import { CaseRow } from "./CaseRow";
 import { casesPassing } from "./helpers";
 import { s } from "./styles";
@@ -119,8 +119,9 @@ export function EvalsTab({ agent }: { agent: Agent }) {
       )}
 
       {editing && (
-        <CaseEditorModal
-          agent={agent}
+        <EvalCaseEditorModal
+          agentId={agent.id}
+          agentName={agent.name}
           evalCase={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
         />
