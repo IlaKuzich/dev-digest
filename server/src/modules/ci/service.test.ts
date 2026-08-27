@@ -8,6 +8,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { deriveRunStatus, CiService } from "./service.js";
+import { lintWorkflowYml } from "./generators/lint.js";
+import { workflowYml } from "./generators/workflow.js";
 import type { Container } from "../../platform/container.js";
 import type { CiInstallation } from "@devdigest/shared";
 
@@ -215,5 +217,275 @@ describe("CiService.exportCi action=files", () => {
 
     expect(mockGh.openPullRequest).not.toHaveBeenCalled();
     expect(result.pr_url).toBe("https://github.com/owner/repo/pull/99");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exportCi + workflow_yml override (AC-14/38/48)
+// ---------------------------------------------------------------------------
+
+describe("CiService.exportCi workflow_yml override", () => {
+  const mockInstallRow = {
+    id: "install-1",
+    agentId: "agent-1",
+    repo: "owner/repo",
+    targetType: "gha" as const,
+    installedAt: new Date(),
+    lastSyncedEtag: null,
+    lastSyncedAt: null,
+  };
+
+  const mockAgent = {
+    id: "agent-1",
+    name: "Test Agent",
+    provider: "openrouter",
+    model: "gpt-4.1",
+    systemPrompt: "Review this PR.",
+    strategy: "auto",
+    ciFailOn: "critical",
+  };
+
+  const VIOLATING_WORKFLOW_YML = `name: DevDigest Review
+on:
+  pull_request_target:
+    types:
+      - opened
+permissions:
+  contents: write
+jobs:
+  devdigest-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run DevDigest Review
+        env:
+          OPENROUTER_API_KEY: sk-hardcoded-secret-value
+        run: echo "not the runner"
+`;
+
+  const CLEAN_EDITED_WORKFLOW_YML = `name: DevDigest Review (edited)
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  devdigest-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run DevDigest Review
+        env:
+          OPENROUTER_API_KEY: \${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: node .devdigest/runner/index.js
+`;
+
+  function makeMockContainer(upsertInstallation: ReturnType<typeof vi.fn>) {
+    return {
+      agentsRepo: {
+        getById: vi.fn().mockResolvedValue(mockAgent),
+        linkedSkills: vi.fn().mockResolvedValue([]),
+      },
+      reposRepo: {
+        findByFullName: vi.fn().mockResolvedValue(undefined),
+      },
+      ciRepo: {
+        upsertInstallation,
+      },
+      github: vi.fn(),
+    } as unknown as Container;
+  }
+
+  it("throws and never calls commitFiles when workflow_yml violates the security lint", async () => {
+    const upsertInstallation = vi.fn().mockResolvedValue(mockInstallRow);
+    const commitFiles = vi.fn();
+    const mockGh = {
+      commitFiles,
+      findOpenPr: vi.fn(),
+      openPullRequest: vi.fn(),
+    };
+    const container = makeMockContainer(upsertInstallation);
+    (container as any).github = vi.fn().mockResolvedValue(mockGh);
+
+    const service = new CiService(container);
+
+    await expect(
+      service.exportCi(
+        "agent-1",
+        {
+          repo: "owner/repo",
+          target: "gha",
+          action: "open_pr",
+          post_as: "github_review",
+          triggers: ["opened"],
+          base: "main",
+          workflow_yml: VIOLATING_WORKFLOW_YML,
+        },
+        "workspace-1",
+      ),
+    ).rejects.toThrow();
+
+    expect(commitFiles).not.toHaveBeenCalled();
+    expect(upsertInstallation).not.toHaveBeenCalled();
+  });
+
+  it("commits the exact override content when workflow_yml is clean (open_pr)", async () => {
+    const upsertInstallation = vi.fn().mockResolvedValue(mockInstallRow);
+    const mockGh = {
+      commitFiles: vi.fn().mockResolvedValue({ branch: "devdigest/ci" }),
+      findOpenPr: vi.fn().mockResolvedValue(null),
+      openPullRequest: vi
+        .fn()
+        .mockResolvedValue({ url: "https://github.com/owner/repo/pull/1" }),
+    };
+    const container = makeMockContainer(upsertInstallation);
+    (container as any).github = vi.fn().mockResolvedValue(mockGh);
+
+    const service = new CiService(container);
+    await service.exportCi(
+      "agent-1",
+      {
+        repo: "owner/repo",
+        target: "gha",
+        action: "open_pr",
+        post_as: "github_review",
+        triggers: ["opened"],
+        base: "main",
+        workflow_yml: CLEAN_EDITED_WORKFLOW_YML,
+      },
+      "workspace-1",
+    );
+
+    const committedWorkflow = mockGh.commitFiles.mock.calls[0]![1].files.find(
+      (f: { path: string }) => f.path === ".github/workflows/devdigest-review.yml",
+    );
+    expect(committedWorkflow?.contents).toBe(CLEAN_EDITED_WORKFLOW_YML);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// lintWorkflowYml — direct unit cases (AC-39/40/41 invariants)
+// ---------------------------------------------------------------------------
+
+describe("lintWorkflowYml", () => {
+  it("accepts the real generator's own output (no false positives)", () => {
+    const generated = workflowYml({
+      triggers: ["opened", "synchronize", "reopened"],
+      postAs: "github_review",
+    });
+    expect(lintWorkflowYml(generated)).toEqual({ ok: true });
+  });
+
+  it("rejects permissions broader than contents:read + pull-requests:write", () => {
+    const yml = workflowYml({
+      triggers: ["opened"],
+      postAs: "github_review",
+    }).replace("  contents: read\n  pull-requests: write", "  contents: write");
+
+    const result = lintWorkflowYml(yml);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.violations.some((v) => v.includes("permissions"))).toBe(
+        true,
+      );
+    }
+  });
+
+  it("rejects a job-level permissions escalation even when the top-level block is compliant", () => {
+    // Regression test (pr-self-review finding): GitHub Actions allows a
+    // `permissions:` block at BOTH the workflow level and per-job — a
+    // job-level block REPLACES the workflow-level one for that job (not
+    // merged). Checking only the FIRST `permissions:` occurrence in the
+    // file is a full escalation bypass.
+    const yml = `name: DevDigest Review
+on:
+  pull_request:
+    types:
+      - opened
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  devdigest-review:
+    permissions:
+      contents: write
+      actions: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run DevDigest Review
+        env:
+          OPENROUTER_API_KEY: \${{ secrets.OPENROUTER_API_KEY }}
+        run: node .devdigest/runner/index.js
+`;
+
+    const result = lintWorkflowYml(yml);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.violations.some((v) => v.includes("permissions"))).toBe(
+        true,
+      );
+      // Must name the job-level escalation specifically, not just re-report
+      // the (compliant) top-level block.
+      expect(
+        result.violations.some(
+          (v) => v.includes("actions") || v.includes("contents: write"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a pull_request_target trigger", () => {
+    const yml = workflowYml({
+      triggers: ["opened"],
+      postAs: "github_review",
+    }).replace("pull_request:", "pull_request_target:");
+
+    const result = lintWorkflowYml(yml);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.violations.some((v) => v.includes("pull_request_target")),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a hardcoded secret instead of ${{ secrets.* }}", () => {
+    const yml = workflowYml({
+      triggers: ["opened"],
+      postAs: "github_review",
+    }).replace(
+      "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}",
+      "OPENROUTER_API_KEY: sk-hardcoded-value",
+    );
+
+    const result = lintWorkflowYml(yml);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.violations.some((v) => v.includes("hardcoded secret")),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a workflow missing the runner invocation step", () => {
+    const yml = workflowYml({
+      triggers: ["opened"],
+      postAs: "github_review",
+    }).replace(
+      "run: node .devdigest/runner/index.js",
+      'run: echo "not the runner"',
+    );
+
+    const result = lintWorkflowYml(yml);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.violations.some((v) => v.includes("runner/index.js")),
+      ).toBe(true);
+    }
   });
 });

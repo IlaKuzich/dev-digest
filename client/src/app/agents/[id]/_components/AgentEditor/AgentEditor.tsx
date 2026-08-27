@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Tabs } from "@devdigest/ui";
 import type { Agent } from "@devdigest/shared";
 import { ContextAttachTab } from "@/components/context-attach";
+import { CiTab } from "./_components/CiTab";
 import { ConfigTab } from "./_components/ConfigTab";
 import { EvalsTab } from "./_components/EvalsTab";
 import { SkillsTab } from "./_components/SkillsTab";
@@ -29,6 +30,8 @@ export function AgentEditor({ agent, tab, onTab }: { agent: Agent; tab: string; 
           <ContextAttachTab owner={{ kind: "agent", id: agent.id }} />
         ) : tab === "evals" ? (
           <EvalsTab agent={agent} />
+        ) : tab === "ci" ? (
+          <CiTab agent={agent} />
         ) : (
           <ConfigTab agent={agent} />
         )}
