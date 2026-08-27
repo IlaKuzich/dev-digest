@@ -324,6 +324,14 @@ export const CiExportInput = z.object({
   post_as: z.enum(['github_review', 'pr_comment', 'none']).default('github_review'),
   triggers: z.array(z.string()).default(['opened', 'synchronize', 'reopened']),
   base: z.string().default('main'),
+  /**
+   * User-edited `workflow.yml` override (Preview step, Variant A round-trip).
+   * When present on "open_pr"/"files", the server commits THIS content for
+   * `.github/workflows/devdigest-review.yml` instead of the freshly-generated
+   * copy, after passing the server-side security re-lint (AC-48). Only
+   * `workflow.yml` is overridable — no other bundle file accepts caller content.
+   */
+  workflow_yml: z.string().optional(),
 });
 export type CiExportInput = z.infer<typeof CiExportInput>;
 /** Caller-facing input type — `.default()` fields stay optional (web hooks). */

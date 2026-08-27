@@ -198,6 +198,144 @@ d("CI module (Testcontainers pg)", () => {
     expect(installations[0]!.repo).toBe("acme/ci-test-repo");
   });
 
+  // ---- Test 1b: workflow_yml security re-lint (AC-14/38/48) ----------------
+
+  it("rejects an edited workflow_yml that violates the security lint (non-2xx, no installation)", async () => {
+    const mockGh = new MockGitHubClient();
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: { github: mockGh },
+    });
+
+    const [agentRow] = await pg.handle.db
+      .insert(t.agents)
+      .values({
+        workspaceId,
+        name: "Lint Reject Agent",
+        provider: "openrouter",
+        model: "gpt-4.1",
+        systemPrompt: "Review PRs.",
+      })
+      .returning();
+    const lintAgentId = agentRow!.id;
+
+    const installationsBefore = await pg.handle.db
+      .select()
+      .from(t.ciInstallations)
+      .where(eq(t.ciInstallations.agentId, lintAgentId));
+    expect(installationsBefore.length).toBe(0);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/agents/${lintAgentId}/export-ci`,
+      payload: {
+        repo: "acme/ci-test-repo",
+        target: "gha",
+        action: "open_pr",
+        post_as: "github_review",
+        triggers: ["opened"],
+        base: "main",
+        workflow_yml: `name: DevDigest Review
+on:
+  pull_request_target:
+    types:
+      - opened
+permissions:
+  contents: write
+jobs:
+  devdigest-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run DevDigest Review
+        env:
+          OPENROUTER_API_KEY: sk-hardcoded-secret-value
+        run: echo "not the runner"
+`,
+      },
+    });
+
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.statusCode).toBeLessThan(500);
+    expect(mockGh.committed.length).toBe(0);
+
+    const installationsAfter = await pg.handle.db
+      .select()
+      .from(t.ciInstallations)
+      .where(eq(t.ciInstallations.agentId, lintAgentId));
+    expect(installationsAfter.length).toBe(0);
+  });
+
+  it("commits the exact edited workflow_yml when it passes the security lint", async () => {
+    const mockGh = new MockGitHubClient();
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: { github: mockGh },
+    });
+
+    const [agentRow] = await pg.handle.db
+      .insert(t.agents)
+      .values({
+        workspaceId,
+        name: "Lint Accept Agent",
+        provider: "openrouter",
+        model: "gpt-4.1",
+        systemPrompt: "Review PRs.",
+      })
+      .returning();
+    const acceptAgentId = agentRow!.id;
+
+    const editedWorkflowYml = `name: DevDigest Review (edited)
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  devdigest-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run DevDigest Review
+        env:
+          OPENROUTER_API_KEY: \${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: node .devdigest/runner/index.js
+`;
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/agents/${acceptAgentId}/export-ci`,
+      payload: {
+        repo: "acme/ci-test-repo",
+        target: "gha",
+        action: "open_pr",
+        post_as: "github_review",
+        triggers: ["opened", "synchronize"],
+        base: "main",
+        workflow_yml: editedWorkflowYml,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+
+    expect(mockGh.committed.length).toBe(1);
+    const committedWorkflow = mockGh.committed[0]!.files.find(
+      (f: { path: string }) => f.path === ".github/workflows/devdigest-review.yml",
+    );
+    expect(committedWorkflow?.contents).toBe(editedWorkflowYml);
+
+    const installations = await pg.handle.db
+      .select()
+      .from(t.ciInstallations)
+      .where(eq(t.ciInstallations.agentId, acceptAgentId));
+    expect(installations.length).toBe(1);
+  });
+
   // ---- Test 2: ingest 200 → ci_runs + agent_runs + ci_run_findings ----------
 
   it("ingest with mock 200 → ci_runs row + agent_runs(source=ci) + ci_run_findings", async () => {

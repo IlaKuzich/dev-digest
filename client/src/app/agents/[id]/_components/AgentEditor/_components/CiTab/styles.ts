@@ -1,0 +1,50 @@
+import type { CSSProperties } from "react";
+
+/** Co-located styles for CiTab + InstallationRow. */
+export const s = {
+  wrap: { maxWidth: 900 } satisfies CSSProperties,
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  } satisfies CSSProperties,
+  h2: { fontSize: 18, fontWeight: 700 } satisfies CSSProperties,
+  headerActions: { marginLeft: "auto", display: "flex", gap: 10 } satisfies CSSProperties,
+  failOnRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20,
+  } satisfies CSSProperties,
+  failOnLabel: { fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" } satisfies CSSProperties,
+  failOnControl: { width: 160 } satisfies CSSProperties,
+  list: { display: "flex", flexDirection: "column", gap: 10 } satisfies CSSProperties,
+  row: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "14px 16px",
+    borderRadius: 8,
+    border: "1px solid var(--border)",
+    background: "var(--bg-elevated)",
+  } satisfies CSSProperties,
+  repo: { display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 600 } satisfies CSSProperties,
+  rowRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 } satisfies CSSProperties,
+  ranAt: { fontSize: 12, color: "var(--text-muted)", minWidth: 56, textAlign: "right" } satisfies CSSProperties,
+  addRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: "14px 16px",
+    borderRadius: 8,
+    border: "1px dashed var(--border-strong)",
+    background: "transparent",
+    color: "var(--text-secondary)",
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    width: "100%",
+  } satisfies CSSProperties,
+} as const;
