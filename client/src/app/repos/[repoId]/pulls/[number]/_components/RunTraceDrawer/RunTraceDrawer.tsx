@@ -25,6 +25,9 @@ export interface RunTraceDrawerProps {
   findings?: FindingRecord[];
   /** When true, the drawer defaults to the live log and streams SSE. */
   running?: boolean;
+  /** Opens a finding's file:line in the PR's own in-app diff view (2026-08-27
+   *  — this row had no click handling at all before, in any caller). */
+  onFileClick?: (file: string, line: number) => void;
   onClose: () => void;
 }
 
@@ -39,6 +42,7 @@ export default function RunTraceDrawer({
   prNumber,
   findings = [],
   running = false,
+  onFileClick,
   onClose,
 }: RunTraceDrawerProps) {
   const t = useTranslations("runs");
@@ -94,7 +98,7 @@ export default function RunTraceDrawer({
               {stillRunning ? t("drawer.tracePending") : t("drawer.loadingTrace")}
             </div>
           ) : trace ? (
-            <TraceBody trace={trace} findings={findings} />
+            <TraceBody trace={trace} findings={findings} onFileClick={onFileClick} />
           ) : (
             <div style={s.emptyNote}>{t("drawer.noTrace")}</div>
           )

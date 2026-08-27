@@ -107,6 +107,12 @@ describe("FindingCard (smoke, both themes)", () => {
     expect(onCapture).toHaveBeenCalledTimes(1);
   });
 
+  it("does not render Learn or Reply-to-author (removed 2026-08-27 — stub buttons, no real functionality yet)", () => {
+    renderWithIntl(<FindingCard f={FINDING} defaultExpanded />);
+    expect(screen.queryByRole("button", { name: /^learn$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reply to author/i })).not.toBeInTheDocument();
+  });
+
   it("keeps 'Turn into eval case' disabled when the review has no owning agent (AC-6), even once accepted", () => {
     const onCapture = vi.fn();
     renderWithIntl(

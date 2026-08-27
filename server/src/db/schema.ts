@@ -26,6 +26,7 @@ export * from './schema/eval';
 export * from './schema/eval-batches';
 export * from './schema/ci';
 export * from './schema/runs';
+export * from './schema/multi-agent';
 export * from './schema/ops';
 export * from './schema/repo-intel';
 
@@ -43,6 +44,7 @@ import { evalCases, evalRuns, conformanceChecks, composedReviews } from './schem
 import { evalBatches } from './schema/eval-batches';
 import { ciInstallations, ciRuns, ciRunFindings } from './schema/ci';
 import { agentRuns, runTraces, multiAgentRuns } from './schema/runs';
+import { multiAgentRunAgents } from './schema/multi-agent';
 import { jobs, installedPlugins, digests } from './schema/ops';
 import {
   repoIndexState,
@@ -92,6 +94,7 @@ export const schema = {
   agentRuns,
   runTraces,
   multiAgentRuns,
+  multiAgentRunAgents,
   jobs,
   installedPlugins,
   digests,

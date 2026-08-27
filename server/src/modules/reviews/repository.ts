@@ -24,6 +24,14 @@ export type ReviewRow = typeof t.reviews.$inferSelect;
 import * as reviewRepo from './repository/review.repo.js';
 import * as runRepo from './repository/run.repo.js';
 import * as pullRepo from './repository/pull.repo.js';
+import * as multiRunRepo from './repository/multi-run.repo.js';
+import type {
+  MultiAgentRunRow,
+  MultiAgentRunWithPrRow,
+  MultiRunAgentRow,
+  AgentRunEstimateStats,
+} from './repository/multi-run.repo.js';
+export type { MultiAgentRunRow, MultiAgentRunWithPrRow, MultiRunAgentRow, AgentRunEstimateStats };
 
 export class ReviewRepository {
   constructor(private db: Db) {}
@@ -200,5 +208,67 @@ export class ReviewRepository {
 
   getRunTrace(runId: string): Promise<RunTrace | undefined> {
     return runRepo.getRunTrace(this.db, runId);
+  }
+
+  // ---- multi-agent runs (A5) ----------------------------------------------
+
+  /** Create the ONE `multi_agent_runs` parent row for a fan-out trigger. */
+  createMultiAgentRun(workspaceId: string, prId: string): Promise<string> {
+    return multiRunRepo.createMultiAgentRun(this.db, workspaceId, prId);
+  }
+
+  /** Attribute every `agent_runs` row a trigger fanned out to the ONE parent. */
+  linkAgentRunsToParent(runIds: string[], multiAgentRunId: string): Promise<void> {
+    return multiRunRepo.linkAgentRunsToParent(this.db, runIds, multiAgentRunId);
+  }
+
+  /** The newest multi-agent run for a PR (AC-29 — latest-per-PR). */
+  getLatestMultiAgentRunForPr(
+    workspaceId: string,
+    prId: string,
+  ): Promise<MultiAgentRunRow | undefined> {
+    return multiRunRepo.getLatestMultiAgentRunForPr(this.db, workspaceId, prId);
+  }
+
+  /** The PR number of the most recent multi-agent run anywhere in this repo,
+   *  or null if the repo has never had one — repo-level nav landing. */
+  getLatestPrNumberForRepo(workspaceId: string, repoId: string): Promise<number | null> {
+    return multiRunRepo.getLatestPrNumberForRepo(this.db, workspaceId, repoId);
+  }
+
+  /** Every multi-agent run anywhere in a repo, newest-first, with its PR —
+   *  "Previous Runs" (2026-08-27, repo-wide per requester decision). */
+  listMultiAgentRunsForRepo(workspaceId: string, repoId: string): Promise<MultiAgentRunWithPrRow[]> {
+    return multiRunRepo.listMultiAgentRunsForRepo(this.db, workspaceId, repoId);
+  }
+
+  /** One multi-agent run by its own id, workspace-scoped — viewing a specific
+   *  historical run from "Previous Runs" (2026-08-27). */
+  getMultiAgentRunById(workspaceId: string, multiAgentRunId: string): Promise<MultiAgentRunRow | undefined> {
+    return multiRunRepo.getMultiAgentRunById(this.db, workspaceId, multiAgentRunId);
+  }
+
+  /** The child `agent_runs` for one multi-agent run, joined with agent name. */
+  agentRunsForMultiRun(multiAgentRunId: string): Promise<MultiRunAgentRow[]> {
+    return multiRunRepo.agentRunsForMultiRun(this.db, multiAgentRunId);
+  }
+
+  /** Full review + finding rows for a set of runs (FindingRecord mapping). */
+  findingsForRuns(runIds: string[]): Promise<{ review: ReviewRow; findings: FindingRow[] }[]> {
+    return multiRunRepo.findingsForRuns(this.db, runIds);
+  }
+
+  /** Avg duration/cost over an agent's own done runs, across all PRs (AC-4). */
+  agentRunStatsForEstimate(workspaceId: string, agentId: string): Promise<AgentRunEstimateStats> {
+    return multiRunRepo.agentRunStatsForEstimate(this.db, workspaceId, agentId);
+  }
+
+  /** The agent's most recent review summary for this PR, or null (AC-6). */
+  latestReviewSummaryForAgentOnPr(
+    workspaceId: string,
+    agentId: string,
+    prId: string,
+  ): Promise<string | null> {
+    return multiRunRepo.latestReviewSummaryForAgentOnPr(this.db, workspaceId, agentId, prId);
   }
 }

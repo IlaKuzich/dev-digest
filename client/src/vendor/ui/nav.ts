@@ -35,6 +35,23 @@ export const NAV: NavGroup[] = [
       { key: "eval", label: "Eval Dashboard", icon: "Gauge", href: "/eval", gKey: "e" },
     ],
   },
+  {
+    section: "GLOBAL",
+    items: [
+      // Only this feature's own nav item — Memory / Agent Performance /
+      // Onboarding Tour / CI Runs (also GLOBAL in the mockups) are separate,
+      // out-of-scope features (spec Non-goals). `activeKeyFor` already maps
+      // "/multi-agent" → "multi-agent" (app-shell/helpers.ts:28, a snapshot
+      // forward-reference) — no change needed there.
+      // Points at the bare repo-scoped route (NOT `/configure`) so it lands
+      // on the repo's LATEST multi-agent run when one exists — the route's
+      // page.tsx resolves and redirects to either the last run's results or
+      // Configure when there is none yet. Fixes: clicking this nav item
+      // always forced a brand-new run and could never return to a run
+      // already in progress/finished.
+      { key: "multi-agent", label: "Multi-Agent Review", icon: "Users", href: "/repos/:repoId/multi-agent" },
+    ],
+  },
 ];
 
 export const SETTINGS_ITEM: NavItemDef = {

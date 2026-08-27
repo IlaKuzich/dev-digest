@@ -142,7 +142,7 @@ export function FindingsPanel({
               headSha={headSha}
               onFileClick={onFileClick}
               expandSignal={f.id === focusFindingId ? focusNonce : undefined}
-              onAction={(act) => action.mutate({ findingId: f.id, action: act, prId })}
+              onAction={(act, reply) => action.mutate({ findingId: f.id, action: act, prId, reply })}
               onCapture={() => draft.mutate(f.id, { onSuccess: setDraftModal })}
             />
           ))

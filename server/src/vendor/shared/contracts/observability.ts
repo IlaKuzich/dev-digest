@@ -71,6 +71,12 @@ export const Conflict = z.object({
 });
 export type Conflict = z.infer<typeof Conflict>;
 
+/** Request body of POST /pulls/:id/multi-agent-run — the selected agent-id set. */
+export const MultiAgentRunRequest = z.object({
+  agent_ids: z.array(z.string().uuid()).min(1),
+});
+export type MultiAgentRunRequest = z.infer<typeof MultiAgentRunRequest>;
+
 /** Response of POST /pulls/:id/multi-agent-run and GET /pulls/:id/multi-agent. */
 export const MultiAgentRun = z.object({
   id: z.string(),
@@ -84,6 +90,35 @@ export const MultiAgentRun = z.object({
   conflicts: z.array(Conflict),
 });
 export type MultiAgentRun = z.infer<typeof MultiAgentRun>;
+
+/**
+ * One row of "Previous Runs" — response of GET /repos/:id/multi-agent/history
+ * (2026-08-27 follow-on; supersedes the original "no browsable history"
+ * non-goal; requester decision: repo-wide across all the repo's PRs, not
+ * scoped to one PR — `pr_number`/`pr_title` identify which PR each run was
+ * against). Deliberately lighter than `MultiAgentRun`: no columns/conflicts,
+ * just enough to list and pick a run to open via
+ * GET /pulls/:id/multi-agent/runs/:runId (which returns a full `MultiAgentRun`).
+ */
+export const MultiAgentRunSummary = z.object({
+  id: z.string(),
+  pr_number: z.number().int(),
+  pr_title: z.string(),
+  ran_at: z.string(),
+  agent_count: z.number().int(),
+  total_duration_ms: z.number().int(),
+  total_cost_usd: z.number().nullable(),
+  /**
+   * `'running'` while ANY child agent run hasn't reached a terminal state —
+   * duration/cost are incomplete (still nulls mixed in) until it settles, so
+   * the history list must show "still running" rather than a misleading
+   * 0s/$0 total (2026-08-27 fix). `'failed'` when every child is terminal
+   * but at least one didn't finish successfully; `'done'` only when every
+   * child succeeded.
+   */
+  status: z.enum(['running', 'done', 'failed']),
+});
+export type MultiAgentRunSummary = z.infer<typeof MultiAgentRunSummary>;
 
 // ---------------------------------------------------------------------------
 // Per-agent Stats (GET /agents/:id/stats)

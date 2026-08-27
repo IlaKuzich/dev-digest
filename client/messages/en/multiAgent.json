@@ -1,0 +1,62 @@
+{
+  "picker": {
+    "trigger": "Run multi-agent review",
+    "title": "Pick agents to run",
+    "noAgents": "No agents yet — create one",
+    "noHistory": "no history yet",
+    "runReviewCount": "Run multi-agent review ({count})",
+    "configureAgents": "Configure agents…",
+    "viewLatestReview": "View Multi-Agent Review"
+  },
+  "configure": {
+    "breadcrumbFeature": "Multi-Agent Review",
+    "breadcrumbPage": "Configure run",
+    "heading": "Run a Multi-Agent Review",
+    "subheading": "Pick a pull request and choose which agents to fan out — they run in parallel and you compare their findings side by side.",
+    "step1Label": "Pull request",
+    "step1Placeholder": "Select a pull request…",
+    "step2Label": "Agents to run",
+    "selectAll": "Select all",
+    "emptyTitle": "Pick a pull request first",
+    "emptyBody": "Choose which PR to review above, then select the agents to run on it.",
+    "noAgents": "This workspace has no agents yet — create one first.",
+    "noSummary": "No prior review of this PR yet",
+    "noHistory": "no history yet",
+    "runReviewCount": "Run multi-agent review ({count})",
+    "aggregate": "≈ {time} · {cost} · parallel fan-out"
+  },
+  "results": {
+    "errorTitle": "Couldn't load this multi-agent run",
+    "noRunTitle": "No multi-agent run yet",
+    "noRunBody": "Configure a run for this PR to compare agents side by side.",
+    "configureRun": "Configure run",
+    "previousRuns": "Previous Runs",
+    "subtitle": "{count} selected agents · parallel",
+    "totalsLine": "{count} agents · {duration} total · {cost}",
+    "viewModeLabel": "View mode",
+    "mode": {
+      "columns": "Columns",
+      "tabs": "Tabs"
+    },
+    "viewTrace": "View trace",
+    "findingsCount": "{count} findings",
+    "noFindings": "No findings",
+    "running": "Running…",
+    "failedReason": "This agent's run failed.",
+    "disagreementTitle": "Where agents disagree",
+    "showOnlyConflicts": "Show only conflicts",
+    "didNotFlag": "did not flag",
+    "noConflicts": "No disagreements — every agent's findings line up."
+  },
+  "history": {
+    "breadcrumbPage": "Previous Runs",
+    "heading": "Previous Runs",
+    "subheading": "Every past multi-agent run across this repo's pull requests, newest first.",
+    "errorTitle": "Couldn't load this repo's run history",
+    "emptyTitle": "No previous runs yet",
+    "emptyBody": "This repo hasn't had a multi-agent run before now.",
+    "rowSummary": "{count} agents · {duration} total · {cost}",
+    "view": "View",
+    "back": "Back to Multi-Agent Review"
+  }
+}

@@ -1,25 +1,37 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { RunRequest } from '@devdigest/shared';
+import { z } from 'zod';
+import { RunRequest, MultiAgentRunRequest } from '@devdigest/shared';
 import type { RunEvent } from '@devdigest/shared';
 import { getContext } from '../_shared/context.js';
-import { IdParams } from '../_shared/schemas.js';
+import { IdParams, PrRunParams } from '../_shared/schemas.js';
 import { NotFoundError } from '../../platform/errors.js';
 import { ReviewService } from './service.js';
+import { MultiAgentService } from './multi-agent.service.js';
 
 /**
  * reviews module.
- *   POST   /pulls/:id/review  {agentId} | {all:true}  → run review(s); returns runs
- *   GET    /runs/:id/events                            → SSE stream of RunEvent (replay-first)
- *   GET    /runs/:id/trace                             → the single-document RunTrace
- *   GET    /pulls/:id/reviews                          → persisted reviews + findings for a PR
- *   POST   /findings/:id/(accept|dismiss)              → finding actions
+ *   POST   /pulls/:id/review          {agentId} | {all:true}  → run review(s); returns runs
+ *   GET    /runs/:id/events                                    → SSE stream of RunEvent (replay-first)
+ *   GET    /runs/:id/trace                                     → the single-document RunTrace
+ *   GET    /pulls/:id/reviews                                  → persisted reviews + findings for a PR
+ *   POST   /pulls/:id/multi-agent-run {agent_ids}              → fan out N agents, one parent run (A5)
+ *   GET    /pulls/:id/multi-agent                              → latest multi-agent run for the PR (A5)
+ *   GET    /pulls/:id/agent-estimates                          → per-agent time/cost estimate + PR summary (A5)
+ *   GET    /repos/:id/multi-agent/latest                       → repo's most recent multi-agent run's PR, or null (nav landing)
+ *   GET    /repos/:id/multi-agent/history                      → every past multi-agent run in the repo, newest-first, repo-wide (A5, 2026-08-27)
+ *   GET    /pulls/:id/multi-agent/runs/:runId                  → one specific historical run by id (A5, 2026-08-27)
+ *   POST   /findings/:id/(accept|dismiss|learn|reply)          → finding actions
  */
-const FINDING_ACTIONS = ['accept', 'dismiss'] as const;
+const FINDING_ACTIONS = ['accept', 'dismiss', 'learn', 'reply'] as const;
+/** Optional body for the finding-action routes — only `reply` reads it. */
+const FindingActionBody = z.object({ reply: z.string().nullish() }).nullish();
+
 export default async function reviewsRoutes(appBase: FastifyInstance) {
   const app = appBase.withTypeProvider<ZodTypeProvider>();
   const { container } = app;
   const service = new ReviewService(container);
+  const multiAgentService = new MultiAgentService(container);
 
   // ---- Run a review (manual trigger) -------------------------------
   // Tight per-route limit: each call can fan out to expensive LLM runs.
@@ -145,12 +157,78 @@ export default async function reviewsRoutes(appBase: FastifyInstance) {
     return { ok: true };
   });
 
-  // ---- Finding actions (accept / dismiss) ---------------------------------
-  for (const action of FINDING_ACTIONS) {
-    app.post(`/findings/:id/${action}`, { schema: { params: IdParams } }, async (req) => {
+  // ---- Multi-agent review (A5) ---------------------------------------------
+  // Trigger: fan the selected agent set out via the EXISTING parallel review
+  // path (AC-11) and attribute every resulting run to one parent (AC-12).
+  // Tight per-route limit mirrors `/pulls/:id/review` — each call fans out to
+  // N expensive LLM runs.
+  app.post(
+    '/pulls/:id/multi-agent-run',
+    {
+      schema: { params: IdParams, body: MultiAgentRunRequest },
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
+    async (req) => {
       const { workspaceId } = await getContext(container, req);
-      const result = await service.actOnFinding(workspaceId, req.params.id, action);
-      return result;
-    });
+      return multiAgentService.trigger(workspaceId, req.params.id, req.body.agent_ids, req.log);
+    },
+  );
+
+  // Latest multi-agent run for a PR (AC-29 — latest-per-PR, survives reload).
+  app.get('/pulls/:id/multi-agent', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return multiAgentService.getForPr(workspaceId, req.params.id);
+  });
+
+  // Per-agent time/cost estimate + latest per-PR summary (AC-3/AC-4/AC-5/AC-6).
+  app.get('/pulls/:id/agent-estimates', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return multiAgentService.estimatesForPr(workspaceId, req.params.id);
+  });
+
+  // One specific historical multi-agent run by id ("Previous Runs" detail).
+  app.get(
+    '/pulls/:id/multi-agent/runs/:runId',
+    { schema: { params: PrRunParams } },
+    async (req) => {
+      const { workspaceId } = await getContext(container, req);
+      return multiAgentService.getById(workspaceId, req.params.id, req.params.runId);
+    },
+  );
+
+  // Repo-level "Multi-Agent Review" nav landing: the PR to jump back to (the
+  // repo's most recently-run multi-agent run), or `null` when none exists yet
+  // — lets the nav item return to the last run instead of always starting a
+  // new one (see MultiAgentService.latestForRepo).
+  app.get('/repos/:id/multi-agent/latest', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return multiAgentService.latestForRepo(workspaceId, req.params.id);
+  });
+
+  // Every past multi-agent run anywhere in this repo, newest-first — repo-
+  // wide "Previous Runs" (2026-08-27 follow-on; supersedes the original "no
+  // browsable history" non-goal; requester decision: repo-wide, not per-PR).
+  app.get('/repos/:id/multi-agent/history', { schema: { params: IdParams } }, async (req) => {
+    const { workspaceId } = await getContext(container, req);
+    return multiAgentService.historyForRepo(workspaceId, req.params.id);
+  });
+
+  // ---- Finding actions (accept / dismiss / learn / reply) -----------------
+  for (const action of FINDING_ACTIONS) {
+    app.post(
+      `/findings/:id/${action}`,
+      { schema: { params: IdParams, body: FindingActionBody } },
+      async (req) => {
+        const { workspaceId } = await getContext(container, req);
+        const reply = req.body?.reply ?? undefined;
+        const result = await service.actOnFinding(
+          workspaceId,
+          req.params.id,
+          action,
+          action === 'reply' ? { reply: reply ?? '' } : {},
+        );
+        return result;
+      },
+    );
   }
 }
