@@ -6,11 +6,14 @@ export interface NavItemDef {
   key: string;
   label: string;
   icon: IconName;
-  /** Route template; :repoId is replaced with the active repo id by the app. */
+  /** Route template; :repoId is replaced with the active repo id by the app.
+   *  Ignored (no `Link` rendered) when `disabled` is set. */
   href: string;
   /** Optional g-nav shortcut suffix (e.g. "p" → g then p). */
   gKey?: string;
   badge?: string;
+  /** Non-navigable placeholder — `NavItem` renders it as inert text, no `Link`. */
+  disabled?: boolean;
 }
 
 export interface NavGroup {
@@ -33,6 +36,30 @@ export const NAV: NavGroup[] = [
       { key: "agents", label: "Agents", icon: "Cpu", href: "/agents", gKey: "a" },
       { key: "conventions", label: "Conventions", icon: "ListChecks", href: "/conventions", gKey: "c" },
       { key: "eval", label: "Eval Dashboard", icon: "Gauge", href: "/eval", gKey: "e" },
+    ],
+  },
+  {
+    section: "GLOBAL",
+    items: [
+      // Placeholders — separate, unbuilt features. Disabled/non-navigable: no
+      // gKey shortcut, and `NavItem` renders them as inert text (no `Link`).
+      { key: "memory", label: "Memory", icon: "Brain", href: "/memory", disabled: true },
+      // Live — Multi-Agent Review feature. Points at the bare repo-scoped
+      // route (NOT `/configure`) so it lands on the repo's LATEST run when
+      // one exists — the route's page.tsx resolves and redirects to either
+      // the last run's results or Configure when there is none yet.
+      // `activeKeyFor` already maps "/multi-agent" → "multi-agent"
+      // (app-shell/helpers.ts:28) — no change needed there.
+      { key: "multi-agent", label: "Multi-Agent Review", icon: "Users", href: "/repos/:repoId/multi-agent" },
+      {
+        key: "agent-performance",
+        label: "Agent Performance",
+        icon: "TrendingUp",
+        href: "/agent-performance",
+        disabled: true,
+      },
+      // Live — CI feature.
+      { key: "ci-runs", label: "CI Runs", icon: "Workflow", href: "/ci-runs" },
     ],
   },
 ];

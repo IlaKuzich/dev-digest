@@ -150,8 +150,12 @@ export class ReviewService {
     workspaceId: string,
     findingId: string,
     action: FindingActionKind,
-  ): Promise<{ finding: ReviewDtoFinding }> {
-    return actOnFindingImpl(this.repo, workspaceId, findingId, action);
+    opts: { reply?: string } = {},
+  ): Promise<{ finding: ReviewDtoFinding; reply?: string }> {
+    return actOnFindingImpl(this.repo, workspaceId, findingId, action, {
+      ...opts,
+      memoryRepo: this.container.memoryRepo,
+    });
   }
 
   // ===========================================================================

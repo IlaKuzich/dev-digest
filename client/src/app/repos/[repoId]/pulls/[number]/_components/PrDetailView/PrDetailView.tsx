@@ -7,7 +7,8 @@
 
 import React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Skeleton, ErrorState } from "@devdigest/ui";
+import { useTranslations } from "next-intl";
+import { Button, Skeleton, ErrorState } from "@devdigest/ui";
 import { AppShell } from "@/components/app-shell";
 import { RepoNotFound } from "@/components/repo-not-found";
 import { PrDetailHeader } from "../PrDetailHeader";
@@ -15,6 +16,7 @@ import { OverviewTab } from "../OverviewTab";
 import { FindingsTab } from "../FindingsTab";
 import { DiffTab } from "../DiffTab";
 import RunTraceDrawer from "../RunTraceDrawer";
+import { MultiAgentPicker } from "../MultiAgentPicker";
 import { usePullDetail, usePulls } from "@/lib/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePrReviews, useCancelRun, usePrActiveRuns, usePrRuns, useDeleteRun } from "@/lib/hooks/reviews";
@@ -25,6 +27,7 @@ import type { DiffFocus } from "@/components/diff-viewer";
 import type { FindingRecord } from "@devdigest/shared";
 
 export function PrDetailView() {
+  const t = useTranslations("multiAgent");
   const params = useParams<{ repoId: string; number: string }>();
   const search = useSearchParams();
   const router = useRouter();
@@ -199,6 +202,38 @@ export function PrDetailView() {
         onRunsStarted={() => invalidateActiveRuns()}
       />
 
+      {/* MultiAgentPicker mounts here rather than inside PrDetailHeader's own
+          action row: this task owns PrDetailView.tsx only, not PrDetailHeader
+          (a sibling task boundary) — see report for the deviation from the
+          mockup's inline placement next to "Run Review". */}
+      {prId && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 32px 0",
+            maxWidth: 1080,
+            margin: "0 auto",
+          }}
+        >
+          {/* Direct navigation to this PR's own multi-agent results (AC-29
+             latest-per-PR resolution) — distinct from MultiAgentPicker, which
+             triggers a NEW fan-out. Always shown; the results page itself
+             already handles "no run yet" with a route to Configure. */}
+          <Button
+            kind="ghost"
+            size="sm"
+            icon="Users"
+            onClick={() => router.push(`/repos/${repoId}/multi-agent/${pr.number}`)}
+          >
+            {t("picker.viewLatestReview")}
+          </Button>
+          <MultiAgentPicker prId={prId} prNumber={pr.number} repoId={repoId} />
+        </div>
+      )}
+
       <div style={{ padding: "24px 32px 44px", display: "flex", flexDirection: "column", gap: 24, maxWidth: 1080, margin: "0 auto" }}>
         {tab === "overview" && (
           <OverviewTab
@@ -256,6 +291,7 @@ export function PrDetailView() {
           prNumber={pr.number}
           findings={runs.find((r) => r.run_id === traceRunId)?.findings ?? []}
           agentName={runs.find((r) => r.run_id === traceRunId)?.agent_name ?? null}
+          onFileClick={handleFocusDiffLine}
           onClose={() => setParam("trace", null)}
         />
       )}

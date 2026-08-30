@@ -199,7 +199,8 @@ Report:
 - The architecture-review outcome, including every `SUGGESTION` you deliberately did not fix.
 - **The test-debt list** — every PARTIAL from Phase 4. Not an appendix; a section.
 - Anything a gate escalated and how it was resolved.
-- Any lesson an agent surfaced for `INSIGHTS.md` (agents cannot write there themselves).
+- Any cross-cutting lesson only visible from the orchestrator's seat (spanning multiple
+  tasks/agents, or about the run itself) that no single implementer could have surfaced.
 
 Then ask whether to push / open the PR.
 
@@ -207,10 +208,20 @@ Then ask whether to push / open the PR.
 
 ## Phase 6 — Insights
 
-Invoke the `engineering-insights` skill to capture what this run learned into the touched
-module's `INSIGHTS.md`. Agents in this chain are barred from writing `INSIGHTS.md`
-themselves, so anything they surfaced in a report only lands if you do this. Root
-`CLAUDE.md` is explicit: **do not skip this step.**
+Each **implementer** already appends its own module-local lessons directly to that module's
+`INSIGHTS.md` during Phase 2, per `.claude/agents/README.md`'s "hybrid strategy" — this is
+intentional, not a gap; `implementer.md` preloads `engineering-insights` for exactly this.
+Phase 6 is **your** pass, not a re-delegation: invoke the `engineering-insights` skill
+yourself to capture whatever a single implementer's local context couldn't see — a lesson
+spanning two tasks' files, something the fix loop or a gate (`architecture-reviewer`,
+`plan-verifier`, `pr-self-review`) surfaced that no task owns, or a process observation about
+the run itself. Root `CLAUDE.md` is explicit: **do not skip this step.**
+
+**Caveat:** when 2+ implementers touching the SAME package run in parallel (e.g. two
+`client/` tasks), each may append to that package's `INSIGHTS.md` in the same window — this
+has worked via non-colliding append anchors so far, not via any real serialization. If you
+see a lost entry or a conflicted append after a parallel wave, treat it as a live risk to
+flag, not a one-off.
 
 ---
 

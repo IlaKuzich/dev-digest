@@ -31,7 +31,15 @@ const specsTokenNoteStyle: React.CSSProperties = {
   margin: "-4px 0 8px 4px",
 };
 
-export function TraceBody({ trace, findings }: { trace: RunTrace; findings: FindingRecord[] }) {
+export function TraceBody({
+  trace,
+  findings,
+  onFileClick,
+}: {
+  trace: RunTrace;
+  findings: FindingRecord[];
+  onFileClick?: (file: string, line: number) => void;
+}) {
   const t = useTranslations("runs");
   const stats = trace.stats;
   return (
@@ -84,7 +92,7 @@ export function TraceBody({ trace, findings }: { trace: RunTrace; findings: Find
         </div>
       </TraceSection>
 
-      <FindingsSection findings={findings} />
+      <FindingsSection findings={findings} onFileClick={onFileClick} />
 
       <TraceSection icon="FileText" title={t("trace.promptAssembly")} defaultOpen={false}>
         <PromptBlock label={t("trace.prompt.system")} text={trace.prompt_assembly.system} color={PROMPT_COLORS.system} />

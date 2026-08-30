@@ -21,11 +21,15 @@ import type {
   CiRefreshResult,
 } from "@devdigest/shared";
 import { CiResultArtifact } from "@devdigest/shared";
-import { NotFoundError } from "../../platform/errors.js";
+import { NotFoundError, ValidationError } from "../../platform/errors.js";
 import { assembleFiles } from "./generators/index.js";
+import { lintWorkflowYml } from "./generators/lint.js";
 import type { CiRepository } from "./repository.js";
 import { extractFirstFileFromZip } from "./zip.js";
 import { buildMemorySnapshot } from "../memory/snapshot.js";
+
+/** Path of the single overridable/editable file in the assembled bundle. */
+const WORKFLOW_FILE_PATH = ".github/workflows/devdigest-review.yml";
 
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for unit tests)
@@ -114,7 +118,7 @@ export class CiService {
       }
     }
 
-    const files = assembleFiles({
+    let files = assembleFiles({
       agent: {
         id: agent.id,
         name: agent.name,
@@ -131,6 +135,26 @@ export class CiService {
       },
       memoryContent,
     });
+
+    // AC-14/38/48: caller-supplied `workflow.yml` override, re-linted here
+    // BEFORE any GitHub commit or zip build — the authoritative hard-reject
+    // gate for both "open_pr" and "files". The client-side checks (AC-12/13)
+    // are advisory only.
+    if (input.workflow_yml) {
+      const lintResult = lintWorkflowYml(input.workflow_yml);
+      if (!lintResult.ok) {
+        throw new ValidationError(
+          `Edited workflow.yml failed the security lint: ${lintResult.violations.join("; ")}`,
+          { violations: lintResult.violations },
+        );
+      }
+      const overriddenWorkflowYml = input.workflow_yml;
+      files = files.map((f) =>
+        f.path === WORKFLOW_FILE_PATH
+          ? { ...f, contents: overriddenWorkflowYml, editable: true }
+          : f,
+      );
+    }
 
     if (input.action === "files") {
       // No GitHub calls, no installation row for the zip path.

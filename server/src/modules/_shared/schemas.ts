@@ -21,3 +21,12 @@ export const VersionParams = z.object({
   version: z.coerce.number().int().positive(),
 });
 export type VersionParams = z.infer<typeof VersionParams>;
+
+/**
+ * Params for `/pulls/:id/multi-agent/runs/:runId` — viewing one specific
+ * historical multi-agent run (2026-08-27 "Previous Runs" follow-on). Both
+ * segments are uuids; the service additionally checks the run belongs to
+ * this PR (see `MultiAgentService.getById`).
+ */
+export const PrRunParams = z.object({ id: z.string().uuid(), runId: z.string().uuid() });
+export type PrRunParams = z.infer<typeof PrRunParams>;
